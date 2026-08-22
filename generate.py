@@ -166,6 +166,15 @@ h1{font-size:26px; font-weight:800; line-height:1.2; margin:0 0 10px;}
   padding:11px 16px; border-radius:10px;
 }
 .cta.ghost{background:transparent; color:var(--teal-br); border:1px solid var(--border);}
+.perks{display:flex; flex-wrap:wrap; gap:12px; margin:0 0 34px;}
+.perks .perk{
+  flex:1 1 220px; display:flex; gap:10px; align-items:flex-start;
+  background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:13px 14px;
+}
+.perks .perk .ic{font-size:16px; line-height:1; flex-shrink:0; margin-top:1px;}
+.perks .perk b{display:block; font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:2px;}
+.perks .perk span{font-size:11.5px; color:var(--text-sec); line-height:1.4;}
 h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
 .grid{display:flex; flex-direction:column; gap:12px;}
 .card{
@@ -198,14 +207,24 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
 .foot a{color:var(--text-mut);}
 """
 
+PERKS_HTML = """
+    <div class="perk">
+      <span class="ic">⚡</span>
+      <div><b>Direct to source</b><span>Every link goes straight to the official university or provider page — you apply with them, not through us.</span></div>
+    </div>
+    <div class="perk">
+      <span class="ic">🎯</span>
+      <div><b>Beyond this list</b><span>Our app also matches you to national and independent grants that aren't tied to any one university.</span></div>
+    </div>"""
+
 def faq_block(uni_name, count):
     items = [
         ("Is this list free to use?",
          f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
-        ("Are these bursaries verified?",
-         "Each entry links directly to the official university or provider page so you can confirm eligibility and deadlines yourself before applying."),
+        ("Do I apply through FindMyFund?",
+         "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         "This page lists what's publicly available. FindMyFund's app checks your specific circumstances — income, region, fee status and more — against the full database and tells you exactly which ones you qualify for and why."),
+         "This page lists what's publicly available for this university. FindMyFund's app checks your specific circumstances — income, region, fee status and more — against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
     ]
     out = []
     for q, a in items:
@@ -220,10 +239,10 @@ def faq_jsonld(uni_name):
     items = [
         ("Is this list free to use?",
          f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
-        ("Are these bursaries verified?",
-         "Each entry links directly to the official university or provider page so you can confirm eligibility and deadlines yourself before applying."),
+        ("Do I apply through FindMyFund?",
+         "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         "This page lists what's publicly available. FindMyFund's app checks your specific circumstances against the full database and tells you exactly which ones you qualify for and why."),
+         "This page lists what's publicly available for this university. FindMyFund's app checks your specific circumstances against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
     ]
     entities = ",".join(
         f'{{"@type":"Question","name":{q!r},"acceptedAnswer":{{"@type":"Answer","text":{a!r}}}}}'
@@ -258,6 +277,9 @@ PAGE_TEMPLATE = """<!doctype html>
     <a class="cta ghost" href="{play}" target="_blank" rel="noopener">Get matched — Google Play</a>
   </div>
 
+  <div class="perks">{perks}
+  </div>
+
   <h2>{list_heading}</h2>
   <div class="grid">{cards}
   </div>
@@ -283,8 +305,8 @@ def render_page(uni_name, entries, slug):
     amt_bit = f" worth {amt_range}" if amt_range else ""
     lede = (
         f"{count} verified bursaries and scholarships{amt_bit} currently listed for students at "
-        f"{uni_name}. Every listing links to the official source — or let the app match you "
-        f"automatically to the ones you actually qualify for."
+        f"{uni_name} — each linking straight to the official source, no forms with us. Our app also "
+        f"matches you to additional grants beyond this list, based on your specific circumstances."
     )
     title = f"{uni_name} Bursaries & Scholarships ({date.today().year}) | FindMyFund"
     description = (
@@ -301,6 +323,7 @@ def render_page(uni_name, entries, slug):
         lede=esc(lede),
         app_store=APP_STORE_URL,
         play=PLAY_URL,
+        perks=PERKS_HTML,
         list_heading=esc(f"{count} bursaries currently listed"),
         cards=cards,
         faq=faq_block(uni_name, count),
@@ -326,8 +349,9 @@ def render_rollup(singles):
     description = f"{count} additional verified UK university bursaries and scholarships, one per institution."
     canonical = f"{SITE_URL}/bursaries/more-universities/"
     lede = (
-        f"{count} more verified bursaries, one each from smaller listings across UK universities. "
-        f"Every listing links to the official source — or let the app match you automatically."
+        f"{count} more verified bursaries, one each from smaller listings across UK universities — "
+        f"each linking straight to the official source, no forms with us. Our app also matches you "
+        f"to additional grants beyond this list, based on your specific circumstances."
     )
     extra_css = ".uni-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px;}"
     return PAGE_TEMPLATE.format(
@@ -339,6 +363,7 @@ def render_rollup(singles):
         lede=esc(lede),
         app_store=APP_STORE_URL,
         play=PLAY_URL,
+        perks=PERKS_HTML,
         list_heading=esc(f"{count} bursaries currently listed"),
         cards=cards,
         faq=faq_block("these universities", count),
@@ -369,10 +394,12 @@ HUB_TEMPLATE = """<!doctype html>
 <div class="wrap">
   <div class="crumb"><a href="/">FindMyFund</a> / Bursaries by university</div>
   <h1>UK University Bursaries &amp; Scholarships</h1>
-  <p class="lede">{n_total} verified bursaries and scholarships across {n_unis} UK universities. Pick your university, or let the app match you automatically to what you actually qualify for.</p>
+  <p class="lede">{n_total} verified bursaries and scholarships across {n_unis} UK universities — each linking straight to the official source, no forms with us. Pick your university, or let the app match you to these plus additional national and independent grants.</p>
   <div class="cta-row">
     <a class="cta" href="{app_store}" target="_blank" rel="noopener">Get matched — App Store</a>
     <a class="cta ghost" href="{play}" target="_blank" rel="noopener">Get matched — Google Play</a>
+  </div>
+  <div class="perks">{perks}
   </div>
   <h2>Browse by university</h2>
   <div class="ulist">{links}
@@ -397,6 +424,7 @@ def render_hub(uni_list, singles_count):
         css=PAGE_CSS,
         app_store=APP_STORE_URL,
         play=PLAY_URL,
+        perks=PERKS_HTML,
         links=links,
     )
 
