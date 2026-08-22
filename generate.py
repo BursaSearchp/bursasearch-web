@@ -29,11 +29,34 @@ def clean(v):
     v = (v or "").strip()
     return "" if v.lower() in ("any", "n/a", "-", "") else v
 
-by_uni = defaultdict(list)
+def norm_uni_key(u):
+    """Collapses name variants ('The X', 'X, The', 'X/Welsh Name', 'X ' vs
+    'X') down to one grouping key, so the same real university never gets
+    split across multiple near-duplicate pages."""
+    u2 = re.sub(r"^the\s+", "", u.strip(), flags=re.I)
+    u2 = re.sub(r",?\s*the\s*$", "", u2, flags=re.I)
+    u2 = u2.split("/")[0].strip()
+    u2 = re.sub(r"\s*\(.*?\)\s*$", "", u2)
+    return re.sub(r"\s+", " ", u2).lower().strip()
+
+# Group raw rows by normalised key, but keep a real display name per group
+# (shortest variant, with no leading "The" / trailing ", The" / slash suffix
+# — reads cleanest as a page title).
+_raw_by_key = defaultdict(list)
+_names_by_key = defaultdict(set)
 for row in rows:
     uni = clean(row.get("University", ""))
-    if uni:
-        by_uni[uni].append(row)
+    if not uni:
+        continue
+    key = norm_uni_key(uni)
+    _raw_by_key[key].append(row)
+    _names_by_key[key].add(uni)
+
+by_uni = {}
+for key, entries in _raw_by_key.items():
+    names = _names_by_key[key]
+    canonical = min(names, key=lambda n: (n.lower().startswith("the "), "/" in n, len(n)))
+    by_uni[canonical] = entries
 
 multi = {u: r for u, r in by_uni.items() if len(r) >= 2}
 singles = {u: r for u, r in by_uni.items() if len(r) == 1}
