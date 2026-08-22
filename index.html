@@ -8,38 +8,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* Committed to one look, always — the app itself has no light mode, so
+     letting this page flip with the visitor's OS theme just meant the
+     accent silently became a duller, off-brand green in light mode. This
+     is the app's actual palette (dashboard navy + teal), not a separate
+     invented one. */
   :root {
-    --bg: #EEF3F4;
-    --surface: #FFFFFF;
-    --text: #0A1626;
-    --text-muted: #5B7285;
-    --accent: #0D7A6B;
-    --accent-strong: #0A5F53;
-    --ring: rgba(10,22,38,.10);
-    --shadow: rgba(10,22,38,.08);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #060E19;
-      --surface: #0E1D2E;
-      --text: #FFFFFF;
-      --text-muted: #9FB3C8;
-      --accent: #14B8A6;
-      --accent-strong: #1FD6C1;
-      --ring: rgba(255,255,255,.10);
-      --shadow: rgba(0,0,0,.35);
-    }
-  }
-
-  :root[data-theme="dark"] {
-    --bg: #060E19;
-    --surface: #0E1D2E;
+    --bg: #091723;
+    --surface: #0F2135;
     --text: #FFFFFF;
-    --text-muted: #9FB3C8;
-    --accent: #14B8A6;
-    --accent-strong: #1FD6C1;
-    --ring: rgba(255,255,255,.10);
+    --text-muted: #7A9BB5;
+    --accent: #0F8A8A;
+    --accent-strong: #1CC4BC;
+    --ring: rgba(255,255,255,.08);
     --shadow: rgba(0,0,0,.35);
   }
 
