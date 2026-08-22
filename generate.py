@@ -92,7 +92,7 @@ def eligibility_badges(row):
             badges.append(f"{label}: {v}")
     return badges[:4]  # keep each card scannable, not a wall of chips
 
-def bursary_card(row):
+def bursary_card(row, tag=None):
     name = clean(row.get("Bursary Name", "")) or "Bursary"
     amount = clean(row.get("Amount", ""))
     deadline = clean(row.get("Deadline", ""))
@@ -115,9 +115,11 @@ def bursary_card(row):
         f'<a class="src" href="{esc(link)}" target="_blank" rel="noopener">View official details →</a>'
         if link else ""
     )
+    tag_html = f'<div class="uni-tag">{esc(tag)}</div>' if tag else ""
 
     return f"""
       <div class="card">
+        {tag_html}
         <h3>{esc(name)}</h3>
         {f'<div class="meta">{meta_html}</div>' if meta_html else ''}
         {f'<div class="badges">{badge_html}</div>' if badge_html else ''}
@@ -205,6 +207,7 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
   font-size:11.5px; color:var(--text-mut); text-align:center;
 }
 .foot a{color:var(--text-mut);}
+.uni-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px;}
 """
 
 PERKS_HTML = """
@@ -217,14 +220,14 @@ PERKS_HTML = """
       <div><b>Beyond this list</b><span>Our app also matches you to national and independent grants that aren't tied to any one university.</span></div>
     </div>"""
 
-def faq_block(uni_name, count):
+def faq_block(uni_name, count, scope_phrase="this university"):
     items = [
         ("Is this list free to use?",
          f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
         ("Do I apply through FindMyFund?",
          "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         "This page lists what's publicly available for this university. FindMyFund's app checks your specific circumstances — income, region, fee status and more — against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
+         f"This page lists what's publicly available for {scope_phrase}. FindMyFund's app checks your specific circumstances — income, region, fee status and more — against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
     ]
     out = []
     for q, a in items:
@@ -235,14 +238,14 @@ def faq_block(uni_name, count):
         </details>""")
     return "".join(out)
 
-def faq_jsonld(uni_name):
+def faq_jsonld(uni_name, scope_phrase="this university"):
     items = [
         ("Is this list free to use?",
          f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
         ("Do I apply through FindMyFund?",
          "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         "This page lists what's publicly available for this university. FindMyFund's app checks your specific circumstances against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
+         f"This page lists what's publicly available for {scope_phrase}. FindMyFund's app checks your specific circumstances against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
     ]
     entities = ",".join(
         f'{{"@type":"Question","name":{q!r},"acceptedAnswer":{{"@type":"Answer","text":{a!r}}}}}'
@@ -268,7 +271,7 @@ PAGE_TEMPLATE = """<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <div class="crumb"><a href="/">FindMyFund</a> / <a href="/bursaries/">Bursaries by university</a> / {uni_name_esc}</div>
+  <div class="crumb"><a href="/">FindMyFund</a> / <a href="/bursaries/">{crumb_label}</a> / {uni_name_esc}</div>
   <h1>{h1}</h1>
   <p class="lede">{lede}</p>
 
@@ -318,6 +321,7 @@ def render_page(uni_name, entries, slug):
         title=esc(title),
         description=esc(description),
         canonical=canonical,
+        crumb_label="Bursaries by university",
         uni_name_esc=esc(uni_name),
         h1=esc(f"{uni_name} Bursaries & Scholarships"),
         lede=esc(lede),
@@ -338,12 +342,7 @@ def render_rollup(singles):
         for r in rows_:
             all_rows.append((uni, r))
     all_rows.sort(key=lambda t: t[0])
-    cards = ""
-    for uni, r in all_rows:
-        card = bursary_card(r).replace(
-            '<h3>', f'<div class="uni-tag">{esc(uni)}</div><h3>', 1
-        )
-        cards += card
+    cards = "".join(bursary_card(r, tag=uni) for uni, r in all_rows)
     count = len(all_rows)
     title = f"More UK University Bursaries ({date.today().year}) | FindMyFund"
     description = f"{count} additional verified UK university bursaries and scholarships, one per institution."
@@ -353,11 +352,11 @@ def render_rollup(singles):
         f"each linking straight to the official source, no forms with us. Our app also matches you "
         f"to additional grants beyond this list, based on your specific circumstances."
     )
-    extra_css = ".uni-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px;}"
     return PAGE_TEMPLATE.format(
         title=esc(title),
         description=esc(description),
         canonical=canonical,
+        crumb_label="Bursaries by university",
         uni_name_esc="More universities",
         h1=esc("More UK University Bursaries"),
         lede=esc(lede),
@@ -368,7 +367,70 @@ def render_rollup(singles):
         cards=cards,
         faq=faq_block("these universities", count),
         jsonld=faq_jsonld("these universities"),
-        css=PAGE_CSS + extra_css,
+        css=PAGE_CSS,
+    )
+
+# ── Circumstance-based pages (cut across universities, tag-based not
+#    partition-based — the same bursary can legitimately appear on more
+#    than one of these, e.g. a low-income care-leaver bursary). ─────────────
+def has_vulnerability(row, name):
+    v = clean(row.get("Vulnerabilities (multi-select)", ""))
+    return name.lower() in [p.strip().lower() for p in v.split(",")]
+
+CIRCUMSTANCES = [
+    # (slug, h1, plural noun phrase used in copy, filter fn)
+    ("low-income-students", "Bursaries for Low-Income Students",
+     "low-income students", lambda r: has_vulnerability(r, "Low income")),
+    ("care-leavers", "Bursaries for Care Leavers",
+     "care leavers", lambda r: has_vulnerability(r, "Care leaver")),
+    ("international-students", "Bursaries for International Students in the UK",
+     "international students", lambda r: clean(r.get("Fee status", "")) == "Overseas"),
+    ("estranged-students", "Bursaries for Estranged Students",
+     "estranged students", lambda r: has_vulnerability(r, "Estranged from family")),
+    ("disabled-students", "Bursaries for Disabled Students",
+     "disabled students", lambda r: has_vulnerability(r, "Disability")),
+    ("refugees-and-asylum-seekers", "Scholarships for Refugees and Asylum Seekers",
+     "refugees and asylum seekers", lambda r: has_vulnerability(r, "Refugee or asylum seeker")),
+]
+
+def render_circumstance_page(slug, h1, noun_phrase, rows_matched):
+    entries_sorted = sorted(
+        rows_matched, key=lambda r: (clean(r.get("University", "")), clean(r.get("Bursary Name", "")))
+    )
+    cards = "".join(
+        bursary_card(r, tag=clean(r.get("University", "")) or None) for r in entries_sorted
+    )
+    count = len(entries_sorted)
+    amt_range = amount_range_text(entries_sorted)
+    amt_bit = f" worth {amt_range}" if amt_range else ""
+    n_unis = len({clean(r.get("University", "")) for r in entries_sorted if clean(r.get("University", ""))})
+    lede = (
+        f"{count} verified bursaries and scholarships{amt_bit} for {noun_phrase}, across {n_unis} "
+        f"UK universities — each linking straight to the official source, no forms with us. Our app "
+        f"also matches you to additional grants beyond this list, based on your full circumstances."
+    )
+    title = f"{h1} ({date.today().year}) | FindMyFund"
+    description = (
+        f"{count} verified bursaries and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}. "
+        f"See eligibility, deadlines and official application links."
+    )
+    canonical = f"{SITE_URL}/bursaries/circumstance/{slug}/"
+    return PAGE_TEMPLATE.format(
+        title=esc(title),
+        description=esc(description),
+        canonical=canonical,
+        crumb_label="Bursaries by circumstance",
+        uni_name_esc=esc(h1),
+        h1=esc(h1),
+        lede=esc(lede),
+        app_store=APP_STORE_URL,
+        play=PLAY_URL,
+        perks=PERKS_HTML,
+        list_heading=esc(f"{count} bursaries currently listed"),
+        cards=cards,
+        faq=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
+        jsonld=faq_jsonld(noun_phrase, scope_phrase=noun_phrase),
+        css=PAGE_CSS,
     )
 
 HUB_TEMPLATE = """<!doctype html>
@@ -392,7 +454,7 @@ HUB_TEMPLATE = """<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <div class="crumb"><a href="/">FindMyFund</a> / Bursaries by university</div>
+  <div class="crumb"><a href="/">FindMyFund</a> / Bursaries</div>
   <h1>UK University Bursaries &amp; Scholarships</h1>
   <p class="lede">{n_total} verified bursaries and scholarships across {n_unis} UK universities — each linking straight to the official source, no forms with us. Pick your university, or let the app match you to these plus additional national and independent grants.</p>
   <div class="cta-row">
@@ -400,6 +462,9 @@ HUB_TEMPLATE = """<!doctype html>
     <a class="cta ghost" href="{play}" target="_blank" rel="noopener">Get matched — Google Play</a>
   </div>
   <div class="perks">{perks}
+  </div>
+  <h2>Browse by circumstance</h2>
+  <div class="ulist">{circumstance_links}
   </div>
   <h2>Browse by university</h2>
   <div class="ulist">{links}
@@ -410,12 +475,16 @@ HUB_TEMPLATE = """<!doctype html>
 </html>
 """
 
-def render_hub(uni_list, singles_count):
+def render_hub(uni_list, singles_count, circumstance_counts):
     links = "".join(
         f'<a href="/bursaries/{slug}/">{esc(name)}<div class="n">{count} bursar{"y" if count==1 else "ies"}</div></a>'
         for name, slug, count in uni_list
     )
     links += f'<a href="/bursaries/more-universities/">More universities<div class="n">{singles_count} bursaries</div></a>'
+    circumstance_links = "".join(
+        f'<a href="/bursaries/circumstance/{slug}/">{esc(h1)}<div class="n">{count} bursaries</div></a>'
+        for slug, h1, count in circumstance_counts
+    )
     n_total = sum(c for _, _, c in uni_list) + singles_count
     return HUB_TEMPLATE.format(
         n_unis=len(uni_list) + singles_count,
@@ -425,6 +494,7 @@ def render_hub(uni_list, singles_count):
         app_store=APP_STORE_URL,
         play=PLAY_URL,
         perks=PERKS_HTML,
+        circumstance_links=circumstance_links,
         links=links,
     )
 
@@ -445,13 +515,26 @@ os.makedirs(d, exist_ok=True)
 with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
     f.write(render_rollup(singles))
 
+# circumstance pages
+circumstance_counts = []
+for slug, h1, noun_phrase, filt in CIRCUMSTANCES:
+    matched = [r for r in rows if filt(r) and clean(r.get("Bursary Name", ""))]
+    if not matched:
+        continue
+    d = os.path.join(OUT_DIR, "circumstance", slug)
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
+        f.write(render_circumstance_page(slug, h1, noun_phrase, matched))
+    circumstance_counts.append((slug, h1, len(matched)))
+
 # hub
 with open(os.path.join(OUT_DIR, "index.html"), "w", encoding="utf-8") as f:
-    f.write(render_hub(uni_list, len(singles)))
+    f.write(render_hub(uni_list, len(singles), circumstance_counts))
 
 # sitemap
 urls = [f"{SITE_URL}/", f"{SITE_URL}/bursaries/", f"{SITE_URL}/bursaries/more-universities/"]
 urls += [f"{SITE_URL}/bursaries/{slug}/" for _, slug, _ in uni_list]
+urls += [f"{SITE_URL}/bursaries/circumstance/{slug}/" for slug, _, _ in circumstance_counts]
 sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 for u in urls:
     sitemap += f"  <url><loc>{u}</loc><lastmod>{TODAY}</lastmod></url>\n"
@@ -462,4 +545,4 @@ with open("sitemap.xml", "w", encoding="utf-8") as f:
 with open("robots.txt", "w", encoding="utf-8") as f:
     f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
 
-print(f"Built {len(uni_list)} university pages + 1 rollup + hub + sitemap ({len(urls)} URLs total).")
+print(f"Built {len(uni_list)} university pages + 1 rollup + {len(circumstance_counts)} circumstance pages + hub + sitemap ({len(urls)} URLs total).")
