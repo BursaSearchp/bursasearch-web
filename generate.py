@@ -1,18 +1,20 @@
 """
-Generates static, SEO-indexable university bursary pages from the scraped
+Generates static, SEO-indexable university bursary pages from the bursary
 dataset. Run from inside the bursasearch-web repo:
 
     python generate.py
 
-Reads _source_data.csv, writes bursaries/<slug>/index.html per university
-(>=2 real bursaries), one rollup page for single-entry universities, a hub
-index, sitemap.xml and robots.txt.
+Reads the dataset via load_rows() (live Apps Script endpoint if SEO_DATA_URL
+is set, else the local _source_data.csv), writes bursaries/<slug>/index.html
+per university (>=2 real bursaries), one rollup page for single-entry
+universities, a hub index, sitemap.xml and robots.txt.
 """
 import csv
 import html
 import json
 import os
 import re
+import urllib.request
 from collections import defaultdict
 from datetime import date
 
@@ -21,13 +23,32 @@ APP_STORE_URL = "https://apps.apple.com/app/id6795890396"
 PLAY_URL = "https://play.google.com/store/apps/details?id=fresherforgev2.com"
 OUT_DIR = "bursaries"
 TODAY = date.today().isoformat()
+# Apps Script ?action=seo endpoint (same loadDataset_()/patchDataset_()
+# pipeline as the live matcher — see Filtration/appscriptfilter/AppScriptCode.txt
+# in the main bursa_project repo). When unset, falls back to a local
+# _source_data.csv for manual/offline runs.
+SEO_DATA_URL = os.environ.get("SEO_DATA_URL")
 
 # ── Data load ────────────────────────────────────────────────────────────────
-with open("_source_data.csv", encoding="utf-8-sig") as f:
-    rows = list(csv.DictReader(f))
+def load_rows():
+    if SEO_DATA_URL:
+        with urllib.request.urlopen(SEO_DATA_URL, timeout=60) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        if not isinstance(data, list) or not data:
+            raise RuntimeError(f"SEO_DATA_URL returned no rows: {str(data)[:200]}")
+        return data
+    with open("_source_data.csv", encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f))
+
+rows = load_rows()
 
 def clean(v):
-    v = (v or "").strip()
+    # Apps Script cell values come through JSON as whatever type the sheet
+    # cell was (numbers, booleans, ISO date strings), not always a str like
+    # csv.DictReader always gives us — normalise before calling .strip().
+    if v is None:
+        return ""
+    v = str(v).strip()
     return "" if v.lower() in ("any", "n/a", "-", "") else v
 
 def norm_uni_key(u):
@@ -89,6 +110,30 @@ def slugify(s):
 def esc(s):
     return html.escape(s, quote=True)
 
+def format_amount(v):
+    """The CSV always had Amount pre-formatted as text ('£3,000'). The live
+    Apps Script feed returns whatever cell type the sheet actually has, so a
+    plain numeric cell (3000) arrives as a bare number with no currency
+    symbol — add one back rather than showing a naked '3000' on the page."""
+    v = clean(v)
+    if not v or not re.fullmatch(r"[\d,]+(\.\d+)?", v):
+        return v
+    n = float(v.replace(",", ""))
+    return f"£{n:,.0f}" if n == int(n) else f"£{n:,.2f}"
+
+def format_deadline(v):
+    """Same issue as Amount: a real Sheet date cell serialises to an ISO
+    timestamp ('2026-08-27T23:00:00.000Z'), not the human text the CSV had."""
+    v = clean(v)
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})T", v)
+    if not m:
+        return v
+    try:
+        d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return v
+    return f"{d.day} {d.strftime('%B %Y')}"
+
 ELIGIBILITY_FIELDS = [
     ("Fee status", "Fee status"),
     ("Study level", "Study level"),
@@ -113,8 +158,8 @@ def eligibility_badges(row):
 
 def bursary_card(row, tag=None, tag_href=None):
     name = clean(row.get("Bursary Name", "")) or "Bursary"
-    amount = clean(row.get("Amount", ""))
-    deadline = clean(row.get("Deadline", ""))
+    amount = format_amount(row.get("Amount", ""))
+    deadline = format_deadline(row.get("Deadline", ""))
     link = clean(row.get("Link", "")) or clean(row.get("Application URL", ""))
     subject = clean(row.get("Study subject", ""))
     badges = eligibility_badges(row)

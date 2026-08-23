@@ -1,0 +1,39 @@
+name: Rebuild bursary pages
+
+on:
+  schedule:
+    # 03:00 UTC daily — independent of the app's own Firestore refresh
+    # (functions/index.js refreshExploreBursaries, 06:00 Europe/London);
+    # this reads straight from the Apps Script ?action=seo endpoint.
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate pages from the live dataset
+        env:
+          SEO_DATA_URL: ${{ secrets.SEO_DATA_URL }}
+        run: python generate.py
+
+      - name: Commit and push if the site actually changed
+        run: |
+          git config user.name "findmyfund-bot"
+          git config user.email "actions@github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes — dataset is unchanged since last run."
+          else
+            git commit -m "Automated rebuild: refresh bursary data ($(date -u +%Y-%m-%d))"
+            git push
+          fi
