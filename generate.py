@@ -10,6 +10,7 @@ index, sitemap.xml and robots.txt.
 """
 import csv
 import html
+import json
 import os
 import re
 from collections import defaultdict
@@ -247,11 +248,18 @@ def faq_jsonld(uni_name, scope_phrase="this university"):
         ("How do I know which ones I actually qualify for?",
          f"This page lists what's publicly available for {scope_phrase}. FindMyFund's app checks your specific circumstances against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
     ]
-    entities = ",".join(
-        f'{{"@type":"Question","name":{q!r},"acceptedAnswer":{{"@type":"Answer","text":{a!r}}}}}'
-        for q, a in items
-    )
-    return f'{{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{entities}]}}'
+    return json.dumps({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": q,
+                "acceptedAnswer": {"@type": "Answer", "text": a},
+            }
+            for q, a in items
+        ],
+    })
 
 PAGE_TEMPLATE = """<!doctype html>
 <html lang="en">
