@@ -19,8 +19,20 @@ from collections import defaultdict
 from datetime import date, datetime
 
 SITE_URL = "https://findmyfund.co.uk"
+# Apple has no equivalent of Play's &referrer= campaign tracking from a plain
+# URL — attributing App Store installs to this site needs a provider/campaign
+# token from App Analytics in App Store Connect (one-time setup only the
+# account owner can do), then the link becomes
+# https://apps.apple.com/app/id6795890396?pt=<providerID>&ct=<campaignToken>&mt=8
 APP_STORE_URL = "https://apps.apple.com/app/id6795890396"
-PLAY_URL = "https://play.google.com/store/apps/details?id=fresherforgev2.com"
+# &referrer= is Google Play's documented custom-campaign format — installs
+# that came through this link now show up in Play Console's Acquisition
+# reports under source "findmyfund_web" / campaign "seo_site", instead of
+# being invisible in the "organic" bucket like every other install.
+PLAY_URL = (
+    "https://play.google.com/store/apps/details?id=fresherforgev2.com"
+    "&referrer=utm_source%3Dfindmyfund_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site"
+)
 OG_IMAGE = f"{SITE_URL}/og-image.png"
 OUT_DIR = "bursaries"
 TODAY = date.today().isoformat()
