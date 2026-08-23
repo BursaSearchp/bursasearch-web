@@ -41,8 +41,17 @@ def norm_uni_key(u):
     return re.sub(r"\s+", " ", u2).lower().strip()
 
 # Group raw rows by normalised key, but keep a real display name per group
-# (shortest variant, with no leading "The" / trailing ", The" / slash suffix
-# — reads cleanest as a page title).
+# (shortest variant, with no leading "The" / trailing ", The" / slash suffix,
+# properly-cased minor words — reads cleanest as a page title).
+MINOR_WORDS = {"of", "and", "the", "in", "for", "at", "on", "de"}
+
+def cap_penalty(n):
+    """Counts wrongly title-cased minor words ('University Of X' vs the
+    correct 'University of X'), so we can prefer the properly-cased variant
+    when two names are otherwise tied."""
+    words = n.split()
+    return sum(1 for w in words[1:] if w.lower() in MINOR_WORDS and w[:1].isupper())
+
 _raw_by_key = defaultdict(list)
 _names_by_key = defaultdict(set)
 for row in rows:
@@ -54,9 +63,18 @@ for row in rows:
     _names_by_key[key].add(uni)
 
 by_uni = {}
-for key, entries in _raw_by_key.items():
+for key in sorted(_raw_by_key):
+    entries = _raw_by_key[key]
     names = _names_by_key[key]
-    canonical = min(names, key=lambda n: (n.lower().startswith("the "), "/" in n, len(n)))
+    # Sort key ends on the string itself so ties resolve identically on
+    # every run — `names` is a set, and set iteration order is hash-seed
+    # randomised per process, so without this the canonical display name
+    # (and therefore the page's title/H1/canonical URL text) could silently
+    # flip between regenerations.
+    canonical = min(
+        names,
+        key=lambda n: (n.lower().startswith("the "), "/" in n, len(n), cap_penalty(n), n),
+    )
     by_uni[canonical] = entries
 
 multi = {u: r for u, r in by_uni.items() if len(r) >= 2}
@@ -401,7 +419,10 @@ CIRCUMSTANCES = [
      "refugees and asylum seekers", lambda r: has_vulnerability(r, "Refugee or asylum seeker")),
 ]
 
-def render_circumstance_page(slug, h1, noun_phrase, rows_matched):
+def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede_tail):
+    """Shared renderer for the cross-cutting tag pages (circumstance, region —
+    same shape as a circumstance page, just a different filter axis and a
+    different URL prefix)."""
     entries_sorted = sorted(
         rows_matched, key=lambda r: (clean(r.get("University", "")), clean(r.get("Bursary Name", "")))
     )
@@ -415,19 +436,19 @@ def render_circumstance_page(slug, h1, noun_phrase, rows_matched):
     lede = (
         f"{count} verified bursaries and scholarships{amt_bit} for {noun_phrase}, across {n_unis} "
         f"UK universities — each linking straight to the official source, no forms with us. Our app "
-        f"also matches you to additional grants beyond this list, based on your full circumstances."
+        f"also matches you to additional grants beyond this list, based on {lede_tail}."
     )
     title = f"{h1} ({date.today().year}) | FindMyFund"
     description = (
         f"{count} verified bursaries and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}. "
         f"See eligibility, deadlines and official application links."
     )
-    canonical = f"{SITE_URL}/bursaries/circumstance/{slug}/"
+    canonical = f"{SITE_URL}/bursaries/{kind}/{slug}/"
     return PAGE_TEMPLATE.format(
         title=esc(title),
         description=esc(description),
         canonical=canonical,
-        crumb_label="Bursaries by circumstance",
+        crumb_label=crumb_label,
         uni_name_esc=esc(h1),
         h1=esc(h1),
         lede=esc(lede),
@@ -439,6 +460,43 @@ def render_circumstance_page(slug, h1, noun_phrase, rows_matched):
         faq=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
         jsonld=faq_jsonld(noun_phrase, scope_phrase=noun_phrase),
         css=PAGE_CSS,
+    )
+
+def render_circumstance_page(slug, h1, noun_phrase, rows_matched):
+    return render_tag_page(
+        "circumstance", slug, h1, noun_phrase, rows_matched,
+        "Bursaries by circumstance", "your full circumstances",
+    )
+
+# ── Region-based pages (same cross-cutting shape as circumstance pages —
+#    "UK region" is a free-text field, sometimes multi-region, so match by
+#    substring containment rather than exact equality). ─────────────────────
+REGIONS = [
+    # (slug, h1, plural noun phrase used in copy)
+    ("scotland", "Bursaries for Students in Scotland", "students in Scotland"),
+    ("south-east", "Bursaries for Students in the South East", "students in the South East"),
+    ("wales", "Bursaries for Students in Wales", "students in Wales"),
+    ("london", "Bursaries for Students in London", "students in London"),
+    ("north-west", "Bursaries for Students in the North West", "students in the North West"),
+    ("south-west", "Bursaries for Students in the South West", "students in the South West"),
+    ("north-east", "Bursaries for Students in the North East", "students in the North East"),
+    ("yorkshire", "Bursaries for Students in Yorkshire", "students in Yorkshire"),
+    ("east-of-england", "Bursaries for Students in the East of England", "students in the East of England"),
+    ("east-midlands", "Bursaries for Students in the East Midlands", "students in the East Midlands"),
+    ("west-midlands", "Bursaries for Students in the West Midlands", "students in the West Midlands"),
+]
+REGION_MATCH = {  # slug -> substring(s) to match against the raw "UK region" cell
+    "scotland": ["scotland"], "south-east": ["south east"], "wales": ["wales"],
+    "london": ["london"], "north-west": ["north west"], "south-west": ["south west"],
+    "north-east": ["north east"], "yorkshire": ["yorkshire"],
+    "east-of-england": ["east of england"], "east-midlands": ["east midlands"],
+    "west-midlands": ["west midlands"],
+}
+
+def render_region_page(slug, h1, noun_phrase, rows_matched):
+    return render_tag_page(
+        "region", slug, h1, noun_phrase, rows_matched,
+        "Bursaries by region", "your region and full circumstances",
     )
 
 HUB_TEMPLATE = """<!doctype html>
@@ -474,6 +532,9 @@ HUB_TEMPLATE = """<!doctype html>
   <h2>Browse by circumstance</h2>
   <div class="ulist">{circumstance_links}
   </div>
+  <h2>Browse by region</h2>
+  <div class="ulist">{region_links}
+  </div>
   <h2>Browse by university</h2>
   <div class="ulist">{links}
   </div>
@@ -483,7 +544,7 @@ HUB_TEMPLATE = """<!doctype html>
 </html>
 """
 
-def render_hub(uni_list, singles_count, circumstance_counts):
+def render_hub(uni_list, singles_count, circumstance_counts, region_counts):
     links = "".join(
         f'<a href="/bursaries/{slug}/">{esc(name)}<div class="n">{count} bursar{"y" if count==1 else "ies"}</div></a>'
         for name, slug, count in uni_list
@@ -492,6 +553,10 @@ def render_hub(uni_list, singles_count, circumstance_counts):
     circumstance_links = "".join(
         f'<a href="/bursaries/circumstance/{slug}/">{esc(h1)}<div class="n">{count} bursaries</div></a>'
         for slug, h1, count in circumstance_counts
+    )
+    region_links = "".join(
+        f'<a href="/bursaries/region/{slug}/">{esc(h1)}<div class="n">{count} bursaries</div></a>'
+        for slug, h1, count in region_counts
     )
     n_total = sum(c for _, _, c in uni_list) + singles_count
     return HUB_TEMPLATE.format(
@@ -503,6 +568,7 @@ def render_hub(uni_list, singles_count, circumstance_counts):
         play=PLAY_URL,
         perks=PERKS_HTML,
         circumstance_links=circumstance_links,
+        region_links=region_links,
         links=links,
     )
 
@@ -535,14 +601,32 @@ for slug, h1, noun_phrase, filt in CIRCUMSTANCES:
         f.write(render_circumstance_page(slug, h1, noun_phrase, matched))
     circumstance_counts.append((slug, h1, len(matched)))
 
+# region pages
+region_counts = []
+for slug, h1, noun_phrase in REGIONS:
+    needles = REGION_MATCH[slug]
+    matched = [
+        r for r in rows
+        if clean(r.get("Bursary Name", ""))
+        and any(n in clean(r.get("UK region", "")).lower() for n in needles)
+    ]
+    if not matched:
+        continue
+    d = os.path.join(OUT_DIR, "region", slug)
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
+        f.write(render_region_page(slug, h1, noun_phrase, matched))
+    region_counts.append((slug, h1, len(matched)))
+
 # hub
 with open(os.path.join(OUT_DIR, "index.html"), "w", encoding="utf-8") as f:
-    f.write(render_hub(uni_list, len(singles), circumstance_counts))
+    f.write(render_hub(uni_list, len(singles), circumstance_counts, region_counts))
 
 # sitemap
 urls = [f"{SITE_URL}/", f"{SITE_URL}/bursaries/", f"{SITE_URL}/bursaries/more-universities/"]
 urls += [f"{SITE_URL}/bursaries/{slug}/" for _, slug, _ in uni_list]
 urls += [f"{SITE_URL}/bursaries/circumstance/{slug}/" for slug, _, _ in circumstance_counts]
+urls += [f"{SITE_URL}/bursaries/region/{slug}/" for slug, _, _ in region_counts]
 sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 for u in urls:
     sitemap += f"  <url><loc>{u}</loc><lastmod>{TODAY}</lastmod></url>\n"
@@ -553,4 +637,4 @@ with open("sitemap.xml", "w", encoding="utf-8") as f:
 with open("robots.txt", "w", encoding="utf-8") as f:
     f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
 
-print(f"Built {len(uni_list)} university pages + 1 rollup + {len(circumstance_counts)} circumstance pages + hub + sitemap ({len(urls)} URLs total).")
+print(f"Built {len(uni_list)} university pages + 1 rollup + {len(circumstance_counts)} circumstance pages + {len(region_counts)} region pages + hub + sitemap ({len(urls)} URLs total).")
