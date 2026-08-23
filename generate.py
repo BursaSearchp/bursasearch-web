@@ -111,7 +111,7 @@ def eligibility_badges(row):
             badges.append(f"{label}: {v}")
     return badges[:4]  # keep each card scannable, not a wall of chips
 
-def bursary_card(row, tag=None):
+def bursary_card(row, tag=None, tag_href=None):
     name = clean(row.get("Bursary Name", "")) or "Bursary"
     amount = clean(row.get("Amount", ""))
     deadline = clean(row.get("Deadline", ""))
@@ -134,7 +134,15 @@ def bursary_card(row, tag=None):
         f'<a class="src" href="{esc(link)}" target="_blank" rel="noopener">View official details →</a>'
         if link else ""
     )
-    tag_html = f'<div class="uni-tag">{esc(tag)}</div>' if tag else ""
+    if tag and tag_href:
+        # Links a card's university tag back to that university's own page —
+        # the main path (besides the hub) between the circumstance/region
+        # pages and the university pages.
+        tag_html = f'<a class="uni-tag" href="{esc(tag_href)}">{esc(tag)}</a>'
+    elif tag:
+        tag_html = f'<div class="uni-tag">{esc(tag)}</div>'
+    else:
+        tag_html = ""
 
     return f"""
       <div class="card">
@@ -226,7 +234,14 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
   font-size:11.5px; color:var(--text-mut); text-align:center;
 }
 .foot a{color:var(--text-mut);}
-.uni-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px;}
+.uni-tag{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px; text-decoration:none;}
+a.uni-tag:hover{text-decoration:underline;}
+.ulist{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin:0 0 8px;}
+.ulist a{
+  display:block; background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:10px 13px; font-size:12.5px; font-weight:600; color:var(--text); text-decoration:none;
+}
+.ulist a:hover{border-color:var(--teal);}
 """
 
 PERKS_HTML = """
@@ -316,7 +331,7 @@ PAGE_TEMPLATE = """<!doctype html>
   <h2>Common questions</h2>
   <div class="faq">{faq}
   </div>
-
+{related}
   <div class="foot">
     Bursary details are sourced from official university and provider pages and may change —
     always confirm on the official link before applying. <a href="/">FindMyFund</a> · Bursa Group Ltd
@@ -325,6 +340,27 @@ PAGE_TEMPLATE = """<!doctype html>
 </body>
 </html>
 """
+
+def related_links_html(entries):
+    """Cross-links a university page out to the circumstance/region pages
+    its own bursaries actually qualify for — otherwise those pages are only
+    reachable from the hub, which is a dead end for crawl depth and for
+    students who'd genuinely want to see them."""
+    links = []
+    for slug, h1, noun_phrase, filt in CIRCUMSTANCES:
+        if any(filt(r) for r in entries):
+            links.append((f"/bursaries/circumstance/{slug}/", h1))
+    for slug, h1, noun_phrase in REGIONS:
+        needles = REGION_MATCH[slug]
+        if any(any(n in clean(r.get("UK region", "")).lower() for n in needles) for r in entries):
+            links.append((f"/bursaries/region/{slug}/", h1))
+    if not links:
+        return ""
+    items = "".join(f'<a href="{esc(href)}">{esc(label)}</a>' for href, label in links)
+    return f"""
+  <h2>Also see</h2>
+  <div class="ulist">{items}
+  </div>"""
 
 def render_page(uni_name, entries, slug):
     entries_sorted = sorted(entries, key=lambda r: clean(r.get("Bursary Name", "")))
@@ -357,6 +393,7 @@ def render_page(uni_name, entries, slug):
         list_heading=esc(f"{count} bursaries currently listed"),
         cards=cards,
         faq=faq_block(uni_name, count),
+        related=related_links_html(entries),
         jsonld=faq_jsonld(uni_name),
         css=PAGE_CSS,
     )
@@ -392,6 +429,7 @@ def render_rollup(singles):
         list_heading=esc(f"{count} bursaries currently listed"),
         cards=cards,
         faq=faq_block("these universities", count),
+        related="",
         jsonld=faq_jsonld("these universities"),
         css=PAGE_CSS,
     )
@@ -419,16 +457,20 @@ CIRCUMSTANCES = [
      "refugees and asylum seekers", lambda r: has_vulnerability(r, "Refugee or asylum seeker")),
 ]
 
-def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede_tail):
+def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede_tail, canon_by_key):
     """Shared renderer for the cross-cutting tag pages (circumstance, region —
     same shape as a circumstance page, just a different filter axis and a
     different URL prefix)."""
     entries_sorted = sorted(
         rows_matched, key=lambda r: (clean(r.get("University", "")), clean(r.get("Bursary Name", "")))
     )
-    cards = "".join(
-        bursary_card(r, tag=clean(r.get("University", "")) or None) for r in entries_sorted
-    )
+    card_parts = []
+    for r in entries_sorted:
+        raw_uni = clean(r.get("University", ""))
+        resolved = canon_by_key.get(norm_uni_key(raw_uni)) if raw_uni else None
+        tag_href = f"/bursaries/{resolved[1]}/" if resolved else None
+        card_parts.append(bursary_card(r, tag=raw_uni or None, tag_href=tag_href))
+    cards = "".join(card_parts)
     count = len(entries_sorted)
     amt_range = amount_range_text(entries_sorted)
     amt_bit = f" worth {amt_range}" if amt_range else ""
@@ -458,14 +500,15 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         list_heading=esc(f"{count} bursaries currently listed"),
         cards=cards,
         faq=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
+        related="",
         jsonld=faq_jsonld(noun_phrase, scope_phrase=noun_phrase),
         css=PAGE_CSS,
     )
 
-def render_circumstance_page(slug, h1, noun_phrase, rows_matched):
+def render_circumstance_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
     return render_tag_page(
         "circumstance", slug, h1, noun_phrase, rows_matched,
-        "Bursaries by circumstance", "your full circumstances",
+        "Bursaries by circumstance", "your full circumstances", canon_by_key,
     )
 
 # ── Region-based pages (same cross-cutting shape as circumstance pages —
@@ -493,10 +536,10 @@ REGION_MATCH = {  # slug -> substring(s) to match against the raw "UK region" ce
     "west-midlands": ["west midlands"],
 }
 
-def render_region_page(slug, h1, noun_phrase, rows_matched):
+def render_region_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
     return render_tag_page(
         "region", slug, h1, noun_phrase, rows_matched,
-        "Bursaries by region", "your region and full circumstances",
+        "Bursaries by region", "your region and full circumstances", canon_by_key,
     )
 
 HUB_TEMPLATE = """<!doctype html>
@@ -583,6 +626,11 @@ for uni, entries in sorted(multi.items()):
         f.write(render_page(uni, entries, slug))
     uni_list.append((uni, slug, len(entries)))
 
+# Maps a normalised university key -> (canonical display name, slug), for
+# the tag pages to link a bursary card's university tag back to that
+# university's own page (only universities with >=2 bursaries get one).
+canon_by_key = {norm_uni_key(name): (name, slug) for name, slug, _ in uni_list}
+
 # rollup
 d = os.path.join(OUT_DIR, "more-universities")
 os.makedirs(d, exist_ok=True)
@@ -598,7 +646,7 @@ for slug, h1, noun_phrase, filt in CIRCUMSTANCES:
     d = os.path.join(OUT_DIR, "circumstance", slug)
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
-        f.write(render_circumstance_page(slug, h1, noun_phrase, matched))
+        f.write(render_circumstance_page(slug, h1, noun_phrase, matched, canon_by_key))
     circumstance_counts.append((slug, h1, len(matched)))
 
 # region pages
@@ -615,7 +663,7 @@ for slug, h1, noun_phrase in REGIONS:
     d = os.path.join(OUT_DIR, "region", slug)
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as f:
-        f.write(render_region_page(slug, h1, noun_phrase, matched))
+        f.write(render_region_page(slug, h1, noun_phrase, matched, canon_by_key))
     region_counts.append((slug, h1, len(matched)))
 
 # hub

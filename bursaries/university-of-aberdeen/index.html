@@ -77,7 +77,14 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
   font-size:11.5px; color:var(--text-mut); text-align:center;
 }
 .foot a{color:var(--text-mut);}
-.uni-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px;}
+.uni-tag{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px; text-decoration:none;}
+a.uni-tag:hover{text-decoration:underline;}
+.ulist{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin:0 0 8px;}
+.ulist a{
+  display:block; background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:10px 13px; font-size:12.5px; font-weight:600; color:var(--text); text-decoration:none;
+}
+.ulist a:hover{border-color:var(--teal);}
 </style>
 </head>
 <body>
@@ -157,6 +164,9 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
         </details>
   </div>
 
+  <h2>Also see</h2>
+  <div class="ulist"><a href="/bursaries/circumstance/international-students/">Bursaries for International Students in the UK</a><a href="/bursaries/region/scotland/">Bursaries for Students in Scotland</a><a href="/bursaries/region/wales/">Bursaries for Students in Wales</a>
+  </div>
   <div class="foot">
     Bursary details are sourced from official university and provider pages and may change —
     always confirm on the official link before applying. <a href="/">FindMyFund</a> · Bursa Group Ltd

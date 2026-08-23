@@ -77,7 +77,14 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
   font-size:11.5px; color:var(--text-mut); text-align:center;
 }
 .foot a{color:var(--text-mut);}
-.uni-tag{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px;}
+.uni-tag{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px; text-decoration:none;}
+a.uni-tag:hover{text-decoration:underline;}
+.ulist{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin:0 0 8px;}
+.ulist a{
+  display:block; background:var(--card); border:1px solid var(--border); border-radius:10px;
+  padding:10px 13px; font-size:12.5px; font-weight:600; color:var(--text); text-decoration:none;
+}
+.ulist a:hover{border-color:var(--teal);}
 </style>
 </head>
 <body>
@@ -105,7 +112,7 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
   <h2>12 bursaries currently listed</h2>
   <div class="grid">
       <div class="card">
-        <div class="uni-tag">Lancaster University</div>
+        <a class="uni-tag" href="/bursaries/lancaster-university/">Lancaster University</a>
         <h3>Lancaster Bursary</h3>
         <div class="meta"><span class="amt">£1,000</span> · <span class="dl">Deadline: 01 August 2026</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: Scotland</span></div>
@@ -119,70 +126,70 @@ h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
         <a class="src" href="https://www.hope.ac.uk/undergraduate/feesandfunding/scholarships/" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Cumbria</div>
+        <a class="uni-tag" href="/bursaries/university-of-cumbria/">University of Cumbria</a>
         <h3>The Cumbria Business and Tourism Excellence Scholarship</h3>
         <div class="meta"><span class="amt">£1,500</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
         <a class="src" href="https://www.cumbria.ac.uk/study/student-finance/scholarships-and-bursaries/" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>Articulation Scholarship</h3>
         <div class="meta"><span class="amt">£1,000 per year</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
         <a class="src" href="https://www.blackbullion.com/funding/uclan-articulation-scholarship" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>David Game Scholarship</h3>
         <div class="meta"><span class="amt">£2,000</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
         <a class="src" href="https://www.lancashire.ac.uk/study/fees-and-finance/bursaries-and-scholarships/david-game-scholarship" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>International Travel Bursary</h3>
         <div class="meta"><span class="amt">£407</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span><span class="badge">Home country: United Kingdom</span></div>
         <a class="src" href="https://www.blackbullion.com/funding/uclan-international-travel-bursary" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>Learning Support Fund</h3>
         <div class="meta"><span class="amt">£407</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
         <a class="src" href="https://www.blackbullion.com/funding/uclan-learning-support-fund" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>Leverhulme Bursary</h3>
         <div class="meta"><span class="amt">£3,000</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
         <a class="src" href="https://www.lancashire.ac.uk/study/fees-and-finance/bursaries-and-scholarships/leverhulme" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>MBBS scholarships</h3>
         <div class="meta"><span class="amt">All tuition fees for the duration of the course (five years)</span></div>
         <div class="badges"><span class="badge">Subject: Medicine</span><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span></div>
         <a class="src" href="https://www.lancashire.ac.uk/study/fees-and-finance/bursaries-and-scholarships/mbbs" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>Medicine Scholarship</h3>
         <div class="meta"><span class="amt">£407</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
         <a class="src" href="https://www.blackbullion.com/funding/uclan-medicine-scholarship" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Lancashire</div>
+        <a class="uni-tag" href="/bursaries/university-of-lancashire/">University of Lancashire</a>
         <h3>UCLan Financial Bursary</h3>
         <div class="meta"><span class="amt">£200</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
         <a class="src" href="https://www.blackbullion.com/funding/uclan-financial-bursary" target="_blank" rel="noopener">View official details →</a>
       </div>
       <div class="card">
-        <div class="uni-tag">University of Manchester</div>
+        <a class="uni-tag" href="/bursaries/university-of-manchester/">University of Manchester</a>
         <h3>The Michael Bates Outreach Scholarship</h3>
         <div class="meta"><span class="amt">£2,000</span> · <span class="dl">Deadline: 30 April</span></div>
         <div class="badges"><span class="badge">Fee status: UK Domiciled</span><span class="badge">Study level: Undergraduate</span><span class="badge">Region: North West</span><span class="badge">Nationality: United Kingdom</span></div>
