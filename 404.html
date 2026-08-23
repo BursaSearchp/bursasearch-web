@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Page Not Found | FindMyFund</title>
+<meta name="description" content="This page doesn't exist. Browse UK university bursaries and scholarships or get matched by the FindMyFund app.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --bg:#091723; --card:#0f2135; --border:#1a3050;
+  --teal:#0f8a8a; --teal-br:#1cc4bc;
+  --text:#ffffff; --text-sec:#7a9bb5;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+  font-family:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;
+  display:flex; align-items:center; justify-content:center; padding:40px 20px;
+}
+.wrap{max-width:480px; text-align:center;}
+h1{font-size:22px; font-weight:800; margin:0 0 10px;}
+p{font-size:14.5px; color:var(--text-sec); margin:0 0 28px; line-height:1.5;}
+.cta-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+.cta{
+  display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+  background:var(--teal); color:#06110e; font-weight:700; font-size:13.5px;
+  padding:11px 16px; border-radius:10px;
+}
+.cta.ghost{background:transparent; color:var(--teal-br); border:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>That page doesn't exist</h1>
+  <p>The bursary or university page you're looking for may have moved. Browse the full list, or let the app match you directly.</p>
+  <div class="cta-row">
+    <a class="cta" href="/bursaries/">Browse all bursaries</a>
+    <a class="cta ghost" href="/">FindMyFund home</a>
+  </div>
+</div>
+</body>
+</html>
