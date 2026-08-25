@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://findmyfund.co.uk/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/more-universities/</loc><lastmod>2026-08-23</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/</loc><lastmod>2026-08-25</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/more-universities/</loc><lastmod>2026-08-25</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/abertay-university/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/aberystwyth-university/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/academy-of-live-technology/</loc><lastmod>2026-08-23</lastmod></url>
@@ -46,7 +46,7 @@
   <url><loc>https://findmyfund.co.uk/bursaries/leeds-trinity-university/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/lincoln-college-university/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/liverpool-john-moores-university/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/london-school-of-economics-and-political-science-lse/</loc><lastmod>2026-08-23</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/london-school-of-economics-and-political-science-lse/</loc><lastmod>2026-08-25</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/loughborough-university/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/manchester-metropolitan-university/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/middlesex-university/</loc><lastmod>2026-08-23</lastmod></url>
@@ -127,7 +127,7 @@
   <url><loc>https://findmyfund.co.uk/bursaries/university-of-the-west-of-england-bristol/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/wrexham-university/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/york-st-john-university/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/circumstance/low-income-students/</loc><lastmod>2026-08-23</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/circumstance/low-income-students/</loc><lastmod>2026-08-25</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/circumstance/care-leavers/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/circumstance/international-students/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/circumstance/estranged-students/</loc><lastmod>2026-08-23</lastmod></url>
@@ -138,7 +138,7 @@
   <url><loc>https://findmyfund.co.uk/bursaries/subject/medicine/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/subject/veterinary-studies/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/subject/music/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/region/scotland/</loc><lastmod>2026-08-23</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/region/scotland/</loc><lastmod>2026-08-25</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/region/south-east/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/region/wales/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/region/london/</loc><lastmod>2026-08-23</lastmod></url>
@@ -148,7 +148,7 @@
   <url><loc>https://findmyfund.co.uk/bursaries/region/yorkshire/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/region/east-of-england/</loc><lastmod>2026-08-23</lastmod></url>
   <url><loc>https://findmyfund.co.uk/bursaries/region/east-midlands/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/region/west-midlands/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/closing-soon/</loc><lastmod>2026-08-23</lastmod></url>
-  <url><loc>https://findmyfund.co.uk/bursaries/highest-value/</loc><lastmod>2026-08-23</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/region/west-midlands/</loc><lastmod>2026-08-25</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/closing-soon/</loc><lastmod>2026-08-25</lastmod></url>
+  <url><loc>https://findmyfund.co.uk/bursaries/highest-value/</loc><lastmod>2026-08-25</lastmod></url>
 </urlset>
