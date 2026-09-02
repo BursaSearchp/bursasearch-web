@@ -227,47 +227,66 @@ def eligibility_badges(row):
             badges.append(f"{label}: {v}")
     return badges[:4]  # keep each card scannable, not a wall of chips
 
-def bursary_card(row, tag=None, tag_href=None):
+_ROLLING_HINTS = ("rolling", "ongoing", "no deadline", "any time", "anytime",
+                  "year-round", "year round", "open all year", "continuous")
+
+def deadline_line(row):
+    """A single 'Deadline …' / 'Rolling …' line for a bursary row, honest about
+    what the data actually says: a parseable future date (flagged 'closing
+    soon' inside 60 days), an open-ended cell, or — when there's no deadline
+    data at all — nothing (never a fabricated 'automatic')."""
+    raw = clean(row.get("Deadline", ""))
+    if not raw:
+        return ""
+    d = parse_deadline_date(raw)
+    if d:
+        if d < date.today():
+            return ""  # a one-off deadline that's already passed — stale, hide it
+        soon = (d - date.today()).days <= 60
+        txt = f"Deadline {format_deadline(raw)}" + (" · closing soon" if soon else "")
+        return f'<span class="dl{" soon" if soon else ""}">{esc(txt)}</span>'
+    if any(h in raw.lower() for h in _ROLLING_HINTS):
+        return '<span class="dl">Rolling — apply any time</span>'
+    return f'<span class="dl">Deadline: {esc(raw)}</span>'
+
+def bursary_row(row, uni=None, uni_href=None, fund_href=None):
+    """One fund as a row in a bordered list. `uni`/`uni_href` show + link the
+    provider (used on the cross-cutting pages). `fund_href` links the name to
+    the fund's own page — wired now, populated once per-grant pages exist."""
     name = clean(row.get("Bursary Name", "")) or "Bursary"
     amount = format_amount(row.get("Amount", ""))
-    deadline = format_deadline(row.get("Deadline", ""))
-    link = clean(row.get("Link", "")) or clean(row.get("Application URL", ""))
+    link = clean(row.get("Application URL", "")) or clean(row.get("Link", ""))
     subject = clean(row.get("Study subject", ""))
-    badges = eligibility_badges(row)
+    chips = eligibility_badges(row)
     if subject:
-        badges = [f"Subject: {subject}"] + badges
-    badges = badges[:4]
+        chips = [f"Subject: {subject}"] + chips
+    chips = chips[:3]
 
-    meta_bits = []
-    if amount:
-        meta_bits.append(f'<span class="amt">{esc(amount)}</span>')
-    if deadline:
-        meta_bits.append(f'<span class="dl">Deadline: {esc(deadline)}</span>')
-    meta_html = " · ".join(meta_bits)
-
-    badge_html = "".join(f'<span class="badge">{esc(b)}</span>' for b in badges)
-    link_html = (
-        f'<a class="src" href="{esc(link)}" target="_blank" rel="noopener">View official details →</a>'
+    if fund_href:
+        name_html = f'<a class="nm" href="{esc(fund_href)}">{esc(name)}</a>'
+    else:
+        name_html = f'<span class="nm">{esc(name)}</span>'
+    amt_html = f'<span class="amt">{esc(amount)}</span>' if amount else ""
+    if uni and uni_href:
+        prov = f'<div class="prov"><a href="{esc(uni_href)}">{esc(uni)}</a></div>'
+    elif uni:
+        prov = f'<div class="prov">{esc(uni)}</div>'
+    else:
+        prov = ""
+    chip_html = "".join(f'<span class="chip">{esc(c)}</span>' for c in chips)
+    chips_block = f'<div class="chips">{chip_html}</div>' if chip_html else ""
+    dl = deadline_line(row)
+    go = (
+        f'<a class="go" href="{esc(link)}" target="_blank" rel="noopener">Official details →</a>'
         if link else ""
     )
-    if tag and tag_href:
-        # Links a card's university tag back to that university's own page —
-        # the main path (besides the hub) between the circumstance/region
-        # pages and the university pages.
-        tag_html = f'<a class="uni-tag" href="{esc(tag_href)}">{esc(tag)}</a>'
-    elif tag:
-        tag_html = f'<div class="uni-tag">{esc(tag)}</div>'
-    else:
-        tag_html = ""
-
-    return f"""
-      <div class="card">
-        {tag_html}
-        <h3>{esc(name)}</h3>
-        {f'<div class="meta">{meta_html}</div>' if meta_html else ''}
-        {f'<div class="badges">{badge_html}</div>' if badge_html else ''}
-        {link_html}
-      </div>"""
+    foot = f'<div class="foot{" split" if dl else ""}">{dl}{go}</div>' if (dl or go) else ""
+    return (
+        '<div class="row">'
+        f'<div class="top">{name_html}{amt_html}</div>'
+        f'{prov}{chips_block}{foot}'
+        '</div>'
+    )
 
 def amount_range_text(entries):
     """Best-effort human summary like '£500–£3,000' from the raw Amount strings."""
@@ -285,90 +304,291 @@ def amount_range_text(entries):
         return f"£{lo:,}"
     return f"£{lo:,}–£{hi:,}"
 
-PAGE_CSS = """
-:root{
-  --bg:#091723; --card:#0f2135; --border:#1a3050;
-  --teal:#0f8a8a; --teal-br:#1cc4bc;
-  --text:#ffffff; --text-sec:#7a9bb5; --text-mut:#3d5a75;
-}
+# ── Presentation layer ──────────────────────────────────────────────────────
+# The website is deliberately committed to ONE light theme: it's a public
+# reference/directory that sits next to gov.uk and university pages, and it
+# is intentionally NOT styled like the (dark, soft-rounded) app — near-square
+# corners, hairline rules instead of shadows. Headings: Archivo. Body: Inter.
+# The Sora wordmark is the only visual tie to the app.
+SITE_CSS = """
 *{box-sizing:border-box;}
+:root{
+  --paper:#FBFCFD; --ground:#EEF2F5; --ink:#0B2233; --ink-soft:#46596B;
+  --ink-mute:#7C8FA0; --line:#D7DEE4; --teal:#0E7C7B; --teal-ink:#0A5C5B;
+  --teal-wash:#E8F2F1; --navy:#0B2233; --warn:#B5561E; --maxw:960px;
+}
+html{-webkit-text-size-adjust:100%;}
 body{
-  margin:0; background:var(--bg); color:var(--text);
-  font-family:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;
-  line-height:1.5;
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:720px; margin:0 auto; padding:28px 20px 64px;}
-a{color:var(--teal-br);}
-.crumb{font-size:12.5px; color:var(--text-sec); margin-bottom:18px;}
-.crumb a{color:var(--text-sec); text-decoration:none;}
-.crumb a:hover{color:var(--teal-br);}
-h1{font-size:26px; font-weight:800; line-height:1.2; margin:0 0 10px;}
-.lede{font-size:14.5px; color:var(--text-sec); margin:0 0 26px; max-width:60ch;}
-.cta-row{display:flex; gap:10px; flex-wrap:wrap; margin:0 0 32px;}
-.cta{
-  display:inline-flex; align-items:center; gap:8px; text-decoration:none;
-  background:var(--teal); color:#06110e; font-weight:700; font-size:13.5px;
-  padding:11px 16px; border-radius:10px;
+a{color:var(--teal-ink); text-decoration:none;}
+a:hover{text-decoration:underline;}
+strong{font-weight:600;}
+:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+
+.hdr{
+  position:sticky; top:0; z-index:20; display:flex; align-items:center;
+  gap:14px 20px; flex-wrap:wrap; padding:8px 20px; min-height:56px;
+  background:rgba(251,252,253,.94); backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
 }
-.cta.ghost{background:transparent; color:var(--teal-br); border:1px solid var(--border);}
-.perks{display:flex; flex-wrap:wrap; gap:12px; margin:0 0 34px;}
-.perks .perk{
-  flex:1 1 220px; display:flex; gap:10px; align-items:flex-start;
-  background:var(--card); border:1px solid var(--border); border-radius:12px;
-  padding:13px 14px;
-}
-.perks .perk .ic{font-size:16px; line-height:1; flex-shrink:0; margin-top:1px;}
-.perks .perk b{display:block; font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:2px;}
-.perks .perk span{font-size:11.5px; color:var(--text-sec); line-height:1.4;}
-h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
-.grid{display:flex; flex-direction:column; gap:12px;}
-.card{
-  background:var(--card); border:1px solid var(--border); border-radius:14px;
-  padding:16px 18px;
-}
-.card h3{font-size:15px; font-weight:700; margin:0 0 6px; color:var(--text);}
-.card .meta{font-size:12.5px; color:var(--teal-br); font-weight:600; margin-bottom:8px;}
-.card .badges{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
-.card .badge{
-  font-size:10.5px; font-weight:600; color:var(--text-sec);
-  background:rgba(255,255,255,.05); border:1px solid var(--border);
-  padding:3px 8px; border-radius:999px;
-}
-.card .src{font-size:12.5px; font-weight:600; text-decoration:none;}
-.card .src:hover{text-decoration:underline;}
-.faq{margin-top:8px;}
-.faq details{
-  border-bottom:1px solid var(--border); padding:14px 0;
-}
-.faq summary{
-  font-size:14px; font-weight:700; cursor:pointer; list-style:none;
-}
+.brand{display:flex; align-items:center; gap:8px; font-family:"Sora",sans-serif;
+  font-weight:700; font-size:16px; letter-spacing:-.01em; color:var(--ink);}
+.brand:hover{text-decoration:none;}
+.brand .mk{width:24px; height:24px; border-radius:4px; background:var(--navy);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.brand .mk svg{width:14px; height:14px;}
+.brand .s{color:var(--teal);}
+.nav{display:flex; flex-wrap:wrap; gap:6px 15px;}
+.nav a{font-size:13.5px; font-weight:500; color:var(--ink-soft);}
+.nav a:hover{color:var(--teal-ink); text-decoration:none;}
+.hdr .grow{flex:1;}
+.btn{display:inline-flex; align-items:center; gap:7px; font-weight:600;
+  font-size:13.5px; background:var(--teal); color:#fff; padding:8px 14px;
+  border-radius:3px; border:1px solid var(--teal); cursor:pointer;}
+.btn:hover{background:var(--teal-ink); text-decoration:none; color:#fff;}
+.btn.lg{font-size:15px; padding:11px 20px;}
+
+.hero{background:var(--navy); color:#fff; padding:54px 20px 46px;}
+.hero .in{max-width:var(--maxw); margin:0 auto;}
+.hero h1{font-family:"Archivo",sans-serif; font-weight:700;
+  font-size:clamp(28px,4.6vw,44px); line-height:1.07; letter-spacing:-.02em;
+  margin:0 0 14px; text-wrap:balance; max-width:19ch;}
+.hero p{font-size:17px; color:#A9C0D1; margin:0 0 24px; max-width:54ch;}
+.hero .actions{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+.hero .stores{font-size:13px; color:#8AA3B6;}
+.facts{display:flex; flex-wrap:wrap; gap:22px 30px; margin:32px 0 0;
+  border-top:1px solid rgba(255,255,255,.14); padding-top:20px;}
+.facts b{display:block; font-family:"Archivo",sans-serif; font-weight:700;
+  font-size:22px; font-variant-numeric:tabular-nums;}
+.facts span{font-size:12.5px; color:#8AA3B6;}
+
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 20px 64px;}
+.crumb{display:flex; flex-wrap:wrap; gap:6px; font-size:12.5px;
+  color:var(--ink-mute); padding:15px 0; border-bottom:1px solid var(--line);}
+.crumb a{color:var(--ink-mute);}
+h1.page{font-family:"Archivo",sans-serif; font-weight:700;
+  font-size:clamp(25px,3.6vw,33px); line-height:1.13; letter-spacing:-.015em;
+  margin:24px 0 12px; text-wrap:balance;}
+.lede{font-size:15.5px; color:var(--ink-soft); max-width:66ch; margin:0 0 22px;}
+.wrap h2{font-family:"Archivo",sans-serif; font-weight:600; font-size:13.5px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);
+  margin:40px 0 14px; padding-left:11px; border-left:3px solid var(--teal);}
+
+.match{background:var(--teal-wash); border:1px solid #C9E3E1; border-radius:3px;
+  padding:15px 17px; margin:20px 0 6px; display:flex; align-items:center;
+  gap:16px; flex-wrap:wrap;}
+.match p{margin:0; font-size:14px; color:var(--teal-ink); flex:1; min-width:230px;}
+.match .stores{font-size:12px; color:var(--ink-mute);}
+.match .stores a{color:var(--ink-mute);}
+
+.list{border:1px solid var(--line); border-radius:3px; overflow:hidden;
+  background:var(--paper);}
+.list .row{padding:14px 17px; border-top:1px solid var(--line);}
+.list .row:first-child{border-top:0;}
+.list .row:hover{background:#F4F8F8;}
+.row .top{display:flex; align-items:baseline; gap:14px;}
+.row .nm{font-family:"Archivo",sans-serif; font-weight:600; font-size:15.5px;
+  color:var(--ink); flex:1;}
+a.nm:hover{color:var(--teal-ink);}
+.row .amt{font-weight:600; font-size:14.5px; color:var(--teal-ink);
+  font-variant-numeric:tabular-nums; white-space:nowrap;}
+.row .prov{font-size:12.5px; color:var(--ink-mute); margin-top:2px;}
+.row .chips{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 7px;}
+.row .chip{font-size:11.5px; font-weight:500; color:var(--ink-soft);
+  border:1px solid var(--line); border-radius:2px; padding:2px 7px;}
+.row .foot{display:flex; align-items:center; justify-content:flex-end;
+  gap:12px; flex-wrap:wrap; margin-top:4px;}
+.row .foot.split{justify-content:space-between;}
+.row .chips + .foot{margin-top:0;}
+.row .dl{font-size:12.5px; color:var(--ink-mute);}
+.row .dl.soon{color:var(--warn); font-weight:600;}
+.row .go{font-size:12.5px; font-weight:600; white-space:nowrap;}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(228px,1fr));
+  gap:10px;}
+.tiles a{display:block; background:var(--paper); border:1px solid var(--line);
+  border-radius:3px; padding:12px 14px;}
+.tiles a:hover{border-color:var(--teal); text-decoration:none;}
+.tiles a b{display:block; font-family:"Archivo",sans-serif; font-weight:600;
+  font-size:14px; color:var(--ink);}
+.tiles a span{display:block; font-size:12.5px; color:var(--ink-mute);
+  margin-top:2px; font-variant-numeric:tabular-nums;}
+
+.steps{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+.steps .step{border:1px solid var(--line); border-radius:3px; padding:15px;
+  background:var(--paper);}
+.steps .step i{display:inline-flex; width:23px; height:23px; border-radius:2px;
+  background:var(--teal-wash); color:var(--teal-ink); font-family:"Archivo",sans-serif;
+  font-weight:700; font-size:12.5px; align-items:center; justify-content:center;
+  margin-bottom:8px; font-style:normal;}
+.steps .step b{display:block; font-family:"Archivo",sans-serif; font-size:14px;
+  margin-bottom:3px;}
+.steps .step p{margin:0; font-size:13px; color:var(--ink-soft);}
+
+.faq details{border-top:1px solid var(--line); padding:12px 0;}
+.faq details:first-child{border-top:0;}
+.faq summary{font-family:"Archivo",sans-serif; font-weight:600; font-size:14px;
+  cursor:pointer; list-style:none; display:flex; justify-content:space-between;
+  gap:12px;}
 .faq summary::-webkit-details-marker{display:none;}
-.faq p{font-size:13px; color:var(--text-sec); margin:8px 0 0;}
-.foot{
-  margin-top:48px; padding-top:20px; border-top:1px solid var(--border);
-  font-size:11.5px; color:var(--text-mut); text-align:center;
+.faq summary::after{content:"+"; color:var(--teal); font-weight:700;}
+.faq details[open] summary::after{content:"\\2013";}
+.faq p{font-size:13.5px; color:var(--ink-soft); margin:9px 0 0;}
+
+.ftr{background:var(--ground); border-top:1px solid var(--line);
+  margin-top:52px; padding:32px 20px 26px;}
+.ftr .cols{max-width:var(--maxw); margin:0 auto; display:flex; gap:44px;
+  flex-wrap:wrap;}
+.ftr .col b{display:block; font-family:"Archivo",sans-serif; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-mute);
+  margin-bottom:9px;}
+.ftr .col a{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
+.ftr .fine{max-width:var(--maxw); margin:24px auto 0; padding-top:16px;
+  border-top:1px solid var(--line); font-size:12px; color:var(--ink-mute);}
+
+.ctabar{display:none;}
+@media (max-width:760px){
+  .ctabar{position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex;
+    align-items:center; gap:10px; padding:9px 12px 9px 14px; background:var(--navy);
+    border-top:1px solid rgba(255,255,255,.12);}
+  .ctabar p{margin:0; flex:1; font-size:12.5px; color:#fff; line-height:1.3;}
+  .ctabar .btn{padding:8px 13px; font-size:13px;}
+  .ctabar .x{background:none; border:0; color:#8AA3B6; font-size:20px;
+    line-height:1; padding:2px 4px; cursor:pointer;}
+  body.has-bar{padding-bottom:60px;}
+  .steps{grid-template-columns:1fr;}
+  .ftr .cols{gap:26px;}
 }
-.foot a{color:var(--text-mut);}
-.uni-tag{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px; text-decoration:none;}
-a.uni-tag:hover{text-decoration:underline;}
-.ulist{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin:0 0 8px;}
-.ulist a{
-  display:block; background:var(--card); border:1px solid var(--border); border-radius:10px;
-  padding:10px 13px; font-size:12.5px; font-weight:600; color:var(--text); text-decoration:none;
-}
-.ulist a:hover{border-color:var(--teal);}
 """
 
-PERKS_HTML = """
-    <div class="perk">
-      <span class="ic">⚡</span>
-      <div><b>Direct to source</b><span>Every link goes straight to the official university or provider page — you apply with them, not through us.</span></div>
-    </div>
-    <div class="perk">
-      <span class="ic">🎯</span>
-      <div><b>Beyond this list</b><span>Our app also matches you to national and independent grants that aren't tied to any one university.</span></div>
-    </div>"""
+FONTS = (
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?'
+    'family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&'
+    'family=Sora:wght@700;800&display=swap">'
+)
+
+LOGO_SVG = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" '
+    'stroke-linecap="round"><circle cx="10" cy="10" r="6"></circle>'
+    '<line x1="14.6" y1="14.6" x2="20" y2="20"></line></svg>'
+)
+
+NAV_LINKS = [
+    ("/bursaries/", "Universities"),
+    ("/#circumstance", "Circumstance"),
+    ("/#subject", "Subject"),
+    ("/#region", "Region"),
+    ("/bursaries/closing-soon/", "Closing soon"),
+]
+
+def header_html():
+    nav = "".join(f'<a href="{h}">{esc(t)}</a>' for h, t in NAV_LINKS)
+    return (
+        '<header class="hdr">'
+        f'<a class="brand" href="/"><span class="mk">{LOGO_SVG}</span>'
+        '<span>Bursa<span class="s">Search</span></span></a>'
+        f'<nav class="nav">{nav}</nav>'
+        '<span class="grow"></span>'
+        '<a class="btn" href="/get">Get the app</a>'
+        '</header>'
+    )
+
+def footer_html():
+    return (
+        '<footer class="ftr"><div class="cols">'
+        '<div class="col"><b>Browse</b>'
+        '<a href="/bursaries/">By university</a>'
+        '<a href="/#circumstance">By circumstance</a>'
+        '<a href="/#subject">By subject</a>'
+        '<a href="/#region">By region</a></div>'
+        '<div class="col"><b>Popular</b>'
+        '<a href="/bursaries/closing-soon/">Closing soon</a>'
+        '<a href="/bursaries/highest-value/">Highest value</a>'
+        '<a href="/bursaries/circumstance/care-leavers/">Care leaver bursaries</a>'
+        '<a href="/bursaries/circumstance/low-income-students/">Low-income bursaries</a></div>'
+        '<div class="col"><b>About</b>'
+        f'<a href="{APP_STORE_URL}">iOS app</a>'
+        f'<a href="{PLAY_URL}">Android app</a>'
+        '<a href="https://bursasearchp.github.io/bursasearch-legal/support.html">Support</a></div>'
+        '</div>'
+        '<p class="fine">Bursary details are compiled from official university and '
+        'provider pages and can change &mdash; always confirm on the official link '
+        'before applying. &copy; Bursa Group Ltd.</p></footer>'
+    )
+
+STICKY_BAR = """<div class="ctabar" id="ctabar">
+<p>See which of these funds you qualify for.</p>
+<a class="btn" href="/get">Get matched</a>
+<button class="x" type="button" aria-label="Dismiss" onclick="try{localStorage.setItem('bs_cta_x','1')}catch(e){}document.getElementById('ctabar').style.display='none'">&times;</button>
+<script>try{if(localStorage.getItem('bs_cta_x'))document.getElementById('ctabar').style.display='none'}catch(e){}</script>
+</div>"""
+
+GET_REDIRECT_HTML = (
+    '<!doctype html><html lang="en"><head><meta charset="UTF-8">'
+    '<meta name="robots" content="noindex"><title>Get the BursaSearch app</title>'
+    f'<meta http-equiv="refresh" content="0;url={APP_STORE_URL}">'
+    f'<script>var a={json.dumps(APP_STORE_URL)},p={json.dumps(PLAY_URL)};'
+    'location.replace(/android/i.test(navigator.userAgent||"")?p:a);</script>'
+    f'</head><body>Opening the app&hellip; <a href="{APP_STORE_URL}">App Store</a> '
+    f'&middot; <a href="{PLAY_URL}">Google Play</a></body></html>'
+)
+
+def jsonld_script(obj_json):
+    return f'<script type="application/ld+json">{obj_json}</script>'
+
+def match_callout(context_phrase):
+    return (
+        '<div class="match">'
+        '<p><strong>See which of these you qualify for</strong> &mdash; the free app '
+        f'matches {esc(context_phrase)} to your household income, region and fee status, '
+        'in plain English, and tracks the deadlines.</p>'
+        '<a class="btn" href="/get">Get matched &mdash; free app</a>'
+        f'<span class="stores"><a href="{APP_STORE_URL}">App Store</a> &middot; '
+        f'<a href="{PLAY_URL}">Google Play</a></span>'
+        '</div>'
+    )
+
+def render_shell(*, title, description, canonical, body, hero="", sticky="", schema=""):
+    """The one page template for the whole site. `title`/`description` arrive
+    already escaped by the caller (same as the old PAGE_TEMPLATE contract)."""
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{title}</title>
+<meta name="description" content="{description}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<link rel="canonical" href="{canonical}">
+{FONTS}
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{description}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{canonical}">
+<meta property="og:image" content="{OG_IMAGE}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{description}">
+<meta name="twitter:image" content="{OG_IMAGE}">
+{schema}
+<style>{SITE_CSS}</style>
+</head>
+<body class="{'has-bar' if sticky else ''}">
+{header_html()}
+{hero}
+<main class="wrap">
+{body}
+</main>
+{footer_html()}
+{sticky}
+</body>
+</html>
+"""
 
 def faq_block(uni_name, count, scope_phrase="this university"):
     items = [
@@ -420,58 +640,30 @@ def breadcrumb_jsonld(crumbs):
         ],
     })
 
-PAGE_TEMPLATE = """<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>{title}</title>
-<meta name="description" content="{description}">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="canonical" href="{canonical}">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap">
-<meta property="og:title" content="{title}">
-<meta property="og:description" content="{description}">
-<meta property="og:type" content="website">
-<meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{og_image}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{title}">
-<meta name="twitter:description" content="{description}">
-<meta name="twitter:image" content="{og_image}">
-<script type="application/ld+json">{jsonld}</script>
-<script type="application/ld+json">{breadcrumb}</script>
-<style>{css}</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="crumb"><a href="/">BursaSearch</a> / <a href="/bursaries/">{crumb_label}</a> / {uni_name_esc}</div>
-  <h1>{h1}</h1>
-  <p class="lede">{lede}</p>
+def crumb_html(trail):
+    """trail = list of (label, href_or_None); the last item renders unlinked."""
+    parts = []
+    for i, (label, href) in enumerate(trail):
+        if href and i < len(trail) - 1:
+            parts.append(f'<a href="{href}">{esc(label)}</a>')
+        else:
+            parts.append(f'<span>{esc(label)}</span>')
+    return '<nav class="crumb">' + '<span>›</span>'.join(parts) + '</nav>'
 
-  <div class="cta-row">
-    <a class="cta" href="{app_store}" target="_blank" rel="noopener">Get matched — App Store</a>
-    <a class="cta ghost" href="{play}" target="_blank" rel="noopener">Get matched — Google Play</a>
-  </div>
-
-  <div class="perks">{perks}
-  </div>
-
-  <h2>{list_heading}</h2>
-  <div class="grid">{cards}
-  </div>
-
-  <h2>Common questions</h2>
-  <div class="faq">{faq}
-  </div>
-{related}
-  <div class="foot">
-    Bursary details are sourced from official university and provider pages and may change —
-    always confirm on the official link before applying. <a href="/">BursaSearch</a> · Bursa Group Ltd
-  </div>
-</div>
-</body>
-</html>
-"""
+def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html, related_html):
+    """Assembles the shared body of a listing page (university / rollup /
+    circumstance / subject / region / closing-soon / highest-value)."""
+    return (
+        crumb_html(trail)
+        + f'<h1 class="page">{esc(h1)}</h1>'
+        + f'<p class="lede">{esc(lede)}</p>'
+        + match_callout(context_phrase)
+        + f'<h2>{esc(f"{count} funds currently listed")}</h2>'
+        + f'<div class="list">{rows_html}</div>'
+        + '<h2>Common questions</h2>'
+        + f'<div class="faq">{faq_html}</div>'
+        + related_html
+    )
 
 def related_links_html(entries, exclude=None):
     """Cross-links a page out to the circumstance/subject/region pages its
@@ -500,15 +692,12 @@ def related_links_html(entries, exclude=None):
             links.append((f"/bursaries/region/{slug}/", h1))
     if not links:
         return ""
-    items = "".join(f'<a href="{esc(href)}">{esc(label)}</a>' for href, label in links)
-    return f"""
-  <h2>Also see</h2>
-  <div class="ulist">{items}
-  </div>"""
+    items = "".join(f'<a href="{esc(href)}"><b>{esc(label)}</b></a>' for href, label in links)
+    return f'<h2>Also see</h2><div class="tiles">{items}</div>'
 
 def render_page(uni_name, entries, slug):
     entries_sorted = sorted(entries, key=lambda r: clean(r.get("Bursary Name", "")))
-    cards = "".join(bursary_card(r) for r in entries_sorted)
+    rows_html = "".join(bursary_row(r) for r in entries_sorted)
     count = len(entries)
     amt_range = amount_range_text(entries)
     amt_bit = f" worth {amt_range}" if amt_range else ""
@@ -523,30 +712,23 @@ def render_page(uni_name, entries, slug):
         f"See eligibility, deadlines and official application links."
     )
     canonical = f"{SITE_URL}/bursaries/{slug}/"
-    return PAGE_TEMPLATE.format(
-        title=esc(title),
-        description=esc(description),
-        canonical=canonical,
-        og_image=OG_IMAGE,
-        crumb_label="Bursaries by university",
-        uni_name_esc=esc(uni_name),
-        h1=esc(f"{uni_name} Bursaries & Scholarships"),
-        lede=esc(lede),
-        app_store=APP_STORE_URL,
-        play=PLAY_URL,
-        perks=PERKS_HTML,
-        list_heading=esc(f"{count} bursaries currently listed"),
-        cards=cards,
-        faq=faq_block(uni_name, count),
-        related=related_links_html(entries),
-        jsonld=faq_jsonld(uni_name),
-        breadcrumb=breadcrumb_jsonld([
-            ("BursaSearch", f"{SITE_URL}/"),
-            ("Bursaries by university", f"{SITE_URL}/bursaries/"),
-            (uni_name, canonical),
-        ]),
-        css=PAGE_CSS,
+    body = content_body(
+        trail=[("Home", "/"), ("Bursaries by university", "/bursaries/"), (uni_name, None)],
+        h1=f"{uni_name} Bursaries & Scholarships",
+        lede=lede,
+        context_phrase=f"these {count} {uni_name} funds",
+        count=count,
+        rows_html=rows_html,
+        faq_html=faq_block(uni_name, count),
+        related_html=related_links_html(entries),
     )
+    schema = jsonld_script(faq_jsonld(uni_name)) + jsonld_script(breadcrumb_jsonld([
+        ("BursaSearch", f"{SITE_URL}/"),
+        ("Bursaries by university", f"{SITE_URL}/bursaries/"),
+        (uni_name, canonical),
+    ]))
+    return render_shell(title=esc(title), description=esc(description),
+                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
 
 # ── Rollup page for single-entry universities ───────────────────────────────
 def render_rollup(singles):
@@ -555,7 +737,7 @@ def render_rollup(singles):
         for r in rows_:
             all_rows.append((uni, r))
     all_rows.sort(key=lambda t: t[0])
-    cards = "".join(bursary_card(r, tag=uni) for uni, r in all_rows)
+    rows_html = "".join(bursary_row(r, uni=uni) for uni, r in all_rows)
     count = len(all_rows)
     title = f"More UK University Bursaries ({date.today().year}) | BursaSearch"
     description = f"{count} additional verified UK university bursaries and scholarships, one per institution."
@@ -565,52 +747,56 @@ def render_rollup(singles):
         f"each linking straight to the official source, no forms with us. Our app also matches you "
         f"to additional grants beyond this list, based on your specific circumstances."
     )
-    return PAGE_TEMPLATE.format(
-        title=esc(title),
-        description=esc(description),
-        canonical=canonical,
-        og_image=OG_IMAGE,
-        crumb_label="Bursaries by university",
-        uni_name_esc="More universities",
-        h1=esc("More UK University Bursaries"),
-        lede=esc(lede),
-        app_store=APP_STORE_URL,
-        play=PLAY_URL,
-        perks=PERKS_HTML,
-        list_heading=esc(f"{count} bursaries currently listed"),
-        cards=cards,
-        faq=faq_block("these universities", count),
-        related="",
-        jsonld=faq_jsonld("these universities"),
-        breadcrumb=breadcrumb_jsonld([
-            ("BursaSearch", f"{SITE_URL}/"),
-            ("Bursaries by university", f"{SITE_URL}/bursaries/"),
-            ("More universities", canonical),
-        ]),
-        css=PAGE_CSS,
+    body = content_body(
+        trail=[("Home", "/"), ("Bursaries by university", "/bursaries/"), ("More universities", None)],
+        h1="More UK University Bursaries",
+        lede=lede,
+        context_phrase="these funds",
+        count=count,
+        rows_html=rows_html,
+        faq_html=faq_block("these universities", count),
+        related_html="",
     )
+    schema = jsonld_script(faq_jsonld("these universities")) + jsonld_script(breadcrumb_jsonld([
+        ("BursaSearch", f"{SITE_URL}/"),
+        ("Bursaries by university", f"{SITE_URL}/bursaries/"),
+        ("More universities", canonical),
+    ]))
+    return render_shell(title=esc(title), description=esc(description),
+                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
 
 # ── Circumstance-based pages (cut across universities, tag-based not
 #    partition-based — the same bursary can legitimately appear on more
 #    than one of these, e.g. a low-income care-leaver bursary). ─────────────
-def has_vulnerability(row, name):
-    v = clean(row.get("Vulnerabilities (multi-select)", ""))
-    return name.lower() in [p.strip().lower() for p in v.split(",")]
+def vuln_has(row, *needles):
+    """True if any comma-separated part of the Vulnerabilities cell CONTAINS
+    any needle (case-insensitive). Substring, not exact — the sheet's label
+    wording drifts over time ('Estranged from family' -> 'Estranged',
+    'Disability' -> 'Disabled / long-term health condition', 'Refugee or
+    asylum seeker' -> 'Refugee / asylum seeker'), and an exact match silently
+    empties whole circumstance pages when it does."""
+    parts = [p.strip().lower() for p in
+             clean(row.get("Vulnerabilities (multi-select)", "")).split(",")]
+    return any(any(n in p for n in needles) for p in parts)
+
+def _is_international(row):
+    fs = clean(row.get("Fee status", "")).lower()
+    return "overseas" in fs or "international" in fs
 
 CIRCUMSTANCES = [
     # (slug, h1, plural noun phrase used in copy, filter fn)
     ("low-income-students", "Bursaries for Low-Income Students",
-     "low-income students", lambda r: has_vulnerability(r, "Low income")),
+     "low-income students", lambda r: vuln_has(r, "low income", "fsm", "free school meal")),
     ("care-leavers", "Bursaries for Care Leavers",
-     "care leavers", lambda r: has_vulnerability(r, "Care leaver")),
+     "care leavers", lambda r: vuln_has(r, "care leaver", "care experienced", "care-experienced")),
     ("international-students", "Bursaries for International Students in the UK",
-     "international students", lambda r: clean(r.get("Fee status", "")) == "Overseas"),
+     "international students", _is_international),
     ("estranged-students", "Bursaries for Estranged Students",
-     "estranged students", lambda r: has_vulnerability(r, "Estranged from family")),
+     "estranged students", lambda r: vuln_has(r, "estranged")),
     ("disabled-students", "Bursaries for Disabled Students",
-     "disabled students", lambda r: has_vulnerability(r, "Disability")),
+     "disabled students", lambda r: vuln_has(r, "disab")),
     ("refugees-and-asylum-seekers", "Scholarships for Refugees and Asylum Seekers",
-     "refugees and asylum seekers", lambda r: has_vulnerability(r, "Refugee or asylum seeker")),
+     "refugees and asylum seekers", lambda r: vuln_has(r, "refugee", "asylum")),
 ]
 
 def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede_tail, canon_by_key,
@@ -625,13 +811,13 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
     )
     if limit:
         entries_sorted = entries_sorted[:limit]
-    card_parts = []
+    row_parts = []
     for r in entries_sorted:
         raw_uni = clean(r.get("University", ""))
         resolved = canon_by_key.get(norm_uni_key(raw_uni)) if raw_uni else None
-        tag_href = f"/bursaries/{resolved[1]}/" if resolved else None
-        card_parts.append(bursary_card(r, tag=raw_uni or None, tag_href=tag_href))
-    cards = "".join(card_parts)
+        uni_href = f"/bursaries/{resolved[1]}/" if resolved else None
+        row_parts.append(bursary_row(r, uni=raw_uni or None, uni_href=uni_href))
+    rows_html = "".join(row_parts)
     count = len(entries_sorted)
     amt_range = amount_range_text(entries_sorted)
     amt_bit = f" worth {amt_range}" if amt_range else ""
@@ -648,30 +834,25 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
     )
     path_suffix = f"{kind}/{slug}/" if slug else f"{kind}/"
     canonical = f"{SITE_URL}/bursaries/{path_suffix}"
-    return PAGE_TEMPLATE.format(
-        title=esc(title),
-        description=esc(description),
-        canonical=canonical,
-        og_image=OG_IMAGE,
-        crumb_label=crumb_label,
-        uni_name_esc=esc(h1),
-        h1=esc(h1),
-        lede=esc(lede),
-        app_store=APP_STORE_URL,
-        play=PLAY_URL,
-        perks=PERKS_HTML,
-        list_heading=esc(f"{count} bursaries currently listed"),
-        cards=cards,
-        faq=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
-        related=related_links_html(rows_matched, exclude=(kind, slug)),
-        jsonld=faq_jsonld(noun_phrase, scope_phrase=noun_phrase),
-        breadcrumb=breadcrumb_jsonld([
+    body = content_body(
+        trail=[("Home", "/"), (crumb_label, "/bursaries/"), (h1, None)],
+        h1=h1,
+        lede=lede,
+        context_phrase=f"these {count} funds",
+        count=count,
+        rows_html=rows_html,
+        faq_html=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
+        related_html=related_links_html(rows_matched, exclude=(kind, slug)),
+    )
+    schema = jsonld_script(faq_jsonld(noun_phrase, scope_phrase=noun_phrase)) + jsonld_script(
+        breadcrumb_jsonld([
             ("BursaSearch", f"{SITE_URL}/"),
             (crumb_label, f"{SITE_URL}/bursaries/"),
             (h1, canonical),
-        ]),
-        css=PAGE_CSS,
+        ])
     )
+    return render_shell(title=esc(title), description=esc(description),
+                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
 
 def render_circumstance_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
     return render_tag_page(
@@ -743,119 +924,131 @@ def render_region_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
         "Bursaries by region", "your region and full circumstances", canon_by_key,
     )
 
-HUB_TEMPLATE = """<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>{title}</title>
-<meta name="description" content="{description}">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="canonical" href="{canonical}">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap">
-<meta property="og:title" content="{title}">
-<meta property="og:description" content="{description}">
-<meta property="og:type" content="website">
-<meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{og_image}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{title}">
-<meta name="twitter:description" content="{description}">
-<meta name="twitter:image" content="{og_image}">
-<script type="application/ld+json">{breadcrumb}</script>
-<style>{css}
-.ulist{{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px;}}
-.ulist a{{
-  display:block; background:var(--card); border:1px solid var(--border); border-radius:10px;
-  padding:12px 14px; font-size:13px; font-weight:600; color:var(--text); text-decoration:none;
-}}
-.ulist a:hover{{border-color:var(--teal);}}
-.ulist .n{{color:var(--text-sec); font-weight:500; font-size:11.5px;}}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="crumb"><a href="/">BursaSearch</a> / Bursaries</div>
-  <h1>UK University Bursaries &amp; Scholarships</h1>
-  <p class="lede">{n_total} verified bursaries and scholarships across {n_unis} UK universities — each linking straight to the official source, no forms with us. Pick your university, or let the app match you to these plus additional national and independent grants.</p>
-  <div class="cta-row">
-    <a class="cta" href="{app_store}" target="_blank" rel="noopener">Get matched — App Store</a>
-    <a class="cta ghost" href="{play}" target="_blank" rel="noopener">Get matched — Google Play</a>
-  </div>
-  <div class="perks">{perks}
-  </div>
-  <h2>Quick links</h2>
-  <div class="ulist">
-    <a href="/bursaries/closing-soon/">Bursaries Closing Soon</a>
-    <a href="/bursaries/highest-value/">Highest-Value Bursaries</a>
-  </div>
-  <h2>Browse by circumstance</h2>
-  <div class="ulist">{circumstance_links}
-  </div>
-  <h2>Browse by subject</h2>
-  <div class="ulist">{subject_links}
-  </div>
-  <h2>Browse by region</h2>
-  <div class="ulist">{region_links}
-  </div>
-  <h2>Browse by university</h2>
-  <div class="ulist">{links}
-  </div>
-  <div class="foot">BursaSearch · Bursa Group Ltd</div>
-</div>
-</body>
-</html>
-"""
+def tiles_html(items):
+    """items = list of (href, title, sub_or_None) → a .tiles grid."""
+    out = []
+    for href, title, sub in items:
+        sub_html = f'<span>{esc(sub)}</span>' if sub else ""
+        out.append(f'<a href="{href}"><b>{esc(title)}</b>{sub_html}</a>')
+    return f'<div class="tiles">{"".join(out)}</div>'
 
 def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, region_counts):
-    links = "".join(
-        f'<a href="/bursaries/{slug}/">{esc(name)}<div class="n">{count} bursar{"y" if count==1 else "ies"}</div></a>'
-        for name, slug, count in uni_list
-    )
-    links += f'<a href="/bursaries/more-universities/">More universities<div class="n">{singles_count} bursaries</div></a>'
-    circumstance_links = "".join(
-        f'<a href="/bursaries/circumstance/{slug}/">{esc(h1)}<div class="n">{count} bursaries</div></a>'
-        for slug, h1, count in circumstance_counts
-    )
-    subject_links = "".join(
-        f'<a href="/bursaries/subject/{slug}/">{esc(h1)}<div class="n">{count} bursaries</div></a>'
-        for slug, h1, count in subject_counts
-    )
-    region_links = "".join(
-        f'<a href="/bursaries/region/{slug}/">{esc(h1)}<div class="n">{count} bursaries</div></a>'
-        for slug, h1, count in region_counts
-    )
     n_total = sum(c for _, _, c in uni_list) + singles_count
     n_unis = len(uni_list) + singles_count
     canonical = f"{SITE_URL}/bursaries/"
     title = "UK University Bursaries & Scholarships — Browse by University | BursaSearch"
-    description = f"Browse verified bursaries and scholarships at {n_unis} UK universities, covering {n_total} funds in total. Free to search."
-    return HUB_TEMPLATE.format(
-        title=esc(title),
-        description=esc(description),
-        n_unis=n_unis,
-        n_total=n_total,
-        canonical=canonical,
-        og_image=OG_IMAGE,
-        css=PAGE_CSS,
-        app_store=APP_STORE_URL,
-        play=PLAY_URL,
-        perks=PERKS_HTML,
-        circumstance_links=circumstance_links,
-        subject_links=subject_links,
-        region_links=region_links,
-        links=links,
-        breadcrumb=breadcrumb_jsonld([
-            ("BursaSearch", f"{SITE_URL}/"),
-            ("Bursaries", canonical),
-        ]),
+    description = (
+        f"Browse verified bursaries and scholarships at {n_unis} UK universities, "
+        f"covering {n_total} funds in total. Free to search."
     )
+    lede = (
+        f"{n_total} verified bursaries and scholarships across {n_unis} UK universities — "
+        "each linking straight to the official source, no forms with us. Pick your "
+        "university below, or let the app match you to these plus national and "
+        "independent grants."
+    )
+    uni_items = [(f"/bursaries/{slug}/", name,
+                  f"{c} bursar{'y' if c == 1 else 'ies'}") for name, slug, c in uni_list]
+    uni_items.append(("/bursaries/more-universities/", "More universities",
+                      f"{singles_count} bursaries"))
+    body = (
+        crumb_html([("Home", "/"), ("Bursaries", None)])
+        + '<h1 class="page">UK University Bursaries &amp; Scholarships</h1>'
+        + f'<p class="lede">{esc(lede)}</p>'
+        + '<h2>Quick links</h2>'
+        + tiles_html([
+            ("/bursaries/closing-soon/", "Bursaries closing soon", None),
+            ("/bursaries/highest-value/", "Highest-value bursaries", None),
+        ])
+        + '<h2 id="circumstance">Browse by circumstance</h2>'
+        + tiles_html([(f"/bursaries/circumstance/{s}/", h1, f"{c} funds")
+                      for s, h1, c in circumstance_counts])
+        + '<h2 id="subject">Browse by subject</h2>'
+        + tiles_html([(f"/bursaries/subject/{s}/", h1, f"{c} funds")
+                      for s, h1, c in subject_counts])
+        + '<h2 id="region">Browse by region</h2>'
+        + tiles_html([(f"/bursaries/region/{s}/", h1, f"{c} funds")
+                      for s, h1, c in region_counts])
+        + '<h2>Browse by university</h2>'
+        + tiles_html(uni_items)
+    )
+    schema = jsonld_script(breadcrumb_jsonld([
+        ("BursaSearch", f"{SITE_URL}/"),
+        ("Bursaries", canonical),
+    ]))
+    return render_shell(title=esc(title), description=esc(description),
+                        canonical=canonical, body=body, schema=schema)
+
+def render_home(uni_list, singles_count, circumstance_counts, subject_counts, region_counts):
+    n_total = sum(c for _, _, c in uni_list) + singles_count
+    n_unis = len(uni_list) + singles_count
+    top_unis = sorted(uni_list, key=lambda t: -t[2])[:11]
+    canonical = f"{SITE_URL}/"
+    title = "BursaSearch — Find every UK university bursary you qualify for"
+    description = (
+        f"Search {n_total:,} verified UK university bursaries, grants and hardship funds — "
+        "free, no account. Each links to the official page; the app matches funds to your "
+        "circumstances and tracks the deadlines."
+    )
+    hero = (
+        '<section class="hero"><div class="in">'
+        '<h1>Find every UK university bursary you qualify for</h1>'
+        f'<p>{n_total:,} verified bursaries, grants and hardship funds — each linked '
+        'straight to the official page. Free to search, no account needed.</p>'
+        '<div class="actions"><a class="btn lg" href="/get">Get matched — free app</a>'
+        '<span class="stores">iOS &amp; Android</span></div>'
+        '<div class="facts">'
+        f'<div><b>{n_total:,}</b><span>verified funds</span></div>'
+        f'<div><b>{n_unis}</b><span>UK universities</span></div>'
+        '<div><b>Weekly</b><span>data checks</span></div>'
+        '</div></div></section>'
+    )
+    uni_items = [(f"/bursaries/{slug}/", name, f"{c} funds") for name, slug, c in top_unis]
+    uni_items.append(("/bursaries/", f"All {n_unis} universities →", "full index"))
+    body = (
+        '<h2 id="university">Browse by university</h2>'
+        + tiles_html(uni_items)
+        + '<h2 id="circumstance">Browse by circumstance</h2>'
+        + tiles_html([(f"/bursaries/circumstance/{s}/", h1, f"{c} funds")
+                      for s, h1, c in circumstance_counts])
+        + '<h2 id="subject">Browse by subject</h2>'
+        + tiles_html([(f"/bursaries/subject/{s}/", h1, f"{c} funds")
+                      for s, h1, c in subject_counts])
+        + '<h2 id="region">Browse by region</h2>'
+        + tiles_html([(f"/bursaries/region/{s}/", h1, f"{c} funds")
+                      for s, h1, c in region_counts])
+        + '<h2>How BursaSearch works</h2>'
+        + '<div class="steps">'
+          '<div class="step"><i>1</i><b>Search</b><p>Pick your university, situation '
+          'or subject and see every verified fund.</p></div>'
+          '<div class="step"><i>2</i><b>Check the source</b><p>Each fund links to the '
+          'official university or provider page. You apply there.</p></div>'
+          '<div class="step"><i>3</i><b>Match &amp; track</b><p>The free app matches '
+          'funds to your circumstances and tracks the deadlines.</p></div>'
+        '</div>'
+    )
+    schema = jsonld_script(json.dumps({
+        "@context": "https://schema.org", "@type": "WebSite",
+        "name": "BursaSearch", "url": f"{SITE_URL}/",
+    })) + jsonld_script(json.dumps({
+        "@context": "https://schema.org", "@type": "Organization",
+        "name": "BursaSearch", "url": f"{SITE_URL}/", "logo": OG_IMAGE,
+        "parentOrganization": {"@type": "Organization", "name": "Bursa Group Ltd"},
+    }))
+    return render_shell(title=esc(title), description=esc(description),
+                        canonical=canonical, body=body, hero=hero, schema=schema)
 
 def submit_indexnow(urls):
     """Tells Bing/Yandex/Seznam about changed URLs immediately instead of
     waiting for their crawler to notice — free, no auth beyond the public
     key file already hosted at the site root. Only runs against live data
     (SEO_DATA_URL set); a local dev run shouldn't spam this on every tweak."""
-    if not urls or not SEO_DATA_URL:
+    if not urls or not SEO_DATA_URL or os.environ.get("SKIP_INDEXNOW"):
+        return
+    if len(urls) > 800:
+        # A mass regeneration (e.g. a site-wide template change) — don't fire
+        # thousands of "instant crawl" pings; the sitemap covers it.
+        print(f"IndexNow: skipping bulk submit of {len(urls)} URL(s).")
         return
     payload = json.dumps({
         "host": "bursasearch.com",
@@ -985,16 +1178,22 @@ if valued_matched:
     write_page(url, os.path.join(d, "index.html"), page, lastmod_map, changed_urls)
     highest_value_counts.append(("highest-value", "Highest-Value UK Bursaries and Scholarships", len(valued_matched)))
 
-# hub
+# hub (/bursaries/) and home (/) — both now generated from the same template
 hub_url = f"{SITE_URL}/bursaries/"
-write_page(hub_url, os.path.join(OUT_DIR, "index.html"), render_hub(uni_list, len(singles), circumstance_counts, subject_counts, region_counts), lastmod_map, changed_urls)
+write_page(hub_url, os.path.join(OUT_DIR, "index.html"),
+           render_hub(uni_list, len(singles), circumstance_counts, subject_counts, region_counts),
+           lastmod_map, changed_urls)
 
-# home page — not generated here (index.html at repo root is hand-authored),
-# but it's in the sitemap, so give it a lastmod based on its own file mtime
-# rather than silently omitting it or always stamping it "today".
 home_url = f"{SITE_URL}/"
-if os.path.exists("index.html"):
-    lastmod_map.setdefault(home_url, date.fromtimestamp(os.path.getmtime("index.html")).isoformat())
+write_page(home_url, "index.html",
+           render_home(uni_list, len(singles), circumstance_counts, subject_counts, region_counts),
+           lastmod_map, changed_urls)
+
+# /get — client-side redirect to the right app store (noindex; kept out of
+# the sitemap on purpose).
+os.makedirs("get", exist_ok=True)
+with open(os.path.join("get", "index.html"), "w", encoding="utf-8") as f:
+    f.write(GET_REDIRECT_HTML)
 
 # sitemap — every URL's lastmod comes from lastmod_map (only bumped above
 # when that page's content actually changed), not blindly stamped TODAY.
