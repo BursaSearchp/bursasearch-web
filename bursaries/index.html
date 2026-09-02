@@ -5,8 +5,9 @@
 <title>UK University Bursaries &amp; Scholarships — Browse by University | BursaSearch</title>
 <meta name="description" content="Browse verified bursaries and scholarships at 144 UK universities, covering 3011 funds in total. Free to search.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
 <link rel="canonical" href="https://bursasearch.com/bursaries/">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&family=Sora:wght@700;800&display=swap">
 <meta property="og:title" content="UK University Bursaries &amp; Scholarships — Browse by University | BursaSearch">
 <meta property="og:description" content="Browse verified bursaries and scholarships at 144 UK universities, covering 3011 funds in total. Free to search.">
 <meta property="og:type" content="website">
@@ -18,125 +19,166 @@
 <meta name="twitter:image" content="https://bursasearch.com/og-image.png">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "BursaSearch", "item": "https://bursasearch.com/"}, {"@type": "ListItem", "position": 2, "name": "Bursaries", "item": "https://bursasearch.com/bursaries/"}]}</script>
 <style>
-:root{
-  --bg:#091723; --card:#0f2135; --border:#1a3050;
-  --teal:#0f8a8a; --teal-br:#1cc4bc;
-  --text:#ffffff; --text-sec:#7a9bb5; --text-mut:#3d5a75;
-}
 *{box-sizing:border-box;}
+:root{
+  --paper:#FBFCFD; --ground:#EEF2F5; --ink:#0B2233; --ink-soft:#46596B;
+  --ink-mute:#7C8FA0; --line:#D7DEE4; --teal:#0E7C7B; --teal-ink:#0A5C5B;
+  --teal-wash:#E8F2F1; --navy:#0B2233; --warn:#B5561E; --maxw:960px;
+}
+html{-webkit-text-size-adjust:100%;}
 body{
-  margin:0; background:var(--bg); color:var(--text);
-  font-family:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;
-  line-height:1.5;
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:720px; margin:0 auto; padding:28px 20px 64px;}
-a{color:var(--teal-br);}
-.crumb{font-size:12.5px; color:var(--text-sec); margin-bottom:18px;}
-.crumb a{color:var(--text-sec); text-decoration:none;}
-.crumb a:hover{color:var(--teal-br);}
-h1{font-size:26px; font-weight:800; line-height:1.2; margin:0 0 10px;}
-.lede{font-size:14.5px; color:var(--text-sec); margin:0 0 26px; max-width:60ch;}
-.cta-row{display:flex; gap:10px; flex-wrap:wrap; margin:0 0 32px;}
-.cta{
-  display:inline-flex; align-items:center; gap:8px; text-decoration:none;
-  background:var(--teal); color:#06110e; font-weight:700; font-size:13.5px;
-  padding:11px 16px; border-radius:10px;
-}
-.cta.ghost{background:transparent; color:var(--teal-br); border:1px solid var(--border);}
-.perks{display:flex; flex-wrap:wrap; gap:12px; margin:0 0 34px;}
-.perks .perk{
-  flex:1 1 220px; display:flex; gap:10px; align-items:flex-start;
-  background:var(--card); border:1px solid var(--border); border-radius:12px;
-  padding:13px 14px;
-}
-.perks .perk .ic{font-size:16px; line-height:1; flex-shrink:0; margin-top:1px;}
-.perks .perk b{display:block; font-size:12.5px; font-weight:700; color:var(--text); margin-bottom:2px;}
-.perks .perk span{font-size:11.5px; color:var(--text-sec); line-height:1.4;}
-h2{font-size:16px; font-weight:700; margin:34px 0 14px; color:var(--text);}
-.grid{display:flex; flex-direction:column; gap:12px;}
-.card{
-  background:var(--card); border:1px solid var(--border); border-radius:14px;
-  padding:16px 18px;
-}
-.card h3{font-size:15px; font-weight:700; margin:0 0 6px; color:var(--text);}
-.card .meta{font-size:12.5px; color:var(--teal-br); font-weight:600; margin-bottom:8px;}
-.card .badges{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
-.card .badge{
-  font-size:10.5px; font-weight:600; color:var(--text-sec);
-  background:rgba(255,255,255,.05); border:1px solid var(--border);
-  padding:3px 8px; border-radius:999px;
-}
-.card .src{font-size:12.5px; font-weight:600; text-decoration:none;}
-.card .src:hover{text-decoration:underline;}
-.faq{margin-top:8px;}
-.faq details{
-  border-bottom:1px solid var(--border); padding:14px 0;
-}
-.faq summary{
-  font-size:14px; font-weight:700; cursor:pointer; list-style:none;
-}
-.faq summary::-webkit-details-marker{display:none;}
-.faq p{font-size:13px; color:var(--text-sec); margin:8px 0 0;}
-.foot{
-  margin-top:48px; padding-top:20px; border-top:1px solid var(--border);
-  font-size:11.5px; color:var(--text-mut); text-align:center;
-}
-.foot a{color:var(--text-mut);}
-.uni-tag{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--teal-br); margin-bottom:4px; text-decoration:none;}
-a.uni-tag:hover{text-decoration:underline;}
-.ulist{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin:0 0 8px;}
-.ulist a{
-  display:block; background:var(--card); border:1px solid var(--border); border-radius:10px;
-  padding:10px 13px; font-size:12.5px; font-weight:600; color:var(--text); text-decoration:none;
-}
-.ulist a:hover{border-color:var(--teal);}
+a{color:var(--teal-ink); text-decoration:none;}
+a:hover{text-decoration:underline;}
+strong{font-weight:600;}
+:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
 
-.ulist{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px;}
-.ulist a{
-  display:block; background:var(--card); border:1px solid var(--border); border-radius:10px;
-  padding:12px 14px; font-size:13px; font-weight:600; color:var(--text); text-decoration:none;
+.hdr{
+  position:sticky; top:0; z-index:20; display:flex; align-items:center;
+  gap:14px 20px; flex-wrap:wrap; padding:8px 20px; min-height:56px;
+  background:rgba(251,252,253,.94); backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
 }
-.ulist a:hover{border-color:var(--teal);}
-.ulist .n{color:var(--text-sec); font-weight:500; font-size:11.5px;}
+.brand{display:flex; align-items:center; gap:8px; font-family:"Sora",sans-serif;
+  font-weight:700; font-size:16px; letter-spacing:-.01em; color:var(--ink);}
+.brand:hover{text-decoration:none;}
+.brand .mk{width:24px; height:24px; border-radius:4px; background:var(--navy);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.brand .mk svg{width:14px; height:14px;}
+.brand .s{color:var(--teal);}
+.nav{display:flex; flex-wrap:wrap; gap:6px 15px;}
+.nav a{font-size:13.5px; font-weight:500; color:var(--ink-soft);}
+.nav a:hover{color:var(--teal-ink); text-decoration:none;}
+.hdr .grow{flex:1;}
+.btn{display:inline-flex; align-items:center; gap:7px; font-weight:600;
+  font-size:13.5px; background:var(--teal); color:#fff; padding:8px 14px;
+  border-radius:3px; border:1px solid var(--teal); cursor:pointer;}
+.btn:hover{background:var(--teal-ink); text-decoration:none; color:#fff;}
+.btn.lg{font-size:15px; padding:11px 20px;}
+
+.hero{background:var(--navy); color:#fff; padding:54px 20px 46px;}
+.hero .in{max-width:var(--maxw); margin:0 auto;}
+.hero h1{font-family:"Archivo",sans-serif; font-weight:700;
+  font-size:clamp(28px,4.6vw,44px); line-height:1.07; letter-spacing:-.02em;
+  margin:0 0 14px; text-wrap:balance; max-width:19ch;}
+.hero p{font-size:17px; color:#A9C0D1; margin:0 0 24px; max-width:54ch;}
+.hero .actions{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+.hero .stores{font-size:13px; color:#8AA3B6;}
+.facts{display:flex; flex-wrap:wrap; gap:22px 30px; margin:32px 0 0;
+  border-top:1px solid rgba(255,255,255,.14); padding-top:20px;}
+.facts b{display:block; font-family:"Archivo",sans-serif; font-weight:700;
+  font-size:22px; font-variant-numeric:tabular-nums;}
+.facts span{font-size:12.5px; color:#8AA3B6;}
+
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 20px 64px;}
+.crumb{display:flex; flex-wrap:wrap; gap:6px; font-size:12.5px;
+  color:var(--ink-mute); padding:15px 0; border-bottom:1px solid var(--line);}
+.crumb a{color:var(--ink-mute);}
+h1.page{font-family:"Archivo",sans-serif; font-weight:700;
+  font-size:clamp(25px,3.6vw,33px); line-height:1.13; letter-spacing:-.015em;
+  margin:24px 0 12px; text-wrap:balance;}
+.lede{font-size:15.5px; color:var(--ink-soft); max-width:66ch; margin:0 0 22px;}
+.wrap h2{font-family:"Archivo",sans-serif; font-weight:600; font-size:13.5px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);
+  margin:40px 0 14px; padding-left:11px; border-left:3px solid var(--teal);}
+
+.match{background:var(--teal-wash); border:1px solid #C9E3E1; border-radius:3px;
+  padding:15px 17px; margin:20px 0 6px; display:flex; align-items:center;
+  gap:16px; flex-wrap:wrap;}
+.match p{margin:0; font-size:14px; color:var(--teal-ink); flex:1; min-width:230px;}
+.match .stores{font-size:12px; color:var(--ink-mute);}
+.match .stores a{color:var(--ink-mute);}
+
+.list{border:1px solid var(--line); border-radius:3px; overflow:hidden;
+  background:var(--paper);}
+.list .row{padding:14px 17px; border-top:1px solid var(--line);}
+.list .row:first-child{border-top:0;}
+.list .row:hover{background:#F4F8F8;}
+.row .top{display:flex; align-items:baseline; gap:14px;}
+.row .nm{font-family:"Archivo",sans-serif; font-weight:600; font-size:15.5px;
+  color:var(--ink); flex:1;}
+a.nm:hover{color:var(--teal-ink);}
+.row .amt{font-weight:600; font-size:14.5px; color:var(--teal-ink);
+  font-variant-numeric:tabular-nums; white-space:nowrap;}
+.row .prov{font-size:12.5px; color:var(--ink-mute); margin-top:2px;}
+.row .chips{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 7px;}
+.row .chip{font-size:11.5px; font-weight:500; color:var(--ink-soft);
+  border:1px solid var(--line); border-radius:2px; padding:2px 7px;}
+.row .foot{display:flex; align-items:center; justify-content:flex-end;
+  gap:12px; flex-wrap:wrap; margin-top:4px;}
+.row .foot.split{justify-content:space-between;}
+.row .chips + .foot{margin-top:0;}
+.row .dl{font-size:12.5px; color:var(--ink-mute);}
+.row .dl.soon{color:var(--warn); font-weight:600;}
+.row .go{font-size:12.5px; font-weight:600; white-space:nowrap;}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(228px,1fr));
+  gap:10px;}
+.tiles a{display:block; background:var(--paper); border:1px solid var(--line);
+  border-radius:3px; padding:12px 14px;}
+.tiles a:hover{border-color:var(--teal); text-decoration:none;}
+.tiles a b{display:block; font-family:"Archivo",sans-serif; font-weight:600;
+  font-size:14px; color:var(--ink);}
+.tiles a span{display:block; font-size:12.5px; color:var(--ink-mute);
+  margin-top:2px; font-variant-numeric:tabular-nums;}
+
+.steps{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+.steps .step{border:1px solid var(--line); border-radius:3px; padding:15px;
+  background:var(--paper);}
+.steps .step i{display:inline-flex; width:23px; height:23px; border-radius:2px;
+  background:var(--teal-wash); color:var(--teal-ink); font-family:"Archivo",sans-serif;
+  font-weight:700; font-size:12.5px; align-items:center; justify-content:center;
+  margin-bottom:8px; font-style:normal;}
+.steps .step b{display:block; font-family:"Archivo",sans-serif; font-size:14px;
+  margin-bottom:3px;}
+.steps .step p{margin:0; font-size:13px; color:var(--ink-soft);}
+
+.faq details{border-top:1px solid var(--line); padding:12px 0;}
+.faq details:first-child{border-top:0;}
+.faq summary{font-family:"Archivo",sans-serif; font-weight:600; font-size:14px;
+  cursor:pointer; list-style:none; display:flex; justify-content:space-between;
+  gap:12px;}
+.faq summary::-webkit-details-marker{display:none;}
+.faq summary::after{content:"+"; color:var(--teal); font-weight:700;}
+.faq details[open] summary::after{content:"\2013";}
+.faq p{font-size:13.5px; color:var(--ink-soft); margin:9px 0 0;}
+
+.ftr{background:var(--ground); border-top:1px solid var(--line);
+  margin-top:52px; padding:32px 20px 26px;}
+.ftr .cols{max-width:var(--maxw); margin:0 auto; display:flex; gap:44px;
+  flex-wrap:wrap;}
+.ftr .col b{display:block; font-family:"Archivo",sans-serif; font-size:11.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-mute);
+  margin-bottom:9px;}
+.ftr .col a{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
+.ftr .fine{max-width:var(--maxw); margin:24px auto 0; padding-top:16px;
+  border-top:1px solid var(--line); font-size:12px; color:var(--ink-mute);}
+
+.ctabar{display:none;}
+@media (max-width:760px){
+  .ctabar{position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex;
+    align-items:center; gap:10px; padding:9px 12px 9px 14px; background:var(--navy);
+    border-top:1px solid rgba(255,255,255,.12);}
+  .ctabar p{margin:0; flex:1; font-size:12.5px; color:#fff; line-height:1.3;}
+  .ctabar .btn{padding:8px 13px; font-size:13px;}
+  .ctabar .x{background:none; border:0; color:#8AA3B6; font-size:20px;
+    line-height:1; padding:2px 4px; cursor:pointer;}
+  body.has-bar{padding-bottom:60px;}
+  .steps{grid-template-columns:1fr;}
+  .ftr .cols{gap:26px;}
+}
 </style>
 </head>
-<body>
-<div class="wrap">
-  <div class="crumb"><a href="/">BursaSearch</a> / Bursaries</div>
-  <h1>UK University Bursaries &amp; Scholarships</h1>
-  <p class="lede">3011 verified bursaries and scholarships across 144 UK universities — each linking straight to the official source, no forms with us. Pick your university, or let the app match you to these plus additional national and independent grants.</p>
-  <div class="cta-row">
-    <a class="cta" href="https://apps.apple.com/app/id6795890396" target="_blank" rel="noopener">Get matched — App Store</a>
-    <a class="cta ghost" href="https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3Dbursasearch_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site" target="_blank" rel="noopener">Get matched — Google Play</a>
-  </div>
-  <div class="perks">
-    <div class="perk">
-      <span class="ic">⚡</span>
-      <div><b>Direct to source</b><span>Every link goes straight to the official university or provider page — you apply with them, not through us.</span></div>
-    </div>
-    <div class="perk">
-      <span class="ic">🎯</span>
-      <div><b>Beyond this list</b><span>Our app also matches you to national and independent grants that aren't tied to any one university.</span></div>
-    </div>
-  </div>
-  <h2>Quick links</h2>
-  <div class="ulist">
-    <a href="/bursaries/closing-soon/">Bursaries Closing Soon</a>
-    <a href="/bursaries/highest-value/">Highest-Value Bursaries</a>
-  </div>
-  <h2>Browse by circumstance</h2>
-  <div class="ulist"><a href="/bursaries/circumstance/low-income-students/">Bursaries for Low-Income Students<div class="n">365 bursaries</div></a><a href="/bursaries/circumstance/care-leavers/">Bursaries for Care Leavers<div class="n">227 bursaries</div></a><a href="/bursaries/circumstance/international-students/">Bursaries for International Students in the UK<div class="n">511 bursaries</div></a>
-  </div>
-  <h2>Browse by subject</h2>
-  <div class="ulist"><a href="/bursaries/subject/law/">Bursaries for Law Students<div class="n">83 bursaries</div></a><a href="/bursaries/subject/business/">Bursaries for Business Students<div class="n">70 bursaries</div></a><a href="/bursaries/subject/medicine/">Bursaries for Medicine Students<div class="n">106 bursaries</div></a><a href="/bursaries/subject/veterinary-studies/">Bursaries for Veterinary Students<div class="n">15 bursaries</div></a><a href="/bursaries/subject/music/">Bursaries for Music Students<div class="n">56 bursaries</div></a>
-  </div>
-  <h2>Browse by region</h2>
-  <div class="ulist"><a href="/bursaries/region/scotland/">Bursaries for Students in Scotland<div class="n">43 bursaries</div></a><a href="/bursaries/region/south-east/">Bursaries for Students in the South East<div class="n">15 bursaries</div></a><a href="/bursaries/region/wales/">Bursaries for Students in Wales<div class="n">46 bursaries</div></a><a href="/bursaries/region/london/">Bursaries for Students in London<div class="n">20 bursaries</div></a><a href="/bursaries/region/north-west/">Bursaries for Students in the North West<div class="n">22 bursaries</div></a><a href="/bursaries/region/south-west/">Bursaries for Students in the South West<div class="n">22 bursaries</div></a><a href="/bursaries/region/north-east/">Bursaries for Students in the North East<div class="n">37 bursaries</div></a><a href="/bursaries/region/yorkshire/">Bursaries for Students in Yorkshire<div class="n">14 bursaries</div></a><a href="/bursaries/region/east-of-england/">Bursaries for Students in the East of England<div class="n">9 bursaries</div></a><a href="/bursaries/region/east-midlands/">Bursaries for Students in the East Midlands<div class="n">17 bursaries</div></a><a href="/bursaries/region/west-midlands/">Bursaries for Students in the West Midlands<div class="n">12 bursaries</div></a>
-  </div>
-  <h2>Browse by university</h2>
-  <div class="ulist"><a href="/bursaries/abertay-university/">Abertay University<div class="n">7 bursaries</div></a><a href="/bursaries/aberystwyth-university/">Aberystwyth University<div class="n">59 bursaries</div></a><a href="/bursaries/anglia-ruskin-university/">Anglia Ruskin University<div class="n">37 bursaries</div></a><a href="/bursaries/arden-university/">Arden University<div class="n">3 bursaries</div></a><a href="/bursaries/arts-university-bournemouth/">Arts University Bournemouth<div class="n">5 bursaries</div></a><a href="/bursaries/aston-university/">Aston University<div class="n">32 bursaries</div></a><a href="/bursaries/bpp-university/">BPP University<div class="n">7 bursaries</div></a><a href="/bursaries/bangor-university/">Bangor University<div class="n">48 bursaries</div></a><a href="/bursaries/bath-spa-university/">Bath Spa University<div class="n">20 bursaries</div></a><a href="/bursaries/birkbeck-university-of-london/">Birkbeck University of London<div class="n">5 bursaries</div></a><a href="/bursaries/birmingham-city-university/">Birmingham City University<div class="n">39 bursaries</div></a><a href="/bursaries/bishop-grosseteste-university/">Bishop Grosseteste University<div class="n">5 bursaries</div></a><a href="/bursaries/bournemouth-university/">Bournemouth University<div class="n">7 bursaries</div></a><a href="/bursaries/brunel-university-london/">Brunel University London<div class="n">5 bursaries</div></a><a href="/bursaries/buckinghamshire-new-university/">Buckinghamshire New University<div class="n">10 bursaries</div></a><a href="/bursaries/canterbury-christ-church-university/">Canterbury Christ Church University<div class="n">22 bursaries</div></a><a href="/bursaries/cardiff-metropolitan-university/">Cardiff Metropolitan University<div class="n">10 bursaries</div></a><a href="/bursaries/cardiff-university/">Cardiff University<div class="n">11 bursaries</div></a><a href="/bursaries/city-university-of-london/">City, University of London<div class="n">6 bursaries</div></a><a href="/bursaries/coventry-university/">Coventry University<div class="n">6 bursaries</div></a><a href="/bursaries/de-montfort-university/">De Montfort University<div class="n">10 bursaries</div></a><a href="/bursaries/durham-university/">Durham University<div class="n">109 bursaries</div></a><a href="/bursaries/edge-hill-university/">Edge Hill University<div class="n">14 bursaries</div></a><a href="/bursaries/edinburgh-napier-university/">Edinburgh Napier University<div class="n">19 bursaries</div></a><a href="/bursaries/external-national-bodies/">External / National Bodies<div class="n">131 bursaries</div></a><a href="/bursaries/falmouth-university/">Falmouth University<div class="n">4 bursaries</div></a><a href="/bursaries/glasgow-caledonian-university/">Glasgow Caledonian University<div class="n">8 bursaries</div></a><a href="/bursaries/glasgow-school-of-art/">Glasgow School of Art<div class="n">8 bursaries</div></a><a href="/bursaries/goldsmiths-university-of-london/">Goldsmiths University of London<div class="n">16 bursaries</div></a><a href="/bursaries/harper-adams-university/">Harper Adams University<div class="n">4 bursaries</div></a><a href="/bursaries/hartpury-university/">Hartpury University<div class="n">7 bursaries</div></a><a href="/bursaries/heriot-watt-university/">Heriot-Watt University<div class="n">9 bursaries</div></a><a href="/bursaries/imperial-college-london/">Imperial College London<div class="n">14 bursaries</div></a><a href="/bursaries/keele-university/">Keele University<div class="n">13 bursaries</div></a><a href="/bursaries/king-s-college-london/">King&#x27;s College London<div class="n">25 bursaries</div></a><a href="/bursaries/kingston-university/">Kingston University<div class="n">7 bursaries</div></a><a href="/bursaries/lse/">LSE<div class="n">12 bursaries</div></a><a href="/bursaries/lancaster-university/">Lancaster University<div class="n">23 bursaries</div></a><a href="/bursaries/leeds-arts-university/">Leeds Arts University<div class="n">4 bursaries</div></a><a href="/bursaries/leeds-beckett-university/">Leeds Beckett University<div class="n">19 bursaries</div></a><a href="/bursaries/leeds-trinity-university/">Leeds Trinity University<div class="n">5 bursaries</div></a><a href="/bursaries/liverpool-hope-university/">Liverpool Hope University<div class="n">7 bursaries</div></a><a href="/bursaries/liverpool-john-moores-university/">Liverpool John Moores University<div class="n">19 bursaries</div></a><a href="/bursaries/london-metropolitan-university/">London Metropolitan University<div class="n">19 bursaries</div></a><a href="/bursaries/london-south-bank-university/">London South Bank University<div class="n">10 bursaries</div></a><a href="/bursaries/loughborough-university/">Loughborough University<div class="n">44 bursaries</div></a><a href="/bursaries/loughborough-university-london/">Loughborough University London<div class="n">5 bursaries</div></a><a href="/bursaries/manchester-metropolitan-university/">Manchester Metropolitan University<div class="n">6 bursaries</div></a><a href="/bursaries/middlesex-university/">Middlesex University<div class="n">16 bursaries</div></a><a href="/bursaries/newcastle-university/">Newcastle University<div class="n">55 bursaries</div></a><a href="/bursaries/newman-university/">Newman University<div class="n">6 bursaries</div></a><a href="/bursaries/northumbria-university/">Northumbria University<div class="n">34 bursaries</div></a><a href="/bursaries/norwich-university-of-the-arts/">Norwich University of the Arts<div class="n">6 bursaries</div></a><a href="/bursaries/nottingham-trent-university/">Nottingham Trent University<div class="n">9 bursaries</div></a><a href="/bursaries/oxford-brookes-university/">Oxford Brookes University<div class="n">33 bursaries</div></a><a href="/bursaries/plymouth-marjon-university/">Plymouth Marjon University<div class="n">4 bursaries</div></a><a href="/bursaries/queen-margaret-university/">Queen Margaret University<div class="n">6 bursaries</div></a><a href="/bursaries/queen-mary-university-of-london/">Queen Mary University of London<div class="n">49 bursaries</div></a><a href="/bursaries/queen-s-university-belfast/">Queen&#x27;s University Belfast<div class="n">55 bursaries</div></a><a href="/bursaries/ravensbourne-university-london/">Ravensbourne University London<div class="n">7 bursaries</div></a><a href="/bursaries/robert-gordon-university/">Robert Gordon University<div class="n">8 bursaries</div></a><a href="/bursaries/roehampton-university/">Roehampton University<div class="n">13 bursaries</div></a><a href="/bursaries/royal-agricultural-university/">Royal Agricultural University<div class="n">20 bursaries</div></a><a href="/bursaries/royal-central-school-of-speech-and-drama/">Royal Central School of Speech and Drama<div class="n">5 bursaries</div></a><a href="/bursaries/royal-conservatoire-of-scotland/">Royal Conservatoire of Scotland<div class="n">7 bursaries</div></a><a href="/bursaries/royal-holloway-university-of-london/">Royal Holloway University of London<div class="n">23 bursaries</div></a><a href="/bursaries/soas-university-of-london/">SOAS University of London<div class="n">6 bursaries</div></a><a href="/bursaries/sruc/">SRUC<div class="n">3 bursaries</div></a><a href="/bursaries/sheffield-hallam-university/">Sheffield Hallam University<div class="n">36 bursaries</div></a><a href="/bursaries/southampton-solent-university/">Southampton Solent University<div class="n">23 bursaries</div></a><a href="/bursaries/st-mary-s-university-twickenham/">St Mary&#x27;s University Twickenham<div class="n">7 bursaries</div></a><a href="/bursaries/staffordshire-university/">Staffordshire University<div class="n">8 bursaries</div></a><a href="/bursaries/swansea-university/">Swansea University<div class="n">36 bursaries</div></a><a href="/bursaries/teesside-university/">Teesside University<div class="n">20 bursaries</div></a><a href="/bursaries/the-open-university/">The Open University<div class="n">8 bursaries</div></a><a href="/bursaries/ucl/">UCL<div class="n">55 bursaries</div></a><a href="/bursaries/ulster-university/">Ulster University<div class="n">8 bursaries</div></a><a href="/bursaries/university-college-birmingham/">University College Birmingham<div class="n">7 bursaries</div></a><a href="/bursaries/university-of-aberdeen/">University of Aberdeen<div class="n">34 bursaries</div></a><a href="/bursaries/university-of-bath/">University of Bath<div class="n">57 bursaries</div></a><a href="/bursaries/university-of-bedfordshire/">University of Bedfordshire<div class="n">8 bursaries</div></a><a href="/bursaries/university-of-birmingham/">University of Birmingham<div class="n">26 bursaries</div></a><a href="/bursaries/university-of-bolton/">University of Bolton<div class="n">6 bursaries</div></a><a href="/bursaries/university-of-bradford/">University of Bradford<div class="n">5 bursaries</div></a><a href="/bursaries/university-of-brighton/">University of Brighton<div class="n">6 bursaries</div></a><a href="/bursaries/university-of-bristol/">University of Bristol<div class="n">22 bursaries</div></a><a href="/bursaries/university-of-buckingham/">University of Buckingham<div class="n">8 bursaries</div></a><a href="/bursaries/university-of-cambridge/">University of Cambridge<div class="n">23 bursaries</div></a><a href="/bursaries/university-of-chester/">University of Chester<div class="n">4 bursaries</div></a><a href="/bursaries/university-of-chichester/">University of Chichester<div class="n">7 bursaries</div></a><a href="/bursaries/university-of-cumbria/">University of Cumbria<div class="n">5 bursaries</div></a><a href="/bursaries/university-of-derby/">University of Derby<div class="n">21 bursaries</div></a><a href="/bursaries/university-of-dundee/">University of Dundee<div class="n">10 bursaries</div></a><a href="/bursaries/university-of-east-anglia/">University of East Anglia<div class="n">4 bursaries</div></a><a href="/bursaries/university-of-east-london/">University of East London<div class="n">10 bursaries</div></a><a href="/bursaries/university-of-edinburgh/">University of Edinburgh<div class="n">57 bursaries</div></a><a href="/bursaries/university-of-essex/">University of Essex<div class="n">16 bursaries</div></a><a href="/bursaries/university-of-exeter/">University of Exeter<div class="n">41 bursaries</div></a><a href="/bursaries/university-of-glasgow/">University of Glasgow<div class="n">25 bursaries</div></a><a href="/bursaries/university-of-gloucestershire/">University of Gloucestershire<div class="n">6 bursaries</div></a><a href="/bursaries/university-of-greenwich/">University of Greenwich<div class="n">28 bursaries</div></a><a href="/bursaries/university-of-hertfordshire/">University of Hertfordshire<div class="n">4 bursaries</div></a><a href="/bursaries/university-of-huddersfield/">University of Huddersfield<div class="n">61 bursaries</div></a><a href="/bursaries/university-of-hull/">University of Hull<div class="n">17 bursaries</div></a><a href="/bursaries/university-of-kent/">University of Kent<div class="n">8 bursaries</div></a><a href="/bursaries/university-of-lancashire/">University of Lancashire<div class="n">38 bursaries</div></a><a href="/bursaries/university-of-law/">University of Law<div class="n">10 bursaries</div></a><a href="/bursaries/university-of-leeds/">University of Leeds<div class="n">37 bursaries</div></a><a href="/bursaries/university-of-leicester/">University of Leicester<div class="n">5 bursaries</div></a><a href="/bursaries/university-of-lincoln/">University of Lincoln<div class="n">43 bursaries</div></a><a href="/bursaries/university-of-liverpool/">University of Liverpool<div class="n">67 bursaries</div></a><a href="/bursaries/university-of-manchester/">University of Manchester<div class="n">71 bursaries</div></a><a href="/bursaries/university-of-northampton/">University of Northampton<div class="n">10 bursaries</div></a><a href="/bursaries/university-of-nottingham/">University of Nottingham<div class="n">35 bursaries</div></a><a href="/bursaries/university-of-oxford/">University of Oxford<div class="n">3 bursaries</div></a><a href="/bursaries/university-of-plymouth/">University of Plymouth<div class="n">31 bursaries</div></a><a href="/bursaries/university-of-portsmouth/">University of Portsmouth<div class="n">32 bursaries</div></a><a href="/bursaries/university-of-reading/">University of Reading<div class="n">55 bursaries</div></a><a href="/bursaries/university-of-salford/">University of Salford<div class="n">40 bursaries</div></a><a href="/bursaries/university-of-sheffield/">University of Sheffield<div class="n">56 bursaries</div></a><a href="/bursaries/university-of-south-wales/">University of South Wales<div class="n">11 bursaries</div></a><a href="/bursaries/university-of-southampton/">University of Southampton<div class="n">70 bursaries</div></a><a href="/bursaries/university-of-st-andrews/">University of St Andrews<div class="n">4 bursaries</div></a><a href="/bursaries/university-of-stirling/">University of Stirling<div class="n">49 bursaries</div></a><a href="/bursaries/university-of-strathclyde/">University of Strathclyde<div class="n">8 bursaries</div></a><a href="/bursaries/university-of-suffolk/">University of Suffolk<div class="n">7 bursaries</div></a><a href="/bursaries/university-of-sunderland/">University of Sunderland<div class="n">5 bursaries</div></a><a href="/bursaries/university-of-surrey/">University of Surrey<div class="n">38 bursaries</div></a><a href="/bursaries/university-of-sussex/">University of Sussex<div class="n">49 bursaries</div></a><a href="/bursaries/university-of-wales-trinity-saint-david/">University of Wales Trinity Saint David<div class="n">15 bursaries</div></a><a href="/bursaries/university-of-warwick/">University of Warwick<div class="n">36 bursaries</div></a><a href="/bursaries/university-of-west-london/">University of West London<div class="n">9 bursaries</div></a><a href="/bursaries/university-of-westminster/">University of Westminster<div class="n">28 bursaries</div></a><a href="/bursaries/university-of-winchester/">University of Winchester<div class="n">7 bursaries</div></a><a href="/bursaries/university-of-wolverhampton/">University of Wolverhampton<div class="n">7 bursaries</div></a><a href="/bursaries/university-of-worcester/">University of Worcester<div class="n">7 bursaries</div></a><a href="/bursaries/university-of-york/">University of York<div class="n">29 bursaries</div></a><a href="/bursaries/university-of-the-arts-london/">University of the Arts London<div class="n">3 bursaries</div></a><a href="/bursaries/university-of-the-highlands-and-islands/">University of the Highlands and Islands<div class="n">18 bursaries</div></a><a href="/bursaries/university-of-the-west-of-england/">University of the West of England<div class="n">45 bursaries</div></a><a href="/bursaries/university-of-the-west-of-scotland/">University of the West of Scotland<div class="n">7 bursaries</div></a><a href="/bursaries/wrexham-university/">Wrexham University<div class="n">6 bursaries</div></a><a href="/bursaries/writtle-university-college/">Writtle University College<div class="n">5 bursaries</div></a><a href="/bursaries/york-st-john-university/">York St John University<div class="n">8 bursaries</div></a><a href="/bursaries/more-universities/">More universities<div class="n">0 bursaries</div></a>
-  </div>
-  <div class="foot">BursaSearch · Bursa Group Ltd</div>
-</div>
+<body class="">
+<header class="hdr"><a class="brand" href="/"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="10" cy="10" r="6"></circle><line x1="14.6" y1="14.6" x2="20" y2="20"></line></svg></span><span>Bursa<span class="s">Search</span></span></a><nav class="nav"><a href="/bursaries/">Universities</a><a href="/#circumstance">Circumstance</a><a href="/#subject">Subject</a><a href="/#region">Region</a><a href="/bursaries/closing-soon/">Closing soon</a></nav><span class="grow"></span><a class="btn" href="/get">Get the app</a></header>
+
+<main class="wrap">
+<nav class="crumb"><a href="/">Home</a><span>›</span><span>Bursaries</span></nav><h1 class="page">UK University Bursaries &amp; Scholarships</h1><p class="lede">3011 verified bursaries and scholarships across 144 UK universities — each linking straight to the official source, no forms with us. Pick your university below, or let the app match you to these plus national and independent grants.</p><h2>Quick links</h2><div class="tiles"><a href="/bursaries/closing-soon/"><b>Bursaries closing soon</b></a><a href="/bursaries/highest-value/"><b>Highest-value bursaries</b></a></div><h2 id="circumstance">Browse by circumstance</h2><div class="tiles"><a href="/bursaries/circumstance/low-income-students/"><b>Bursaries for Low-Income Students</b><span>367 funds</span></a><a href="/bursaries/circumstance/care-leavers/"><b>Bursaries for Care Leavers</b><span>227 funds</span></a><a href="/bursaries/circumstance/international-students/"><b>Bursaries for International Students in the UK</b><span>636 funds</span></a><a href="/bursaries/circumstance/estranged-students/"><b>Bursaries for Estranged Students</b><span>151 funds</span></a><a href="/bursaries/circumstance/disabled-students/"><b>Bursaries for Disabled Students</b><span>97 funds</span></a><a href="/bursaries/circumstance/refugees-and-asylum-seekers/"><b>Scholarships for Refugees and Asylum Seekers</b><span>131 funds</span></a></div><h2 id="subject">Browse by subject</h2><div class="tiles"><a href="/bursaries/subject/law/"><b>Bursaries for Law Students</b><span>83 funds</span></a><a href="/bursaries/subject/business/"><b>Bursaries for Business Students</b><span>70 funds</span></a><a href="/bursaries/subject/medicine/"><b>Bursaries for Medicine Students</b><span>106 funds</span></a><a href="/bursaries/subject/veterinary-studies/"><b>Bursaries for Veterinary Students</b><span>15 funds</span></a><a href="/bursaries/subject/music/"><b>Bursaries for Music Students</b><span>56 funds</span></a></div><h2 id="region">Browse by region</h2><div class="tiles"><a href="/bursaries/region/scotland/"><b>Bursaries for Students in Scotland</b><span>43 funds</span></a><a href="/bursaries/region/south-east/"><b>Bursaries for Students in the South East</b><span>15 funds</span></a><a href="/bursaries/region/wales/"><b>Bursaries for Students in Wales</b><span>46 funds</span></a><a href="/bursaries/region/london/"><b>Bursaries for Students in London</b><span>20 funds</span></a><a href="/bursaries/region/north-west/"><b>Bursaries for Students in the North West</b><span>22 funds</span></a><a href="/bursaries/region/south-west/"><b>Bursaries for Students in the South West</b><span>22 funds</span></a><a href="/bursaries/region/north-east/"><b>Bursaries for Students in the North East</b><span>37 funds</span></a><a href="/bursaries/region/yorkshire/"><b>Bursaries for Students in Yorkshire</b><span>14 funds</span></a><a href="/bursaries/region/east-of-england/"><b>Bursaries for Students in the East of England</b><span>9 funds</span></a><a href="/bursaries/region/east-midlands/"><b>Bursaries for Students in the East Midlands</b><span>17 funds</span></a><a href="/bursaries/region/west-midlands/"><b>Bursaries for Students in the West Midlands</b><span>12 funds</span></a></div><h2>Browse by university</h2><div class="tiles"><a href="/bursaries/abertay-university/"><b>Abertay University</b><span>7 bursaries</span></a><a href="/bursaries/aberystwyth-university/"><b>Aberystwyth University</b><span>59 bursaries</span></a><a href="/bursaries/anglia-ruskin-university/"><b>Anglia Ruskin University</b><span>37 bursaries</span></a><a href="/bursaries/arden-university/"><b>Arden University</b><span>3 bursaries</span></a><a href="/bursaries/arts-university-bournemouth/"><b>Arts University Bournemouth</b><span>5 bursaries</span></a><a href="/bursaries/aston-university/"><b>Aston University</b><span>32 bursaries</span></a><a href="/bursaries/bpp-university/"><b>BPP University</b><span>7 bursaries</span></a><a href="/bursaries/bangor-university/"><b>Bangor University</b><span>48 bursaries</span></a><a href="/bursaries/bath-spa-university/"><b>Bath Spa University</b><span>20 bursaries</span></a><a href="/bursaries/birkbeck-university-of-london/"><b>Birkbeck University of London</b><span>5 bursaries</span></a><a href="/bursaries/birmingham-city-university/"><b>Birmingham City University</b><span>39 bursaries</span></a><a href="/bursaries/bishop-grosseteste-university/"><b>Bishop Grosseteste University</b><span>5 bursaries</span></a><a href="/bursaries/bournemouth-university/"><b>Bournemouth University</b><span>7 bursaries</span></a><a href="/bursaries/brunel-university-london/"><b>Brunel University London</b><span>5 bursaries</span></a><a href="/bursaries/buckinghamshire-new-university/"><b>Buckinghamshire New University</b><span>10 bursaries</span></a><a href="/bursaries/canterbury-christ-church-university/"><b>Canterbury Christ Church University</b><span>22 bursaries</span></a><a href="/bursaries/cardiff-metropolitan-university/"><b>Cardiff Metropolitan University</b><span>10 bursaries</span></a><a href="/bursaries/cardiff-university/"><b>Cardiff University</b><span>11 bursaries</span></a><a href="/bursaries/city-university-of-london/"><b>City, University of London</b><span>6 bursaries</span></a><a href="/bursaries/coventry-university/"><b>Coventry University</b><span>6 bursaries</span></a><a href="/bursaries/de-montfort-university/"><b>De Montfort University</b><span>10 bursaries</span></a><a href="/bursaries/durham-university/"><b>Durham University</b><span>109 bursaries</span></a><a href="/bursaries/edge-hill-university/"><b>Edge Hill University</b><span>14 bursaries</span></a><a href="/bursaries/edinburgh-napier-university/"><b>Edinburgh Napier University</b><span>19 bursaries</span></a><a href="/bursaries/external-national-bodies/"><b>External / National Bodies</b><span>131 bursaries</span></a><a href="/bursaries/falmouth-university/"><b>Falmouth University</b><span>4 bursaries</span></a><a href="/bursaries/glasgow-caledonian-university/"><b>Glasgow Caledonian University</b><span>8 bursaries</span></a><a href="/bursaries/glasgow-school-of-art/"><b>Glasgow School of Art</b><span>8 bursaries</span></a><a href="/bursaries/goldsmiths-university-of-london/"><b>Goldsmiths University of London</b><span>16 bursaries</span></a><a href="/bursaries/harper-adams-university/"><b>Harper Adams University</b><span>4 bursaries</span></a><a href="/bursaries/hartpury-university/"><b>Hartpury University</b><span>7 bursaries</span></a><a href="/bursaries/heriot-watt-university/"><b>Heriot-Watt University</b><span>9 bursaries</span></a><a href="/bursaries/imperial-college-london/"><b>Imperial College London</b><span>14 bursaries</span></a><a href="/bursaries/keele-university/"><b>Keele University</b><span>13 bursaries</span></a><a href="/bursaries/king-s-college-london/"><b>King&#x27;s College London</b><span>25 bursaries</span></a><a href="/bursaries/kingston-university/"><b>Kingston University</b><span>7 bursaries</span></a><a href="/bursaries/lse/"><b>LSE</b><span>12 bursaries</span></a><a href="/bursaries/lancaster-university/"><b>Lancaster University</b><span>23 bursaries</span></a><a href="/bursaries/leeds-arts-university/"><b>Leeds Arts University</b><span>4 bursaries</span></a><a href="/bursaries/leeds-beckett-university/"><b>Leeds Beckett University</b><span>19 bursaries</span></a><a href="/bursaries/leeds-trinity-university/"><b>Leeds Trinity University</b><span>5 bursaries</span></a><a href="/bursaries/liverpool-hope-university/"><b>Liverpool Hope University</b><span>7 bursaries</span></a><a href="/bursaries/liverpool-john-moores-university/"><b>Liverpool John Moores University</b><span>19 bursaries</span></a><a href="/bursaries/london-metropolitan-university/"><b>London Metropolitan University</b><span>19 bursaries</span></a><a href="/bursaries/london-south-bank-university/"><b>London South Bank University</b><span>10 bursaries</span></a><a href="/bursaries/loughborough-university/"><b>Loughborough University</b><span>44 bursaries</span></a><a href="/bursaries/loughborough-university-london/"><b>Loughborough University London</b><span>5 bursaries</span></a><a href="/bursaries/manchester-metropolitan-university/"><b>Manchester Metropolitan University</b><span>6 bursaries</span></a><a href="/bursaries/middlesex-university/"><b>Middlesex University</b><span>16 bursaries</span></a><a href="/bursaries/newcastle-university/"><b>Newcastle University</b><span>55 bursaries</span></a><a href="/bursaries/newman-university/"><b>Newman University</b><span>6 bursaries</span></a><a href="/bursaries/northumbria-university/"><b>Northumbria University</b><span>34 bursaries</span></a><a href="/bursaries/norwich-university-of-the-arts/"><b>Norwich University of the Arts</b><span>6 bursaries</span></a><a href="/bursaries/nottingham-trent-university/"><b>Nottingham Trent University</b><span>9 bursaries</span></a><a href="/bursaries/oxford-brookes-university/"><b>Oxford Brookes University</b><span>33 bursaries</span></a><a href="/bursaries/plymouth-marjon-university/"><b>Plymouth Marjon University</b><span>4 bursaries</span></a><a href="/bursaries/queen-margaret-university/"><b>Queen Margaret University</b><span>6 bursaries</span></a><a href="/bursaries/queen-mary-university-of-london/"><b>Queen Mary University of London</b><span>49 bursaries</span></a><a href="/bursaries/queen-s-university-belfast/"><b>Queen&#x27;s University Belfast</b><span>55 bursaries</span></a><a href="/bursaries/ravensbourne-university-london/"><b>Ravensbourne University London</b><span>7 bursaries</span></a><a href="/bursaries/robert-gordon-university/"><b>Robert Gordon University</b><span>8 bursaries</span></a><a href="/bursaries/roehampton-university/"><b>Roehampton University</b><span>13 bursaries</span></a><a href="/bursaries/royal-agricultural-university/"><b>Royal Agricultural University</b><span>20 bursaries</span></a><a href="/bursaries/royal-central-school-of-speech-and-drama/"><b>Royal Central School of Speech and Drama</b><span>5 bursaries</span></a><a href="/bursaries/royal-conservatoire-of-scotland/"><b>Royal Conservatoire of Scotland</b><span>7 bursaries</span></a><a href="/bursaries/royal-holloway-university-of-london/"><b>Royal Holloway University of London</b><span>23 bursaries</span></a><a href="/bursaries/soas-university-of-london/"><b>SOAS University of London</b><span>6 bursaries</span></a><a href="/bursaries/sruc/"><b>SRUC</b><span>3 bursaries</span></a><a href="/bursaries/sheffield-hallam-university/"><b>Sheffield Hallam University</b><span>36 bursaries</span></a><a href="/bursaries/southampton-solent-university/"><b>Southampton Solent University</b><span>23 bursaries</span></a><a href="/bursaries/st-mary-s-university-twickenham/"><b>St Mary&#x27;s University Twickenham</b><span>7 bursaries</span></a><a href="/bursaries/staffordshire-university/"><b>Staffordshire University</b><span>8 bursaries</span></a><a href="/bursaries/swansea-university/"><b>Swansea University</b><span>36 bursaries</span></a><a href="/bursaries/teesside-university/"><b>Teesside University</b><span>20 bursaries</span></a><a href="/bursaries/the-open-university/"><b>The Open University</b><span>8 bursaries</span></a><a href="/bursaries/ucl/"><b>UCL</b><span>55 bursaries</span></a><a href="/bursaries/ulster-university/"><b>Ulster University</b><span>8 bursaries</span></a><a href="/bursaries/university-college-birmingham/"><b>University College Birmingham</b><span>7 bursaries</span></a><a href="/bursaries/university-of-aberdeen/"><b>University of Aberdeen</b><span>34 bursaries</span></a><a href="/bursaries/university-of-bath/"><b>University of Bath</b><span>57 bursaries</span></a><a href="/bursaries/university-of-bedfordshire/"><b>University of Bedfordshire</b><span>8 bursaries</span></a><a href="/bursaries/university-of-birmingham/"><b>University of Birmingham</b><span>26 bursaries</span></a><a href="/bursaries/university-of-bolton/"><b>University of Bolton</b><span>6 bursaries</span></a><a href="/bursaries/university-of-bradford/"><b>University of Bradford</b><span>5 bursaries</span></a><a href="/bursaries/university-of-brighton/"><b>University of Brighton</b><span>6 bursaries</span></a><a href="/bursaries/university-of-bristol/"><b>University of Bristol</b><span>22 bursaries</span></a><a href="/bursaries/university-of-buckingham/"><b>University of Buckingham</b><span>8 bursaries</span></a><a href="/bursaries/university-of-cambridge/"><b>University of Cambridge</b><span>23 bursaries</span></a><a href="/bursaries/university-of-chester/"><b>University of Chester</b><span>4 bursaries</span></a><a href="/bursaries/university-of-chichester/"><b>University of Chichester</b><span>7 bursaries</span></a><a href="/bursaries/university-of-cumbria/"><b>University of Cumbria</b><span>5 bursaries</span></a><a href="/bursaries/university-of-derby/"><b>University of Derby</b><span>21 bursaries</span></a><a href="/bursaries/university-of-dundee/"><b>University of Dundee</b><span>10 bursaries</span></a><a href="/bursaries/university-of-east-anglia/"><b>University of East Anglia</b><span>4 bursaries</span></a><a href="/bursaries/university-of-east-london/"><b>University of East London</b><span>10 bursaries</span></a><a href="/bursaries/university-of-edinburgh/"><b>University of Edinburgh</b><span>57 bursaries</span></a><a href="/bursaries/university-of-essex/"><b>University of Essex</b><span>16 bursaries</span></a><a href="/bursaries/university-of-exeter/"><b>University of Exeter</b><span>41 bursaries</span></a><a href="/bursaries/university-of-glasgow/"><b>University of Glasgow</b><span>25 bursaries</span></a><a href="/bursaries/university-of-gloucestershire/"><b>University of Gloucestershire</b><span>6 bursaries</span></a><a href="/bursaries/university-of-greenwich/"><b>University of Greenwich</b><span>28 bursaries</span></a><a href="/bursaries/university-of-hertfordshire/"><b>University of Hertfordshire</b><span>4 bursaries</span></a><a href="/bursaries/university-of-huddersfield/"><b>University of Huddersfield</b><span>61 bursaries</span></a><a href="/bursaries/university-of-hull/"><b>University of Hull</b><span>17 bursaries</span></a><a href="/bursaries/university-of-kent/"><b>University of Kent</b><span>8 bursaries</span></a><a href="/bursaries/university-of-lancashire/"><b>University of Lancashire</b><span>38 bursaries</span></a><a href="/bursaries/university-of-law/"><b>University of Law</b><span>10 bursaries</span></a><a href="/bursaries/university-of-leeds/"><b>University of Leeds</b><span>37 bursaries</span></a><a href="/bursaries/university-of-leicester/"><b>University of Leicester</b><span>5 bursaries</span></a><a href="/bursaries/university-of-lincoln/"><b>University of Lincoln</b><span>43 bursaries</span></a><a href="/bursaries/university-of-liverpool/"><b>University of Liverpool</b><span>67 bursaries</span></a><a href="/bursaries/university-of-manchester/"><b>University of Manchester</b><span>71 bursaries</span></a><a href="/bursaries/university-of-northampton/"><b>University of Northampton</b><span>10 bursaries</span></a><a href="/bursaries/university-of-nottingham/"><b>University of Nottingham</b><span>35 bursaries</span></a><a href="/bursaries/university-of-oxford/"><b>University of Oxford</b><span>3 bursaries</span></a><a href="/bursaries/university-of-plymouth/"><b>University of Plymouth</b><span>31 bursaries</span></a><a href="/bursaries/university-of-portsmouth/"><b>University of Portsmouth</b><span>32 bursaries</span></a><a href="/bursaries/university-of-reading/"><b>University of Reading</b><span>55 bursaries</span></a><a href="/bursaries/university-of-salford/"><b>University of Salford</b><span>40 bursaries</span></a><a href="/bursaries/university-of-sheffield/"><b>University of Sheffield</b><span>56 bursaries</span></a><a href="/bursaries/university-of-south-wales/"><b>University of South Wales</b><span>11 bursaries</span></a><a href="/bursaries/university-of-southampton/"><b>University of Southampton</b><span>70 bursaries</span></a><a href="/bursaries/university-of-st-andrews/"><b>University of St Andrews</b><span>4 bursaries</span></a><a href="/bursaries/university-of-stirling/"><b>University of Stirling</b><span>49 bursaries</span></a><a href="/bursaries/university-of-strathclyde/"><b>University of Strathclyde</b><span>8 bursaries</span></a><a href="/bursaries/university-of-suffolk/"><b>University of Suffolk</b><span>7 bursaries</span></a><a href="/bursaries/university-of-sunderland/"><b>University of Sunderland</b><span>5 bursaries</span></a><a href="/bursaries/university-of-surrey/"><b>University of Surrey</b><span>38 bursaries</span></a><a href="/bursaries/university-of-sussex/"><b>University of Sussex</b><span>49 bursaries</span></a><a href="/bursaries/university-of-wales-trinity-saint-david/"><b>University of Wales Trinity Saint David</b><span>15 bursaries</span></a><a href="/bursaries/university-of-warwick/"><b>University of Warwick</b><span>36 bursaries</span></a><a href="/bursaries/university-of-west-london/"><b>University of West London</b><span>9 bursaries</span></a><a href="/bursaries/university-of-westminster/"><b>University of Westminster</b><span>28 bursaries</span></a><a href="/bursaries/university-of-winchester/"><b>University of Winchester</b><span>7 bursaries</span></a><a href="/bursaries/university-of-wolverhampton/"><b>University of Wolverhampton</b><span>7 bursaries</span></a><a href="/bursaries/university-of-worcester/"><b>University of Worcester</b><span>7 bursaries</span></a><a href="/bursaries/university-of-york/"><b>University of York</b><span>29 bursaries</span></a><a href="/bursaries/university-of-the-arts-london/"><b>University of the Arts London</b><span>3 bursaries</span></a><a href="/bursaries/university-of-the-highlands-and-islands/"><b>University of the Highlands and Islands</b><span>18 bursaries</span></a><a href="/bursaries/university-of-the-west-of-england/"><b>University of the West of England</b><span>45 bursaries</span></a><a href="/bursaries/university-of-the-west-of-scotland/"><b>University of the West of Scotland</b><span>7 bursaries</span></a><a href="/bursaries/wrexham-university/"><b>Wrexham University</b><span>6 bursaries</span></a><a href="/bursaries/writtle-university-college/"><b>Writtle University College</b><span>5 bursaries</span></a><a href="/bursaries/york-st-john-university/"><b>York St John University</b><span>8 bursaries</span></a><a href="/bursaries/more-universities/"><b>More universities</b><span>0 bursaries</span></a></div>
+</main>
+<footer class="ftr"><div class="cols"><div class="col"><b>Browse</b><a href="/bursaries/">By university</a><a href="/#circumstance">By circumstance</a><a href="/#subject">By subject</a><a href="/#region">By region</a></div><div class="col"><b>Popular</b><a href="/bursaries/closing-soon/">Closing soon</a><a href="/bursaries/highest-value/">Highest value</a><a href="/bursaries/circumstance/care-leavers/">Care leaver bursaries</a><a href="/bursaries/circumstance/low-income-students/">Low-income bursaries</a></div><div class="col"><b>About</b><a href="https://apps.apple.com/app/id6795890396">iOS app</a><a href="https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3Dbursasearch_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site">Android app</a><a href="https://bursasearchp.github.io/bursasearch-legal/support.html">Support</a></div></div><p class="fine">Bursary details are compiled from official university and provider pages and can change &mdash; always confirm on the official link before applying. &copy; Bursa Group Ltd.</p></footer>
+
 </body>
 </html>
