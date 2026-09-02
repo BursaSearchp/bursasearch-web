@@ -28,7 +28,7 @@ jobs:
 
       - name: Commit and push if the site actually changed
         run: |
-          git config user.name "findmyfund-bot"
+          git config user.name "bursasearch-bot"
           git config user.email "actions@github.com"
           git add -A
           if git diff --cached --quiet; then

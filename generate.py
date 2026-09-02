@@ -18,7 +18,7 @@ import urllib.request
 from collections import defaultdict
 from datetime import date, datetime
 
-SITE_URL = "https://findmyfund.co.uk"
+SITE_URL = "https://bursasearch.com"
 # Apple has no equivalent of Play's &referrer= campaign tracking from a plain
 # URL — attributing App Store installs to this site needs a provider/campaign
 # token from App Analytics in App Store Connect (one-time setup only the
@@ -27,11 +27,11 @@ SITE_URL = "https://findmyfund.co.uk"
 APP_STORE_URL = "https://apps.apple.com/app/id6795890396"
 # &referrer= is Google Play's documented custom-campaign format — installs
 # that came through this link now show up in Play Console's Acquisition
-# reports under source "findmyfund_web" / campaign "seo_site", instead of
+# reports under source "bursasearch_web" / campaign "seo_site", instead of
 # being invisible in the "organic" bucket like every other install.
 PLAY_URL = (
     "https://play.google.com/store/apps/details?id=fresherforgev2.com"
-    "&referrer=utm_source%3Dfindmyfund_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site"
+    "&referrer=utm_source%3Dbursasearch_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site"
 )
 OG_IMAGE = f"{SITE_URL}/og-image.png"
 OUT_DIR = "bursaries"
@@ -374,10 +374,10 @@ def faq_block(uni_name, count, scope_phrase="this university"):
     items = [
         ("Is this list free to use?",
          f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
-        ("Do I apply through FindMyFund?",
+        ("Do I apply through BursaSearch?",
          "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         f"This page lists what's publicly available for {scope_phrase}. FindMyFund's app checks your specific circumstances — income, region, fee status and more — against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
+         f"This page lists what's publicly available for {scope_phrase}. BursaSearch's app checks your specific circumstances — income, region, fee status and more — against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
     ]
     out = []
     for q, a in items:
@@ -392,10 +392,10 @@ def faq_jsonld(uni_name, scope_phrase="this university"):
     items = [
         ("Is this list free to use?",
          f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
-        ("Do I apply through FindMyFund?",
+        ("Do I apply through BursaSearch?",
          "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         f"This page lists what's publicly available for {scope_phrase}. FindMyFund's app checks your specific circumstances against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
+         f"This page lists what's publicly available for {scope_phrase}. BursaSearch's app checks your specific circumstances against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
     ]
     return json.dumps({
         "@context": "https://schema.org",
@@ -444,7 +444,7 @@ PAGE_TEMPLATE = """<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <div class="crumb"><a href="/">FindMyFund</a> / <a href="/bursaries/">{crumb_label}</a> / {uni_name_esc}</div>
+  <div class="crumb"><a href="/">BursaSearch</a> / <a href="/bursaries/">{crumb_label}</a> / {uni_name_esc}</div>
   <h1>{h1}</h1>
   <p class="lede">{lede}</p>
 
@@ -466,7 +466,7 @@ PAGE_TEMPLATE = """<!doctype html>
 {related}
   <div class="foot">
     Bursary details are sourced from official university and provider pages and may change —
-    always confirm on the official link before applying. <a href="/">FindMyFund</a> · Bursa Group Ltd
+    always confirm on the official link before applying. <a href="/">BursaSearch</a> · Bursa Group Ltd
   </div>
 </div>
 </body>
@@ -517,7 +517,7 @@ def render_page(uni_name, entries, slug):
         f"{uni_name} — each linking straight to the official source, no forms with us. Our app also "
         f"matches you to additional grants beyond this list, based on your specific circumstances."
     )
-    title = f"{uni_name} Bursaries & Scholarships ({date.today().year}) | FindMyFund"
+    title = f"{uni_name} Bursaries & Scholarships ({date.today().year}) | BursaSearch"
     description = (
         f"{count} verified bursaries and scholarships for {uni_name} students{amt_bit}. "
         f"See eligibility, deadlines and official application links."
@@ -541,7 +541,7 @@ def render_page(uni_name, entries, slug):
         related=related_links_html(entries),
         jsonld=faq_jsonld(uni_name),
         breadcrumb=breadcrumb_jsonld([
-            ("FindMyFund", f"{SITE_URL}/"),
+            ("BursaSearch", f"{SITE_URL}/"),
             ("Bursaries by university", f"{SITE_URL}/bursaries/"),
             (uni_name, canonical),
         ]),
@@ -557,7 +557,7 @@ def render_rollup(singles):
     all_rows.sort(key=lambda t: t[0])
     cards = "".join(bursary_card(r, tag=uni) for uni, r in all_rows)
     count = len(all_rows)
-    title = f"More UK University Bursaries ({date.today().year}) | FindMyFund"
+    title = f"More UK University Bursaries ({date.today().year}) | BursaSearch"
     description = f"{count} additional verified UK university bursaries and scholarships, one per institution."
     canonical = f"{SITE_URL}/bursaries/more-universities/"
     lede = (
@@ -583,7 +583,7 @@ def render_rollup(singles):
         related="",
         jsonld=faq_jsonld("these universities"),
         breadcrumb=breadcrumb_jsonld([
-            ("FindMyFund", f"{SITE_URL}/"),
+            ("BursaSearch", f"{SITE_URL}/"),
             ("Bursaries by university", f"{SITE_URL}/bursaries/"),
             ("More universities", canonical),
         ]),
@@ -641,7 +641,7 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         f"UK universities — each linking straight to the official source, no forms with us. Our app "
         f"also matches you to additional grants beyond this list, based on {lede_tail}."
     )
-    title = f"{h1} ({date.today().year}) | FindMyFund"
+    title = f"{h1} ({date.today().year}) | BursaSearch"
     description = (
         f"{count} verified bursaries and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}. "
         f"See eligibility, deadlines and official application links."
@@ -666,7 +666,7 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         related=related_links_html(rows_matched, exclude=(kind, slug)),
         jsonld=faq_jsonld(noun_phrase, scope_phrase=noun_phrase),
         breadcrumb=breadcrumb_jsonld([
-            ("FindMyFund", f"{SITE_URL}/"),
+            ("BursaSearch", f"{SITE_URL}/"),
             (crumb_label, f"{SITE_URL}/bursaries/"),
             (h1, canonical),
         ]),
@@ -774,7 +774,7 @@ HUB_TEMPLATE = """<!doctype html>
 </head>
 <body>
 <div class="wrap">
-  <div class="crumb"><a href="/">FindMyFund</a> / Bursaries</div>
+  <div class="crumb"><a href="/">BursaSearch</a> / Bursaries</div>
   <h1>UK University Bursaries &amp; Scholarships</h1>
   <p class="lede">{n_total} verified bursaries and scholarships across {n_unis} UK universities — each linking straight to the official source, no forms with us. Pick your university, or let the app match you to these plus additional national and independent grants.</p>
   <div class="cta-row">
@@ -800,7 +800,7 @@ HUB_TEMPLATE = """<!doctype html>
   <h2>Browse by university</h2>
   <div class="ulist">{links}
   </div>
-  <div class="foot">FindMyFund · Bursa Group Ltd</div>
+  <div class="foot">BursaSearch · Bursa Group Ltd</div>
 </div>
 </body>
 </html>
@@ -827,7 +827,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     n_total = sum(c for _, _, c in uni_list) + singles_count
     n_unis = len(uni_list) + singles_count
     canonical = f"{SITE_URL}/bursaries/"
-    title = "UK University Bursaries & Scholarships — Browse by University | FindMyFund"
+    title = "UK University Bursaries & Scholarships — Browse by University | BursaSearch"
     description = f"Browse verified bursaries and scholarships at {n_unis} UK universities, covering {n_total} funds in total. Free to search."
     return HUB_TEMPLATE.format(
         title=esc(title),
@@ -845,7 +845,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
         region_links=region_links,
         links=links,
         breadcrumb=breadcrumb_jsonld([
-            ("FindMyFund", f"{SITE_URL}/"),
+            ("BursaSearch", f"{SITE_URL}/"),
             ("Bursaries", canonical),
         ]),
     )
@@ -858,7 +858,7 @@ def submit_indexnow(urls):
     if not urls or not SEO_DATA_URL:
         return
     payload = json.dumps({
-        "host": "findmyfund.co.uk",
+        "host": "bursasearch.com",
         "key": INDEXNOW_KEY,
         "keyLocation": f"{SITE_URL}/{INDEXNOW_KEY}.txt",
         "urlList": urls,
