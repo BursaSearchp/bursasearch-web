@@ -125,6 +125,20 @@ a.nm:hover{color:var(--teal-ink);}
 .tiles a span{display:block; font-size:12.5px; color:var(--ink-mute);
   margin-top:2px; font-variant-numeric:tabular-nums;}
 
+h1.page + .sub{font-size:13px; color:var(--ink-mute); margin:-4px 0 16px;
+  letter-spacing:.01em;}
+.kv{border:1px solid var(--line); border-radius:3px; overflow:hidden; margin:18px 0;}
+.kv > div{display:flex; gap:14px; padding:10px 15px; border-top:1px solid var(--line);
+  font-size:13.5px;}
+.kv > div:first-child{border-top:0;}
+.kv dt{flex:0 0 132px; color:var(--ink-mute);}
+.kv dd{margin:0; flex:1; font-weight:500;}
+.kv dd a{font-weight:600;}
+.crit{margin:10px 0 0; padding:0 0 0 20px;}
+.crit li{margin:0 0 6px; font-size:14px; color:var(--ink-soft);}
+.crit + p.note{font-size:12.5px; color:var(--ink-mute); margin-top:10px;}
+.applybtn{margin:10px 0 0;}
+
 .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
 .steps .step{border:1px solid var(--line); border-radius:3px; padding:15px;
   background:var(--paper);}
