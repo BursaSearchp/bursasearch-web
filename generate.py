@@ -128,6 +128,36 @@ def slugify(s):
 def esc(s):
     return html.escape(s, quote=True)
 
+# ── Per-grant page lookups (populated in the build section, phase 1, before
+#    any listing page is rendered so its rows can link straight to the fund's
+#    own page). ─────────────────────────────────────────────────────────────
+FUND_SLUGS_FILE = "fund_slugs.json"
+FUND_URLS = {}      # fund_key -> "/bursaries/<uni-slug>/<fund-slug>/"
+CANON_BY_KEY = {}   # norm_uni_key -> (canonical display name, uni slug)
+
+def load_fund_slugs():
+    try:
+        with open(FUND_SLUGS_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def fund_key(uni_name, fund_name):
+    return norm_uni_key(uni_name) + "|" + re.sub(r"\s+", " ", clean(fund_name).lower())
+
+def fund_href_for(row, uni_hint=None):
+    """The row's own grant-page path, or None. uni_hint = canonical uni name
+    when the caller already knows it (a university page); otherwise the row's
+    raw University is resolved through CANON_BY_KEY (the cross-cutting pages)."""
+    name = clean(row.get("Bursary Name", ""))
+    if not name:
+        return None
+    if uni_hint:
+        return FUND_URLS.get(fund_key(uni_hint, name))
+    raw = clean(row.get("University", ""))
+    resolved = CANON_BY_KEY.get(norm_uni_key(raw)) if raw else None
+    return FUND_URLS.get(fund_key(resolved[0], name)) if resolved else None
+
 def load_lastmod():
     try:
         with open(LASTMOD_FILE, encoding="utf-8") as f:
@@ -417,6 +447,20 @@ a.nm:hover{color:var(--teal-ink);}
 .tiles a span{display:block; font-size:12.5px; color:var(--ink-mute);
   margin-top:2px; font-variant-numeric:tabular-nums;}
 
+h1.page + .sub{font-size:13px; color:var(--ink-mute); margin:-4px 0 16px;
+  letter-spacing:.01em;}
+.kv{border:1px solid var(--line); border-radius:3px; overflow:hidden; margin:18px 0;}
+.kv > div{display:flex; gap:14px; padding:10px 15px; border-top:1px solid var(--line);
+  font-size:13.5px;}
+.kv > div:first-child{border-top:0;}
+.kv dt{flex:0 0 132px; color:var(--ink-mute);}
+.kv dd{margin:0; flex:1; font-weight:500;}
+.kv dd a{font-weight:600;}
+.crit{margin:10px 0 0; padding:0 0 0 20px;}
+.crit li{margin:0 0 6px; font-size:14px; color:var(--ink-soft);}
+.crit + p.note{font-size:12.5px; color:var(--ink-mute); margin-top:10px;}
+.applybtn{margin:10px 0 0;}
+
 .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
 .steps .step{border:1px solid var(--line); border-radius:3px; padding:15px;
   background:var(--paper);}
@@ -697,7 +741,9 @@ def related_links_html(entries, exclude=None):
 
 def render_page(uni_name, entries, slug):
     entries_sorted = sorted(entries, key=lambda r: clean(r.get("Bursary Name", "")))
-    rows_html = "".join(bursary_row(r) for r in entries_sorted)
+    rows_html = "".join(
+        bursary_row(r, fund_href=fund_href_for(r, uni_name)) for r in entries_sorted
+    )
     count = len(entries)
     amt_range = amount_range_text(entries)
     amt_bit = f" worth {amt_range}" if amt_range else ""
@@ -816,7 +862,9 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         raw_uni = clean(r.get("University", ""))
         resolved = canon_by_key.get(norm_uni_key(raw_uni)) if raw_uni else None
         uni_href = f"/bursaries/{resolved[1]}/" if resolved else None
-        row_parts.append(bursary_row(r, uni=raw_uni or None, uni_href=uni_href))
+        row_parts.append(bursary_row(
+            r, uni=raw_uni or None, uni_href=uni_href, fund_href=fund_href_for(r),
+        ))
     rows_html = "".join(row_parts)
     count = len(entries_sorted)
     amt_range = amount_range_text(entries_sorted)
@@ -923,6 +971,278 @@ def render_region_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
         "region", slug, h1, noun_phrase, rows_matched,
         "Bursaries by region", "your region and full circumstances", canon_by_key,
     )
+
+# ── Per-grant pages ─────────────────────────────────────────────────────────
+# One URL per individual fund that carries enough real data to make a page
+# that isn't thin. Nested under the university (/bursaries/<uni>/<fund>/) for
+# topical relevance and a natural breadcrumb.
+FUND_PAGE_MIN_SIGNALS = 2
+FUND_SIGNAL_FIELDS = [
+    "Amount", "Deadline", "Fee status", "Study subject",
+    "Vulnerabilities (multi-select)", "Household income", "Home country",
+    "Required nationality", "Course Year", "AI Notes", "Extra Requirement",
+]
+
+def fund_has_page(row):
+    if not clean(row.get("Bursary Name", "")):
+        return False
+    if not (clean(row.get("Application URL", "")) or clean(row.get("Link", ""))):
+        return False
+    return sum(1 for f in FUND_SIGNAL_FIELDS if clean(row.get(f, ""))) >= FUND_PAGE_MIN_SIGNALS
+
+def assign_fund_slug(fkey, name, pinned, used):
+    """Slug for a fund within its university. `pinned` = fund_slugs.json — a
+    fund keeps its slug across runs (a light rename mustn't move the URL), so
+    a known fund returns its pin unconditionally. `used` = slugs already taken
+    for this university this run (pre-seeded with this uni's pins), so only a
+    genuinely new fund needs the -2/-3 collision suffix."""
+    if fkey in pinned:
+        return pinned[fkey]
+    base = slugify(name) or "bursary"
+    s, i = base, 2
+    while s in used:
+        s, i = f"{base}-{i}", i + 1
+    pinned[fkey] = s
+    return s
+
+_SCHOLARSHIP_WORDS = ("scholarship", "award", "prize", "medal", "studentship")
+_HARDSHIP_WORDS = ("hardship", "emergency", "crisis", "financial difficulty",
+                   "in financial need", "support fund", "access to learning")
+
+def infer_fund_type(row):
+    n = clean(row.get("Bursary Name", "")).lower()
+    if any(w in n for w in _HARDSHIP_WORDS):
+        return "Hardship fund"
+    if any(w in n for w in _SCHOLARSHIP_WORDS):
+        return "Scholarship"
+    return "Bursary"
+
+def eligibility_audience_phrase(row):
+    """The single strongest 'who it's for' phrase, for the lede + schema."""
+    if vuln_has(row, "care leaver", "care experienced", "care-experienced"):
+        return "care-experienced students"
+    if vuln_has(row, "estranged"):
+        return "students estranged from their families"
+    if vuln_has(row, "refugee", "asylum"):
+        return "students with refugee or asylum-seeker backgrounds"
+    if vuln_has(row, "disab"):
+        return "disabled students"
+    hh = clean(row.get("Household income", ""))
+    if hh:
+        return f"students with a household income of {hh}"
+    if vuln_has(row, "low income", "fsm", "free school meal"):
+        return "students from lower-income households"
+    subj = clean(row.get("Study subject", ""))
+    if subj and len(subj) < 40:
+        return f"{subj.lower()} students"
+    fs = clean(row.get("Fee status", "")).lower()
+    if "overseas" in fs or "international" in fs:
+        return "international students"
+    return ""
+
+def deadline_text(row):
+    """Plain-text deadline for the key-facts list."""
+    raw = clean(row.get("Deadline", ""))
+    if not raw:
+        return "Set annually — check the official page"
+    d = parse_deadline_date(raw)
+    if d:
+        return format_deadline(raw) if d >= date.today() else "Set annually — check the official page"
+    if any(h in raw.lower() for h in _ROLLING_HINTS):
+        return "Rolling — no fixed date"
+    return raw
+
+def fund_lede(row, uni_name, ftype):
+    name = clean(row.get("Bursary Name", ""))
+    amount = format_amount(row.get("Amount", ""))
+    amt = f" worth {amount}" if amount else ""
+    aud = eligibility_audience_phrase(row)
+    aud_bit = f" for {aud}" if aud else ""
+    d = parse_deadline_date(row.get("Deadline", ""))
+    raw = clean(row.get("Deadline", ""))
+    if d and d >= date.today():
+        dl = f" Applications for {date.today().year}/{str(date.today().year + 1)[2:]} close on {format_deadline(raw)}."
+    elif raw and any(h in raw.lower() for h in _ROLLING_HINTS):
+        dl = " It runs on a rolling basis, so there's no fixed deadline."
+    else:
+        dl = ""
+    return (
+        f"The {name} is a {ftype.lower()}{amt}{aud_bit} at {uni_name}. Every detail "
+        f"here is taken from the official page — you apply directly with {uni_name}, "
+        f"not through us.{dl}"
+    )
+
+def eligibility_lines(row):
+    out = []
+    hh = clean(row.get("Household income", ""))
+    if hh:
+        out.append(f"Your household income is {hh}.")
+    v = clean(row.get("Vulnerabilities (multi-select)", ""))
+    if v:
+        parts = [p.strip() for p in v.split(",") if p.strip()]
+        out.append("Your circumstances include: " + ", ".join(parts).lower() + ".")
+    fs = clean(row.get("Fee status", ""))
+    if fs and fs.lower() != "any":
+        out.append(f"Your fee status is {fs}.")
+    nat = clean(row.get("Required nationality", ""))
+    if nat:
+        out.append(f"You are a national of {nat}.")
+    hc = clean(row.get("Home country", ""))
+    if hc:
+        out.append(f"You are ordinarily resident in {hc}.")
+    subj = clean(row.get("Study subject", ""))
+    if subj:
+        out.append(f"You are studying {subj}, or a closely related course.")
+    lvl = clean(row.get("Study level", ""))
+    if lvl:
+        out.append(f"You are studying at {lvl.lower()} level.")
+    yr = clean(row.get("Course Year", ""))
+    if yr:
+        out.append(f"You are in course year {yr}.")
+    grade = clean(row.get("Minimum grade", ""))
+    if grade:
+        out.append(f"You have achieved at least {grade}.")
+    extra = clean(row.get("Extra Requirement", ""))
+    if extra:
+        out.append(extra if extra.rstrip().endswith((".", "!", "?")) else extra.rstrip() + ".")
+    return out
+
+def fund_faq_items(row, uni_name):
+    name = clean(row.get("Bursary Name", ""))
+    amount = format_amount(row.get("Amount", ""))
+    a_amt = (
+        f"The {name} is worth {amount}."
+        if amount else
+        f"{uni_name} doesn't publish a single fixed figure for the {name} — check the "
+        "official page for the current amount and how it's paid."
+    )
+    d = parse_deadline_date(row.get("Deadline", ""))
+    raw = clean(row.get("Deadline", ""))
+    if d and d >= date.today():
+        a_dl = f"Applications for the {name} close on {format_deadline(raw)}."
+    elif raw and any(h in raw.lower() for h in _ROLLING_HINTS):
+        a_dl = f"The {name} has no fixed deadline — you can apply at any point during the year."
+    else:
+        a_dl = (
+            f"{uni_name} sets the deadline for the {name} each year. Check the official "
+            "page for the current closing date."
+        )
+    return [
+        (f"How much is the {name}?", a_amt),
+        (f"What is the deadline for the {name}?", a_dl),
+        ("Do I apply through BursaSearch?",
+         f"No. You apply directly with {uni_name} using the official link on this page — "
+         "BursaSearch is not part of the application."),
+    ]
+
+def monetary_grant_jsonld(row, uni_name, canonical, description):
+    obj = {
+        "@context": "https://schema.org",
+        "@type": "MonetaryGrant",
+        "name": clean(row.get("Bursary Name", "")),
+        "description": description,
+        "url": canonical,
+        "funder": {"@type": "CollegeOrUniversity", "name": uni_name},
+    }
+    val = max_amount_value(row.get("Amount", ""))
+    if val > 0:
+        obj["amount"] = {"@type": "MonetaryAmount", "currency": "GBP", "value": val}
+    aud = eligibility_audience_phrase(row)
+    if aud:
+        obj["audience"] = {"@type": "EducationalAudience", "audienceType": aud}
+    return json.dumps(obj)
+
+def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
+    name = clean(row.get("Bursary Name", ""))
+    ftype = infer_fund_type(row)
+    official = clean(row.get("Application URL", "")) or clean(row.get("Link", ""))
+    canonical = f"{SITE_URL}/bursaries/{uni_slug}/{fund_slug}/"
+    lede = fund_lede(row, uni_name, ftype)
+    description = (lede[:157].rsplit(" ", 1)[0] + "…") if len(lede) > 158 else lede
+    title = f"{name} — {uni_name} ({date.today().year}) | BursaSearch"
+
+    kv = [("Amount", esc(format_amount(row.get("Amount", "")) or "See official page")),
+          ("Type", esc(ftype)),
+          ("Deadline", esc(deadline_text(row)))]
+    lvl = clean(row.get("Study level", ""))
+    if lvl:
+        kv.append(("Study level", esc(lvl)))
+    fs = clean(row.get("Fee status", ""))
+    if fs and fs.lower() != "any":
+        kv.append(("Fee status", esc(fs)))
+    subj = clean(row.get("Study subject", ""))
+    if subj:
+        kv.append(("Subject", esc(subj)))
+    kv.append(("Administered by", f'<a href="/bursaries/{uni_slug}/">{esc(uni_name)}</a>'))
+    kv_html = '<dl class="kv">' + "".join(
+        f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in kv
+    ) + "</dl>"
+
+    crit = eligibility_lines(row)
+    if crit:
+        crit_html = ('<ul class="crit">' + "".join(f"<li>{esc(c)}</li>" for c in crit)
+                     + '</ul><p class="note">This is a summary — always confirm the full '
+                       'eligibility rules on the official page before applying.</p>')
+    else:
+        crit_html = ('<p class="note">The official page has the full eligibility rules for '
+                     f'the {esc(name)}.</p>')
+
+    faq_items = fund_faq_items(row, uni_name)
+    faq_html = "".join(
+        f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faq_items
+    )
+
+    sib = [s for s in sibling_specs if s[3] != fund_slug][:5]
+    sib_tiles = "".join(
+        f'<a href="/bursaries/{uni_slug}/{s[3]}/"><b>{esc(s[0])}</b></a>' for s in sib
+    )
+    sib_tiles += (f'<a href="/bursaries/{uni_slug}/"><b>See all {uni_name} bursaries →</b>'
+                  '</a>')
+
+    body = (
+        crumb_html([
+            ("Home", "/"),
+            ("Bursaries by university", "/bursaries/"),
+            (uni_name, f"/bursaries/{uni_slug}/"),
+            (name, None),
+        ])
+        + f'<h1 class="page">{esc(name)}</h1>'
+        + f'<p class="sub">{esc(uni_name)} &middot; {esc(ftype)}</p>'
+        + f'<p class="lede">{esc(lede)}</p>'
+        + kv_html
+        + '<h2>Who can apply</h2>'
+        + crit_html
+        + match_callout(f"the {name} and every other {uni_name} fund")
+        + '<h2>How to apply</h2>'
+        + f'<p>Apply directly to {esc(uni_name)} — BursaSearch doesn\'t process '
+          'applications. The official page has the current form and closing date.</p>'
+        + (f'<p class="applybtn"><a class="btn" href="{esc(official)}" target="_blank" '
+           'rel="noopener">Open the official page →</a></p>' if official else "")
+        + '<h2>Common questions</h2>'
+        + f'<div class="faq">{faq_html}</div>'
+        + f'<h2>Other funds at {esc(uni_name)}</h2>'
+        + f'<div class="tiles">{sib_tiles}</div>'
+        + related_links_html([row])
+    )
+    schema = (
+        jsonld_script(monetary_grant_jsonld(row, uni_name, canonical, description))
+        + jsonld_script(json.dumps({
+            "@context": "https://schema.org", "@type": "FAQPage",
+            "mainEntity": [
+                {"@type": "Question", "name": q,
+                 "acceptedAnswer": {"@type": "Answer", "text": a}}
+                for q, a in faq_items
+            ],
+        }))
+        + jsonld_script(breadcrumb_jsonld([
+            ("BursaSearch", f"{SITE_URL}/"),
+            ("Bursaries by university", f"{SITE_URL}/bursaries/"),
+            (uni_name, f"{SITE_URL}/bursaries/{uni_slug}/"),
+            (name, canonical),
+        ]))
+    )
+    return render_shell(title=esc(title), description=esc(description),
+                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
 
 def tiles_html(items):
     """items = list of (href, title, sub_or_None) → a .tiles grid."""
@@ -1075,19 +1395,44 @@ os.makedirs(OUT_DIR, exist_ok=True)
 lastmod_map = load_lastmod()
 changed_urls = []
 
-uni_list = []
-for uni, entries in sorted(multi.items()):
-    slug = slugify(uni)
+# ── Phase 1: slugs + the fund-page URL map, BEFORE any page is rendered, so
+#    every listing page's rows can link straight to the fund's own page. ─────
+uni_list = [(uni, slugify(uni), len(entries)) for uni, entries in sorted(multi.items())]
+
+# norm_uni_key -> (canonical display name, slug). Also feeds fund_href_for().
+canon_by_key = {norm_uni_key(name): (name, slug) for name, slug, _ in uni_list}
+CANON_BY_KEY.update(canon_by_key)
+
+# Assign a stable slug to every fund that clears the gate, keyed per
+# university; collect specs for phase 3 (rendering the grant pages).
+fund_slugs = load_fund_slugs()
+fund_specs_by_uni = {}  # uni slug -> [(fund_name, row, uni_name, fund_slug), ...]
+for uni, uslug, _ in uni_list:
+    entries = multi[uni]
+    gated = sorted((r for r in entries if fund_has_page(r)),
+                   key=lambda r: clean(r.get("Bursary Name", "")))
+    used, specs = set(), []
+    # Pinned slugs first so a fresh one can't land on a name a pin will reclaim.
+    for r in gated:
+        fk = fund_key(uni, clean(r.get("Bursary Name", "")))
+        if fk in fund_slugs and fund_slugs[fk] not in used:
+            used.add(fund_slugs[fk])
+    for r in gated:
+        name = clean(r.get("Bursary Name", ""))
+        fk = fund_key(uni, name)
+        fslug = assign_fund_slug(fk, name, fund_slugs, used)
+        used.add(fslug)
+        FUND_URLS[fk] = f"/bursaries/{uslug}/{fslug}/"
+        specs.append((name, r, uni, fslug))
+    if specs:
+        fund_specs_by_uni[uslug] = specs
+
+# ── Phase 2: render every listing page. ─────────────────────────────────────
+for uni, slug, count in uni_list:
     d = os.path.join(OUT_DIR, slug)
     os.makedirs(d, exist_ok=True)
     url = f"{SITE_URL}/bursaries/{slug}/"
-    write_page(url, os.path.join(d, "index.html"), render_page(uni, entries, slug), lastmod_map, changed_urls)
-    uni_list.append((uni, slug, len(entries)))
-
-# Maps a normalised university key -> (canonical display name, slug), for
-# the tag pages to link a bursary card's university tag back to that
-# university's own page (only universities with >=2 bursaries get one).
-canon_by_key = {norm_uni_key(name): (name, slug) for name, slug, _ in uni_list}
+    write_page(url, os.path.join(d, "index.html"), render_page(uni, multi[uni], slug), lastmod_map, changed_urls)
 
 # rollup
 d = os.path.join(OUT_DIR, "more-universities")
@@ -1178,6 +1523,23 @@ if valued_matched:
     write_page(url, os.path.join(d, "index.html"), page, lastmod_map, changed_urls)
     highest_value_counts.append(("highest-value", "Highest-Value UK Bursaries and Scholarships", len(valued_matched)))
 
+# ── Phase 3: one page per individual fund that cleared the gate. ────────────
+fund_urls = []
+for uslug, specs in fund_specs_by_uni.items():
+    d = os.path.join(OUT_DIR, uslug)
+    for name, r, uni_name, fslug in specs:
+        fd = os.path.join(d, fslug)
+        os.makedirs(fd, exist_ok=True)
+        url = f"{SITE_URL}/bursaries/{uslug}/{fslug}/"
+        write_page(url, os.path.join(fd, "index.html"),
+                   render_fund_page(r, uni_name, uslug, fslug, specs),
+                   lastmod_map, changed_urls)
+        fund_urls.append(url)
+
+# Persist the fund slug map so a light rename in the sheet doesn't churn URLs.
+with open(FUND_SLUGS_FILE, "w", encoding="utf-8") as f:
+    json.dump(fund_slugs, f, indent=0, sort_keys=True)
+
 # hub (/bursaries/) and home (/) — both now generated from the same template
 hub_url = f"{SITE_URL}/bursaries/"
 write_page(hub_url, os.path.join(OUT_DIR, "index.html"),
@@ -1204,6 +1566,7 @@ urls += [f"{SITE_URL}/bursaries/subject/{slug}/" for slug, _, _ in subject_count
 urls += [f"{SITE_URL}/bursaries/region/{slug}/" for slug, _, _ in region_counts]
 urls += [f"{SITE_URL}/bursaries/closing-soon/" for _ in closing_soon_counts]
 urls += [f"{SITE_URL}/bursaries/highest-value/" for _ in highest_value_counts]
+urls += fund_urls
 sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 for u in urls:
     lm = lastmod_map.get(u, TODAY)
@@ -1223,8 +1586,9 @@ with open("robots.txt", "w", encoding="utf-8") as f:
 submit_indexnow(changed_urls)
 
 print(
-    f"Built {len(uni_list)} university pages + 1 rollup + {len(circumstance_counts)} circumstance pages + "
-    f"{len(subject_counts)} subject pages + {len(region_counts)} region pages + "
-    f"{len(closing_soon_counts)} closing-soon + {len(highest_value_counts)} highest-value + hub + sitemap "
+    f"Built {len(uni_list)} university pages + {len(fund_urls)} fund pages + 1 rollup + "
+    f"{len(circumstance_counts)} circumstance + {len(subject_counts)} subject + "
+    f"{len(region_counts)} region + {len(closing_soon_counts)} closing-soon + "
+    f"{len(highest_value_counts)} highest-value + hub + home + sitemap "
     f"({len(urls)} URLs total, {len(changed_urls)} changed this run)."
 )
