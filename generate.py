@@ -132,8 +132,10 @@ def esc(s):
 #    any listing page is rendered so its rows can link straight to the fund's
 #    own page). ─────────────────────────────────────────────────────────────
 FUND_SLUGS_FILE = "fund_slugs.json"
-FUND_URLS = {}      # fund_key -> "/bursaries/<uni-slug>/<fund-slug>/"
-CANON_BY_KEY = {}   # norm_uni_key -> (canonical display name, uni slug)
+FUND_URLS = {}           # fund_key -> "/bursaries/<uni-slug>/<fund-slug>/"
+CANON_BY_KEY = {}        # norm_uni_key -> (canonical display name, uni slug)
+UNI_SUBJECT_PAGES = {}   # uni slug -> [(subject slug, subject h1, count), ...]
+SUBJECT_UNI_PAGES = {}   # subject slug -> [(uni name, uni slug, count), ...]
 
 def load_fund_slugs():
     try:
@@ -758,6 +760,13 @@ def render_page(uni_name, entries, slug):
         f"See eligibility, deadlines and official application links."
     )
     canonical = f"{SITE_URL}/bursaries/{slug}/"
+    subj_pages = UNI_SUBJECT_PAGES.get(slug, [])
+    subj_block = ""
+    if subj_pages:
+        subj_block = f'<h2>Subject-specific funds at {esc(uni_name)}</h2>' + tiles_html([
+            (f"/bursaries/{slug}/subject/{s}/", f"{SUBJECT_LABEL.get(s, s)} bursaries", f"{c} funds")
+            for s, _, c in sorted(subj_pages, key=lambda t: -t[2])
+        ])
     body = content_body(
         trail=[("Home", "/"), ("Bursaries by university", "/bursaries/"), (uni_name, None)],
         h1=f"{uni_name} Bursaries & Scholarships",
@@ -766,7 +775,7 @@ def render_page(uni_name, entries, slug):
         count=count,
         rows_html=rows_html,
         faq_html=faq_block(uni_name, count),
-        related_html=related_links_html(entries),
+        related_html=subj_block + related_links_html(entries),
     )
     schema = jsonld_script(faq_jsonld(uni_name)) + jsonld_script(breadcrumb_jsonld([
         ("BursaSearch", f"{SITE_URL}/"),
@@ -846,7 +855,7 @@ CIRCUMSTANCES = [
 ]
 
 def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede_tail, canon_by_key,
-                     sort_key=None, limit=None):
+                     sort_key=None, limit=None, extra_html=""):
     """Shared renderer for the cross-cutting tag pages (circumstance, region,
     subject, plus the two standalone ranked pages closing-soon/highest-value
     which pass slug="" and their own sort_key/limit) — same shape, just a
@@ -890,7 +899,7 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         count=count,
         rows_html=rows_html,
         faq_html=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
-        related_html=related_links_html(rows_matched, exclude=(kind, slug)),
+        related_html=extra_html + related_links_html(rows_matched, exclude=(kind, slug)),
     )
     schema = jsonld_script(faq_jsonld(noun_phrase, scope_phrase=noun_phrase)) + jsonld_script(
         breadcrumb_jsonld([
@@ -908,11 +917,10 @@ def render_circumstance_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
         "Bursaries by circumstance", "your full circumstances", canon_by_key,
     )
 
-# ── Subject-based pages — only the handful of subjects with enough real
-#    cross-university volume to be worth a page. The raw "Study subject"
-#    field is otherwise messy free-text (course-list dumps, inconsistent
-#    naming), so unlike circumstance/region this isn't "every category",
-#    just the ones with a genuine, non-thin audience. ──────────────────────
+# ── Subject-based pages — the subjects with enough real cross-university
+#    volume to be worth a page. The raw "Study subject" cell is mostly clean
+#    single labels ("Engineering", "Nursing", "Law", …) but only ~37% filled,
+#    so this is a curated list, not "every category". ─────────────────────────
 def _subj(row):
     return clean(row.get("Study subject", "")).lower()
 
@@ -922,24 +930,106 @@ def _is_medicine(row):
     s = _subj(row)
     return bool(re.search(r"\bmedicine\b", s)) and "veterinary" not in s
 
+def _subj_match(pattern):
+    return lambda r: bool(re.search(pattern, _subj(r)))
+
 SUBJECTS = [
     # (slug, h1, plural noun phrase used in copy, filter fn operating on the row)
-    ("law", "Bursaries for Law Students", "law students",
-     lambda r: bool(re.search(r"\blaw\b", _subj(r)))),
+    ("law", "Bursaries for Law Students", "law students", _subj_match(r"\blaw\b")),
     ("business", "Bursaries for Business Students", "business students",
-     lambda r: bool(re.search(r"\bbusiness\b", _subj(r)))),
+     _subj_match(r"\bbusiness\b")),
     ("medicine", "Bursaries for Medicine Students", "medicine students", _is_medicine),
+    ("nursing", "Bursaries for Nursing Students", "nursing students",
+     _subj_match(r"\bnursing\b")),
+    ("engineering", "Bursaries for Engineering Students", "engineering students",
+     _subj_match(r"\bengineering\b")),
+    ("computer-science", "Bursaries for Computer Science Students",
+     "computer science students", _subj_match(r"\bcomput")),
+    ("art-and-design", "Bursaries for Art & Design Students", "art and design students",
+     _subj_match(r"\bart\b|\bdesign\b|fine art")),
+    ("music", "Bursaries for Music Students", "music students", _subj_match(r"\bmusic\b")),
     ("veterinary-studies", "Bursaries for Veterinary Students", "veterinary students",
      lambda r: "veterinary" in _subj(r)),
-    ("music", "Bursaries for Music Students", "music students",
-     lambda r: bool(re.search(r"\bmusic\b", _subj(r)))),
 ]
+# Short label per subject, for the "<Label> bursaries at <University>" pages.
+SUBJECT_LABEL = {
+    "law": "Law", "business": "Business", "medicine": "Medicine", "nursing": "Nursing",
+    "engineering": "Engineering", "computer-science": "Computer Science",
+    "art-and-design": "Art & Design", "music": "Music", "veterinary-studies": "Veterinary",
+}
 
 def render_subject_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
+    unis = SUBJECT_UNI_PAGES.get(slug, [])
+    extra = ""
+    if unis:
+        tiles = tiles_html([
+            (f"/bursaries/{us}/subject/{slug}/", un, f"{c} funds")
+            for un, us, c in sorted(unis, key=lambda t: -t[2])
+        ])
+        label = SUBJECT_LABEL.get(slug, "these")
+        extra = f'<h2>{esc(label)} bursaries by university</h2>' + tiles
     return render_tag_page(
         "subject", slug, h1, noun_phrase, rows_matched,
         "Bursaries by subject", "your subject and full circumstances", canon_by_key,
+        extra_html=extra,
     )
+
+# ── University × subject pages — "engineering bursaries at Bath". Only where
+#    a named university genuinely has >=2 funds for that subject (~124 pairs
+#    in the data); the rest would be thin. Nested under the university. ──────
+UNI_SUBJECT_MIN = 2
+
+def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
+    label = SUBJECT_LABEL.get(subj_slug, "Subject")
+    count = len(matched)
+    h1 = f"{label} Bursaries at {uni_name}"
+    canonical = f"{SITE_URL}/bursaries/{uni_slug}/subject/{subj_slug}/"
+    title = f"{label} Bursaries at {uni_name} ({date.today().year}) | BursaSearch"
+    amt = amount_range_text(matched)
+    amt_bit = f" worth {amt}" if amt else ""
+    lede = (
+        f"{count} verified {label.lower()} bursaries and scholarships{amt_bit} for "
+        f"{uni_name} students — each linking straight to the official page. Our app also "
+        f"matches you to funds beyond this list, based on your subject and circumstances."
+    )
+    description = (
+        f"{count} verified {label.lower()} bursaries and scholarships for {uni_name} "
+        f"students{amt_bit}. See eligibility, deadlines and official application links."
+    )
+    rows_html = "".join(
+        bursary_row(r, fund_href=fund_href_for(r, uni_name))
+        for r in sorted(matched, key=lambda r: clean(r.get("Bursary Name", "")))
+    )
+    # cross-links: the standalone subject page, the university page, and the
+    # other subjects that university has a page for.
+    others = [(s, sh1, c) for s, sh1, c in UNI_SUBJECT_PAGES.get(uni_slug, []) if s != subj_slug]
+    also = [(f"/bursaries/subject/{subj_slug}/", f"All {label.lower()} bursaries (UK)"),
+            (f"/bursaries/{uni_slug}/", f"All {uni_name} bursaries")]
+    also += [(f"/bursaries/{uni_slug}/subject/{s}/",
+              f"{SUBJECT_LABEL.get(s, s)} bursaries at {uni_name}") for s, _, _ in others]
+    also_tiles = tiles_html([(h, t, None) for h, t in also])
+    body = content_body(
+        trail=[("Home", "/"), ("Bursaries by university", "/bursaries/"),
+               (uni_name, f"/bursaries/{uni_slug}/"), (f"{label} bursaries", None)],
+        h1=h1,
+        lede=lede,
+        context_phrase=f"these {count} {label.lower()} funds at {uni_name}",
+        count=count,
+        rows_html=rows_html,
+        faq_html=faq_block(f"{label.lower()} students at {uni_name}", count,
+                           scope_phrase=f"{label.lower()} students at {uni_name}"),
+        related_html=f"<h2>Also see</h2>{also_tiles}",
+    )
+    schema = jsonld_script(faq_jsonld(f"{label.lower()} students at {uni_name}",
+                                      scope_phrase=f"{label.lower()} students at {uni_name}")) + \
+        jsonld_script(breadcrumb_jsonld([
+            ("BursaSearch", f"{SITE_URL}/"),
+            ("Bursaries by university", f"{SITE_URL}/bursaries/"),
+            (uni_name, f"{SITE_URL}/bursaries/{uni_slug}/"),
+            (h1, canonical),
+        ]))
+    return render_shell(title=esc(title), description=esc(description),
+                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
 
 # ── Region-based pages (same cross-cutting shape as circumstance pages —
 #    "UK region" is a free-text field, sometimes multi-region, so match by
@@ -999,6 +1089,8 @@ def assign_fund_slug(fkey, name, pinned, used):
     if fkey in pinned:
         return pinned[fkey]
     base = slugify(name) or "bursary"
+    if base == "subject":       # reserved: /bursaries/<uni>/subject/<subj>/
+        base = "subject-fund"
     s, i = base, 2
     while s in used:
         s, i = f"{base}-{i}", i + 1
@@ -1368,12 +1460,35 @@ for uni, uslug, _ in uni_list:
     if specs:
         fund_specs_by_uni[uslug] = specs
 
+# University × subject viability — a page only where a named university has
+# >= UNI_SUBJECT_MIN funds for that subject. Populated before rendering so the
+# university pages and the standalone subject pages can cross-link into it.
+uni_subject_specs = []  # (uni_name, uni_slug, subj_slug, matched_rows)
+for uni, uslug, _ in uni_list:
+    entries = multi[uni]
+    for sslug, sh1, _snoun, sfilt in SUBJECTS:
+        m = [r for r in entries if sfilt(r) and clean(r.get("Bursary Name", ""))]
+        if len(m) >= UNI_SUBJECT_MIN:
+            UNI_SUBJECT_PAGES.setdefault(uslug, []).append((sslug, sh1, len(m)))
+            SUBJECT_UNI_PAGES.setdefault(sslug, []).append((uni, uslug, len(m)))
+            uni_subject_specs.append((uni, uslug, sslug, m))
+
 # ── Phase 2: render every listing page. ─────────────────────────────────────
 for uni, slug, count in uni_list:
     d = os.path.join(OUT_DIR, slug)
     os.makedirs(d, exist_ok=True)
     url = f"{SITE_URL}/bursaries/{slug}/"
     write_page(url, os.path.join(d, "index.html"), render_page(uni, multi[uni], slug), lastmod_map, changed_urls)
+
+# university × subject pages
+uni_subject_urls = []
+for uni_name, uslug, sslug, m in uni_subject_specs:
+    sd = os.path.join(OUT_DIR, uslug, "subject", sslug)
+    os.makedirs(sd, exist_ok=True)
+    url = f"{SITE_URL}/bursaries/{uslug}/subject/{sslug}/"
+    write_page(url, os.path.join(sd, "index.html"),
+               render_uni_subject_page(uni_name, uslug, sslug, m), lastmod_map, changed_urls)
+    uni_subject_urls.append(url)
 
 # rollup
 d = os.path.join(OUT_DIR, "more-universities")
@@ -1510,6 +1625,7 @@ urls += [f"{SITE_URL}/bursaries/subject/{slug}/" for slug, _, _ in subject_count
 urls += [f"{SITE_URL}/bursaries/region/{slug}/" for slug, _, _ in region_counts]
 urls += [f"{SITE_URL}/bursaries/closing-soon/" for _ in closing_soon_counts]
 urls += [f"{SITE_URL}/bursaries/highest-value/" for _ in highest_value_counts]
+urls += uni_subject_urls
 urls += fund_urls
 sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 for u in urls:
@@ -1530,7 +1646,8 @@ with open("robots.txt", "w", encoding="utf-8") as f:
 submit_indexnow(changed_urls)
 
 print(
-    f"Built {len(uni_list)} university pages + {len(fund_urls)} fund pages + 1 rollup + "
+    f"Built {len(uni_list)} university pages + {len(fund_urls)} fund pages + "
+    f"{len(uni_subject_urls)} uni×subject + 1 rollup + "
     f"{len(circumstance_counts)} circumstance + {len(subject_counts)} subject + "
     f"{len(region_counts)} region + {len(closing_soon_counts)} closing-soon + "
     f"{len(highest_value_counts)} highest-value + hub + sitemap "
