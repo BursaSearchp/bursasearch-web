@@ -524,9 +524,9 @@ LOGO_SVG = (
 
 NAV_LINKS = [
     ("/bursaries/", "Universities"),
-    ("/#circumstance", "Circumstance"),
-    ("/#subject", "Subject"),
-    ("/#region", "Region"),
+    ("/bursaries/#circumstance", "Circumstance"),
+    ("/bursaries/#subject", "Subject"),
+    ("/bursaries/#region", "Region"),
     ("/bursaries/closing-soon/", "Closing soon"),
 ]
 
@@ -547,9 +547,9 @@ def footer_html():
         '<footer class="ftr"><div class="cols">'
         '<div class="col"><b>Browse</b>'
         '<a href="/bursaries/">By university</a>'
-        '<a href="/#circumstance">By circumstance</a>'
-        '<a href="/#subject">By subject</a>'
-        '<a href="/#region">By region</a></div>'
+        '<a href="/bursaries/#circumstance">By circumstance</a>'
+        '<a href="/bursaries/#subject">By subject</a>'
+        '<a href="/bursaries/#region">By region</a></div>'
         '<div class="col"><b>Popular</b>'
         '<a href="/bursaries/closing-soon/">Closing soon</a>'
         '<a href="/bursaries/highest-value/">Highest value</a>'
@@ -1299,65 +1299,6 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     return render_shell(title=esc(title), description=esc(description),
                         canonical=canonical, body=body, schema=schema)
 
-def render_home(uni_list, singles_count, circumstance_counts, subject_counts, region_counts):
-    n_total = sum(c for _, _, c in uni_list) + singles_count
-    n_unis = len(uni_list) + singles_count
-    top_unis = sorted(uni_list, key=lambda t: -t[2])[:11]
-    canonical = f"{SITE_URL}/"
-    title = "BursaSearch — Find every UK university bursary you qualify for"
-    description = (
-        f"Search {n_total:,} verified UK university bursaries, grants and hardship funds — "
-        "free, no account. Each links to the official page; the app matches funds to your "
-        "circumstances and tracks the deadlines."
-    )
-    hero = (
-        '<section class="hero"><div class="in">'
-        '<h1>Find every UK university bursary you qualify for</h1>'
-        f'<p>{n_total:,} verified bursaries, grants and hardship funds — each linked '
-        'straight to the official page. Free to search, no account needed.</p>'
-        '<div class="actions"><a class="btn lg" href="/get">Get matched — free app</a>'
-        '<span class="stores">iOS &amp; Android</span></div>'
-        '<div class="facts">'
-        f'<div><b>{n_total:,}</b><span>verified funds</span></div>'
-        f'<div><b>{n_unis}</b><span>UK universities</span></div>'
-        '<div><b>Weekly</b><span>data checks</span></div>'
-        '</div></div></section>'
-    )
-    uni_items = [(f"/bursaries/{slug}/", name, f"{c} funds") for name, slug, c in top_unis]
-    uni_items.append(("/bursaries/", f"All {n_unis} universities →", "full index"))
-    body = (
-        '<h2 id="university">Browse by university</h2>'
-        + tiles_html(uni_items)
-        + '<h2 id="circumstance">Browse by circumstance</h2>'
-        + tiles_html([(f"/bursaries/circumstance/{s}/", h1, f"{c} funds")
-                      for s, h1, c in circumstance_counts])
-        + '<h2 id="subject">Browse by subject</h2>'
-        + tiles_html([(f"/bursaries/subject/{s}/", h1, f"{c} funds")
-                      for s, h1, c in subject_counts])
-        + '<h2 id="region">Browse by region</h2>'
-        + tiles_html([(f"/bursaries/region/{s}/", h1, f"{c} funds")
-                      for s, h1, c in region_counts])
-        + '<h2>How BursaSearch works</h2>'
-        + '<div class="steps">'
-          '<div class="step"><i>1</i><b>Search</b><p>Pick your university, situation '
-          'or subject and see every verified fund.</p></div>'
-          '<div class="step"><i>2</i><b>Check the source</b><p>Each fund links to the '
-          'official university or provider page. You apply there.</p></div>'
-          '<div class="step"><i>3</i><b>Match &amp; track</b><p>The free app matches '
-          'funds to your circumstances and tracks the deadlines.</p></div>'
-        '</div>'
-    )
-    schema = jsonld_script(json.dumps({
-        "@context": "https://schema.org", "@type": "WebSite",
-        "name": "BursaSearch", "url": f"{SITE_URL}/",
-    })) + jsonld_script(json.dumps({
-        "@context": "https://schema.org", "@type": "Organization",
-        "name": "BursaSearch", "url": f"{SITE_URL}/", "logo": OG_IMAGE,
-        "parentOrganization": {"@type": "Organization", "name": "Bursa Group Ltd"},
-    }))
-    return render_shell(title=esc(title), description=esc(description),
-                        canonical=canonical, body=body, hero=hero, schema=schema)
-
 def submit_indexnow(urls):
     """Tells Bing/Yandex/Seznam about changed URLs immediately instead of
     waiting for their crawler to notice — free, no auth beyond the public
@@ -1540,16 +1481,19 @@ for uslug, specs in fund_specs_by_uni.items():
 with open(FUND_SLUGS_FILE, "w", encoding="utf-8") as f:
     json.dump(fund_slugs, f, indent=0, sort_keys=True)
 
-# hub (/bursaries/) and home (/) — both now generated from the same template
+# hub (/bursaries/) — generated from the shared template
 hub_url = f"{SITE_URL}/bursaries/"
 write_page(hub_url, os.path.join(OUT_DIR, "index.html"),
            render_hub(uni_list, len(singles), circumstance_counts, subject_counts, region_counts),
            lastmod_map, changed_urls)
 
+# home page (/) — hand-authored index.html at the repo root (the TikTok
+# onboarding splash: logo + tagline + direct App Store / Google Play links).
+# NOT generated here; it's in the sitemap, so give it a lastmod from its own
+# file mtime rather than omitting it or always stamping it "today".
 home_url = f"{SITE_URL}/"
-write_page(home_url, "index.html",
-           render_home(uni_list, len(singles), circumstance_counts, subject_counts, region_counts),
-           lastmod_map, changed_urls)
+if os.path.exists("index.html"):
+    lastmod_map.setdefault(home_url, date.fromtimestamp(os.path.getmtime("index.html")).isoformat())
 
 # /get — client-side redirect to the right app store (noindex; kept out of
 # the sitemap on purpose).
@@ -1589,6 +1533,6 @@ print(
     f"Built {len(uni_list)} university pages + {len(fund_urls)} fund pages + 1 rollup + "
     f"{len(circumstance_counts)} circumstance + {len(subject_counts)} subject + "
     f"{len(region_counts)} region + {len(closing_soon_counts)} closing-soon + "
-    f"{len(highest_value_counts)} highest-value + hub + home + sitemap "
+    f"{len(highest_value_counts)} highest-value + hub + sitemap "
     f"({len(urls)} URLs total, {len(changed_urls)} changed this run)."
 )
