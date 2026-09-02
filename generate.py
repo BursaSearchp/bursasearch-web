@@ -410,11 +410,22 @@ h1.page{font-family:"Archivo",sans-serif; font-weight:700;
   margin:40px 0 14px; padding-left:11px; border-left:3px solid var(--teal);}
 
 .match{background:var(--teal-wash); border:1px solid #C9E3E1; border-radius:3px;
-  padding:15px 17px; margin:20px 0 6px; display:flex; align-items:center;
-  gap:16px; flex-wrap:wrap;}
-.match p{margin:0; font-size:14px; color:var(--teal-ink); flex:1; min-width:230px;}
+  padding:16px 18px; margin:20px 0 6px; display:flex; align-items:center;
+  gap:18px; flex-wrap:wrap;}
+.match .txt{flex:1; min-width:240px;}
+.match p{margin:0; font-size:14px; color:var(--teal-ink); line-height:1.5;}
+.match .pts{margin:7px 0 0; font-size:12px; font-weight:600; color:var(--teal-ink);
+  letter-spacing:.01em;}
+.match .btn{white-space:nowrap;}
 .match .stores{font-size:12px; color:var(--ink-mute);}
 .match .stores a{color:var(--ink-mute);}
+
+.ctastrip{background:var(--navy); color:#fff; border-radius:3px; padding:18px 20px;
+  margin:28px 0 6px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+.ctastrip p{margin:0; flex:1; min-width:240px; font-size:14px; line-height:1.5; color:#fff;}
+.ctastrip .sub{display:block; margin-top:4px; font-size:12px; color:#A9C0D1;}
+.ctastrip .btn{background:#fff; color:var(--teal-ink); border-color:#fff; white-space:nowrap;}
+.ctastrip .btn:hover{background:var(--teal-wash); color:var(--teal-ink);}
 
 .list{border:1px solid var(--line); border-radius:3px; overflow:hidden;
   background:var(--paper);}
@@ -540,7 +551,7 @@ def header_html():
         '<span>Bursa<span class="s">Search</span></span></a>'
         f'<nav class="nav">{nav}</nav>'
         '<span class="grow"></span>'
-        '<a class="btn" href="/get">Get the app</a>'
+        '<a class="btn" href="/get">Get matched — free</a>'
         '</header>'
     )
 
@@ -568,7 +579,7 @@ def footer_html():
     )
 
 STICKY_BAR = """<div class="ctabar" id="ctabar">
-<p>See which of these funds you qualify for.</p>
+<p>Match every UK bursary &middot; track applications &middot; deadline alerts</p>
 <a class="btn" href="/get">Get matched</a>
 <button class="x" type="button" aria-label="Dismiss" onclick="try{localStorage.setItem('bs_cta_x','1')}catch(e){}document.getElementById('ctabar').style.display='none'">&times;</button>
 <script>try{if(localStorage.getItem('bs_cta_x'))document.getElementById('ctabar').style.display='none'}catch(e){}</script>
@@ -589,15 +600,28 @@ def jsonld_script(obj_json):
 
 def match_callout(context_phrase):
     return (
-        '<div class="match">'
-        '<p><strong>See which of these you qualify for</strong> &mdash; the free app '
-        f'matches {esc(context_phrase)} to your household income, region and fee status, '
-        'in plain English, and tracks the deadlines.</p>'
-        '<a class="btn" href="/get">Get matched &mdash; free app</a>'
+        '<div class="match"><div class="txt">'
+        f'<p><strong>Match {esc(context_phrase)} to your circumstances</strong> &mdash; and '
+        'every other UK bursary. The free app checks university, national and independent '
+        'funds against your details, tells you which ones you qualify for and why, then '
+        'tracks each application and reminds you before the deadline.</p>'
+        '<p class="pts">Every source, one place &middot; Eligibility explained &middot; '
+        'Deadline reminders</p></div>'
+        '<a class="btn" href="/get">Get matched &mdash; free</a>'
         f'<span class="stores"><a href="{APP_STORE_URL}">App Store</a> &middot; '
         f'<a href="{PLAY_URL}">Google Play</a></span>'
         '</div>'
     )
+
+CTA_STRIP = (
+    '<div class="ctastrip">'
+    '<p><strong>Get matched to every fund you qualify for</strong> &mdash; across '
+    'universities, national bodies and independent trusts. Track your applications and get '
+    'a reminder before every deadline.'
+    '<span class="sub">Free &middot; no account needed to browse &middot; iOS &amp; Android</span></p>'
+    '<a class="btn" href="/get">Get the app</a>'
+    '</div>'
+)
 
 def render_shell(*, title, description, canonical, body, hero="", sticky="", schema=""):
     """The one page template for the whole site. `title`/`description` arrive
@@ -643,7 +667,7 @@ def faq_block(uni_name, count, scope_phrase="this university"):
         ("Do I apply through BursaSearch?",
          "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         f"This page lists what's publicly available for {scope_phrase}. BursaSearch's app checks your specific circumstances — income, region, fee status and more — against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
+         f"This page lists what's publicly available for {scope_phrase}. The free BursaSearch app checks your circumstances — income, region, fee status and more — against every UK bursary, including national and independent funds beyond this list, tells you exactly which ones you qualify for and why, then tracks your applications and reminds you before each deadline."),
     ]
     out = []
     for q, a in items:
@@ -661,7 +685,7 @@ def faq_jsonld(uni_name, scope_phrase="this university"):
         ("Do I apply through BursaSearch?",
          "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
         ("How do I know which ones I actually qualify for?",
-         f"This page lists what's publicly available for {scope_phrase}. BursaSearch's app checks your specific circumstances against our full database, which also includes national and independent grants beyond this list, and tells you exactly which ones you qualify for and why."),
+         f"This page lists what's publicly available for {scope_phrase}. The free BursaSearch app checks your circumstances against every UK bursary, including national and independent funds beyond this list, tells you exactly which ones you qualify for and why, then tracks your applications and reminds you before each deadline."),
     ]
     return json.dumps({
         "@context": "https://schema.org",
@@ -706,6 +730,7 @@ def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html,
         + match_callout(context_phrase)
         + f'<h2>{esc(f"{count} funds currently listed")}</h2>'
         + f'<div class="list">{rows_html}</div>'
+        + CTA_STRIP
         + '<h2>Common questions</h2>'
         + f'<div class="faq">{faq_html}</div>'
         + related_html
@@ -1304,7 +1329,7 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
         + kv_html
         + '<h2>Who can apply</h2>'
         + crit_html
-        + match_callout(f"the {name} and every other {uni_name} fund")
+        + match_callout(f"the {name}")
         + '<h2>How to apply</h2>'
         + f'<p>Apply directly to {esc(uni_name)} — BursaSearch doesn\'t process '
           'applications. The official page has the current form and closing date.</p>'
@@ -1315,6 +1340,7 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
         + f'<h2>Other funds at {esc(uni_name)}</h2>'
         + f'<div class="tiles">{sib_tiles}</div>'
         + related_links_html([row])
+        + CTA_STRIP
     )
     schema = (
         jsonld_script(monetary_grant_jsonld(row, uni_name, canonical, description))
