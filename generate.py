@@ -326,8 +326,16 @@ def bursary_row(row, uni=None, uni_href=None, fund_href=None):
         '</div>'
     )
 
+RANGE_AMOUNT_FLOOR = 100  # see amount_range_text
+
 def amount_range_text(entries):
-    """Best-effort human summary like '£500–£3,000' from the raw Amount strings."""
+    """Best-effort human summary like '£500–£3,000' from the raw Amount
+    strings — floored at RANGE_AMOUNT_FLOOR. A handful of source rows carry a
+    stray sub-£100 figure (a per-item top-up, a misparsed cell — genuinely
+    live examples: '£20', '£0.90'), and a headline range built from the raw
+    min ('worth £20–£21,805') reads as broken data rather than a real offer.
+    This range only feeds the meta description / lede headline; the fund's
+    own row still shows its real amount untouched."""
     nums = []
     for r in entries:
         for n in re.findall(r"£?\s?([\d,]{2,7})", clean(r.get("Amount", ""))):
@@ -335,6 +343,7 @@ def amount_range_text(entries):
                 nums.append(int(n.replace(",", "")))
             except ValueError:
                 pass
+    nums = [n for n in nums if n >= RANGE_AMOUNT_FLOOR] or nums
     if not nums:
         return None
     lo, hi = min(nums), max(nums)
