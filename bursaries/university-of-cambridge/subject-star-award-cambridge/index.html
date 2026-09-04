@@ -5,7 +5,7 @@
 <title>Subject Star Award (Cambridge) — University of Cambridge (2026) | BursaSearch</title>
 <meta name="description" content="The Subject Star Award (Cambridge) is a scholarship worth £300 at University of Cambridge. Every detail here is taken from the official page — you apply…">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="dark">
 <link rel="canonical" href="https://bursasearch.com/bursaries/university-of-cambridge/subject-star-award-cambridge/">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&family=Sora:wght@700;800&display=swap">
 <meta property="og:title" content="Subject Star Award (Cambridge) — University of Cambridge (2026) | BursaSearch">
@@ -21,9 +21,10 @@
 <style>
 *{box-sizing:border-box;}
 :root{
-  --paper:#FBFCFD; --ground:#EEF2F5; --ink:#0B2233; --ink-soft:#46596B;
-  --ink-mute:#7C8FA0; --line:#D7DEE4; --teal:#0E7C7B; --teal-ink:#0A5C5B;
-  --teal-wash:#E8F2F1; --navy:#0B2233; --warn:#B5561E; --maxw:960px;
+  --paper:#0A1B29; --ground:#0F2135; --ink:#EAF1F6; --ink-strong:#FFFFFF;
+  --ink-soft:#AEC5D6; --ink-mute:#7E9AB0; --line:rgba(255,255,255,.09);
+  --teal:#0F8A8A; --teal-ink:#1CC4BC; --teal-wash:rgba(28,196,188,.08);
+  --navy:#102A3D; --warn:#F0A868; --maxw:960px;
 }
 html{-webkit-text-size-adjust:100%;}
 body{
@@ -33,113 +34,118 @@ body{
 }
 a{color:var(--teal-ink); text-decoration:none;}
 a:hover{text-decoration:underline;}
-strong{font-weight:600;}
-:focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+strong{font-weight:600; color:var(--ink-strong);}
+:focus-visible{outline:2px solid var(--teal-ink); outline-offset:2px;}
 
 .hdr{
   position:sticky; top:0; z-index:20; display:flex; align-items:center;
-  gap:14px 20px; flex-wrap:wrap; padding:8px 20px; min-height:56px;
-  background:rgba(251,252,253,.94); backdrop-filter:blur(6px);
+  gap:14px 22px; flex-wrap:wrap; padding:10px 30px; min-height:56px;
+  background:rgba(10,27,41,.92); backdrop-filter:blur(8px);
   border-bottom:1px solid var(--line);
 }
 .brand{display:flex; align-items:center; gap:8px; font-family:"Sora",sans-serif;
-  font-weight:700; font-size:16px; letter-spacing:-.01em; color:var(--ink);}
+  font-weight:700; font-size:16px; letter-spacing:-.01em; color:var(--ink-strong);}
 .brand:hover{text-decoration:none;}
-.brand .mk{width:24px; height:24px; border-radius:4px; background:var(--navy);
+.brand .mk{width:24px; height:24px; border-radius:5px; background:var(--teal);
   display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .brand .mk svg{width:14px; height:14px;}
-.brand .s{color:var(--teal);}
-.nav{display:flex; flex-wrap:wrap; gap:6px 15px;}
+.brand .s{color:var(--teal-ink);}
+.nav{display:flex; flex-wrap:wrap; gap:6px 16px;}
 .nav a{font-size:13.5px; font-weight:500; color:var(--ink-soft);}
-.nav a:hover{color:var(--teal-ink); text-decoration:none;}
+.nav a:hover{color:var(--ink-strong); text-decoration:none;}
 .hdr .grow{flex:1;}
-.btn{display:inline-flex; align-items:center; gap:7px; font-weight:600;
-  font-size:13.5px; background:var(--teal); color:#fff; padding:8px 14px;
-  border-radius:3px; border:1px solid var(--teal); cursor:pointer;}
-.btn:hover{background:var(--teal-ink); text-decoration:none; color:#fff;}
-.btn.lg{font-size:15px; padding:11px 20px;}
+.btn{display:inline-flex; align-items:center; gap:7px; font-weight:700;
+  font-size:13.5px; background:var(--teal-ink); color:#06221E; padding:9px 16px;
+  border-radius:3px; border:1px solid var(--teal-ink); cursor:pointer;}
+.btn:hover{background:#43D6CE; text-decoration:none; color:#06221E;}
+.btn.lg{font-size:15px; padding:12px 22px;}
 
-.hero{background:var(--navy); color:#fff; padding:54px 20px 46px;}
+.hero{background:var(--ground); color:#fff; padding:54px 20px 46px;}
 .hero .in{max-width:var(--maxw); margin:0 auto;}
 .hero h1{font-family:"Archivo",sans-serif; font-weight:700;
   font-size:clamp(28px,4.6vw,44px); line-height:1.07; letter-spacing:-.02em;
   margin:0 0 14px; text-wrap:balance; max-width:19ch;}
-.hero p{font-size:17px; color:#A9C0D1; margin:0 0 24px; max-width:54ch;}
+.hero p{font-size:17px; color:var(--ink-soft); margin:0 0 24px; max-width:54ch;}
 .hero .actions{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
-.hero .stores{font-size:13px; color:#8AA3B6;}
-.facts{display:flex; flex-wrap:wrap; gap:22px 30px; margin:32px 0 0;
-  border-top:1px solid rgba(255,255,255,.14); padding-top:20px;}
-.facts b{display:block; font-family:"Archivo",sans-serif; font-weight:700;
-  font-size:22px; font-variant-numeric:tabular-nums;}
-.facts span{font-size:12.5px; color:#8AA3B6;}
+.hero .stores{font-size:13px; color:var(--ink-mute);}
 
-.wrap{max-width:var(--maxw); margin:0 auto; padding:0 20px 64px;}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 30px 76px;}
 .crumb{display:flex; flex-wrap:wrap; gap:6px; font-size:12.5px;
-  color:var(--ink-mute); padding:15px 0; border-bottom:1px solid var(--line);}
+  color:var(--ink-mute); padding:18px 0; border-bottom:1px solid var(--line);}
 .crumb a{color:var(--ink-mute);}
+.crumb a:hover{color:var(--ink-soft);}
 h1.page{font-family:"Archivo",sans-serif; font-weight:700;
   font-size:clamp(25px,3.6vw,33px); line-height:1.13; letter-spacing:-.015em;
-  margin:24px 0 12px; text-wrap:balance;}
-.lede{font-size:15.5px; color:var(--ink-soft); max-width:66ch; margin:0 0 22px;}
-.wrap h2{font-family:"Archivo",sans-serif; font-weight:600; font-size:13.5px;
-  letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);
-  margin:40px 0 14px; padding-left:11px; border-left:3px solid var(--teal);}
+  margin:26px 0 14px; text-wrap:balance; color:var(--ink-strong);}
+.lede{font-size:15.5px; color:var(--ink-soft); max-width:66ch; margin:0 0 18px;}
+.wrap h2{font-family:"Archivo",sans-serif; font-weight:600; font-size:13px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--ink-mute);
+  margin:34px 0 16px; padding-left:12px; border-left:3px solid var(--teal-ink);}
 
-.match{background:var(--teal-wash); border:1px solid #C9E3E1; border-radius:3px;
-  padding:16px 18px; margin:20px 0 6px; display:flex; align-items:center;
-  gap:18px; flex-wrap:wrap;}
-.match .txt{flex:1; min-width:240px;}
-.match p{margin:0; font-size:14px; color:var(--teal-ink); line-height:1.5;}
-.match .pts{margin:7px 0 0; font-size:12px; font-weight:600; color:var(--teal-ink);
-  letter-spacing:.01em;}
-.match .btn{white-space:nowrap;}
-.match .stores{font-size:12px; color:var(--ink-mute);}
-.match .stores a{color:var(--ink-mute);}
+.stats{display:flex; flex-wrap:wrap; gap:8px 34px; margin:0 0 8px;
+  padding:16px 0 18px; border-bottom:1px solid var(--line);}
+.stats div{font-size:12.5px; color:var(--ink-mute);}
+.stats b{font-family:"Archivo",sans-serif; font-weight:700; font-size:15px;
+  color:var(--teal-ink); letter-spacing:-.01em; font-variant-numeric:tabular-nums;
+  margin-right:7px;}
 
-.ctastrip{background:var(--navy); color:#fff; border-radius:3px; padding:18px 20px;
-  margin:28px 0 6px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
-.ctastrip p{margin:0; flex:1; min-width:240px; font-size:14px; line-height:1.5; color:#fff;}
-.ctastrip .sub{display:block; margin-top:4px; font-size:12px; color:#A9C0D1;}
-.ctastrip .btn{background:#fff; color:var(--teal-ink); border-color:#fff; white-space:nowrap;}
-.ctastrip .btn:hover{background:var(--teal-wash); color:var(--teal-ink);}
+.cta{background:var(--ground); border-radius:5px; padding:26px 26px 24px;
+  margin:36px 0 8px;}
+.cta .ey{font-family:"Archivo",sans-serif; font-weight:600; font-size:11px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--teal-ink); margin:0 0 10px;}
+.cta h3{font-family:"Archivo",sans-serif; font-weight:700; font-size:20px;
+  line-height:1.22; letter-spacing:-.01em; margin:0 0 10px; color:var(--ink-strong);
+  text-wrap:balance; max-width:36ch;}
+.cta > p{margin:0 0 14px; font-size:14px; line-height:1.6; color:var(--ink-soft);
+  max-width:62ch;}
+.cta ul{list-style:none; margin:0 0 18px; padding:0; display:grid; gap:7px;}
+.cta li{font-size:13px; color:var(--ink); padding-left:22px; position:relative;}
+.cta li::before{content:"\2713"; position:absolute; left:0; color:var(--teal-ink);
+  font-weight:700;}
+.cta .act{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:0;}
+.cta .fine{font-size:12px; color:var(--ink-mute);}
 
-.list{border:1px solid var(--line); border-radius:3px; overflow:hidden;
-  background:var(--paper);}
-.list .row{padding:14px 17px; border-top:1px solid var(--line);}
+.list{background:transparent;}
+.list .row{position:relative; display:grid; grid-template-columns:1fr auto;
+  gap:4px 18px; padding:18px 4px; border-top:1px solid var(--line);}
 .list .row:first-child{border-top:0;}
-.list .row:hover{background:#F4F8F8;}
-.row .top{display:flex; align-items:baseline; gap:14px;}
-.row .nm{font-family:"Archivo",sans-serif; font-weight:600; font-size:15.5px;
-  color:var(--ink); flex:1;}
-a.nm:hover{color:var(--teal-ink);}
-.row .amt{font-weight:600; font-size:14.5px; color:var(--teal-ink);
+.list .row:hover{background:rgba(255,255,255,.025);}
+.list .row:hover::before{content:""; position:absolute; left:-9px; top:0; bottom:0;
+  width:3px; background:var(--teal-ink);}
+.row .nm{grid-column:1; font-family:"Archivo",sans-serif; font-weight:600;
+  font-size:15.5px; color:var(--ink-strong);}
+a.nm:hover{color:var(--teal-ink); text-decoration:none;}
+.row .amt{grid-column:2; grid-row:1; text-align:right; align-self:start;
+  font-weight:700; font-size:15.5px; color:var(--teal-ink);
   font-variant-numeric:tabular-nums; white-space:nowrap;}
-.row .prov{font-size:12.5px; color:var(--ink-mute); margin-top:2px;}
-.row .chips{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 7px;}
-.row .chip{font-size:11.5px; font-weight:500; color:var(--ink-soft);
-  border:1px solid var(--line); border-radius:2px; padding:2px 7px;}
-.row .foot{display:flex; align-items:center; justify-content:flex-end;
-  gap:12px; flex-wrap:wrap; margin-top:4px;}
-.row .foot.split{justify-content:space-between;}
-.row .chips + .foot{margin-top:0;}
-.row .dl{font-size:12.5px; color:var(--ink-mute);}
+.row .prov{grid-column:1; font-size:12.5px; color:var(--ink-mute); margin-top:1px;}
+.row .prov a{color:var(--ink-soft);}
+.row .chips{grid-column:1/-1; display:flex; flex-wrap:wrap; gap:7px; margin:11px 0 0;}
+.row .chip{font-size:11px; font-weight:500; color:var(--ink-soft);
+  border:1px solid var(--line); border-radius:2px; padding:2px 8px;}
+.row .foot{grid-column:1/-1; display:flex; align-items:center; gap:16px;
+  flex-wrap:wrap; margin-top:11px;}
+.row .foot.split{justify-content:flex-start;}
+.row .dl{font-size:12px; color:var(--ink-mute);}
 .row .dl.soon{color:var(--warn); font-weight:600;}
-.row .go{font-size:12.5px; font-weight:600; white-space:nowrap;}
+.row .go{font-size:12px; font-weight:600; color:var(--teal-ink); white-space:nowrap;}
+.listmeta{font-size:12px; color:var(--ink-mute); margin:13px 4px 0;}
 
 .tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(228px,1fr));
   gap:10px;}
-.tiles a{display:block; background:var(--paper); border:1px solid var(--line);
-  border-radius:3px; padding:12px 14px;}
-.tiles a:hover{border-color:var(--teal); text-decoration:none;}
+.tiles a{display:block; background:transparent; border:1px solid var(--line);
+  border-radius:3px; padding:13px 15px;}
+.tiles a:hover{border-color:var(--teal-ink); background:var(--teal-wash);
+  text-decoration:none;}
 .tiles a b{display:block; font-family:"Archivo",sans-serif; font-weight:600;
-  font-size:14px; color:var(--ink);}
+  font-size:14px; color:var(--ink-strong);}
 .tiles a span{display:block; font-size:12.5px; color:var(--ink-mute);
   margin-top:2px; font-variant-numeric:tabular-nums;}
 
 h1.page + .sub{font-size:13px; color:var(--ink-mute); margin:-4px 0 16px;
   letter-spacing:.01em;}
-.kv{border:1px solid var(--line); border-radius:3px; overflow:hidden; margin:18px 0;}
-.kv > div{display:flex; gap:14px; padding:10px 15px; border-top:1px solid var(--line);
+.kv{border:1px solid var(--line); border-radius:4px; overflow:hidden; margin:22px 0;}
+.kv > div{display:flex; gap:14px; padding:11px 16px; border-top:1px solid var(--line);
   font-size:13.5px;}
 .kv > div:first-child{border-top:0;}
 .kv dt{flex:0 0 132px; color:var(--ink-mute);}
@@ -148,31 +154,31 @@ h1.page + .sub{font-size:13px; color:var(--ink-mute); margin:-4px 0 16px;
 .crit{margin:10px 0 0; padding:0 0 0 20px;}
 .crit li{margin:0 0 6px; font-size:14px; color:var(--ink-soft);}
 .crit + p.note{font-size:12.5px; color:var(--ink-mute); margin-top:10px;}
-.applybtn{margin:10px 0 0;}
+.applybtn{margin:14px 0 0;}
 
 .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
 .steps .step{border:1px solid var(--line); border-radius:3px; padding:15px;
-  background:var(--paper);}
+  background:transparent;}
 .steps .step i{display:inline-flex; width:23px; height:23px; border-radius:2px;
   background:var(--teal-wash); color:var(--teal-ink); font-family:"Archivo",sans-serif;
   font-weight:700; font-size:12.5px; align-items:center; justify-content:center;
   margin-bottom:8px; font-style:normal;}
 .steps .step b{display:block; font-family:"Archivo",sans-serif; font-size:14px;
-  margin-bottom:3px;}
+  margin-bottom:3px; color:var(--ink-strong);}
 .steps .step p{margin:0; font-size:13px; color:var(--ink-soft);}
 
 .faq details{border-top:1px solid var(--line); padding:12px 0;}
 .faq details:first-child{border-top:0;}
 .faq summary{font-family:"Archivo",sans-serif; font-weight:600; font-size:14px;
   cursor:pointer; list-style:none; display:flex; justify-content:space-between;
-  gap:12px;}
+  gap:12px; color:var(--ink-strong);}
 .faq summary::-webkit-details-marker{display:none;}
-.faq summary::after{content:"+"; color:var(--teal); font-weight:700;}
+.faq summary::after{content:"+"; color:var(--teal-ink); font-weight:700;}
 .faq details[open] summary::after{content:"\2013";}
 .faq p{font-size:13.5px; color:var(--ink-soft); margin:9px 0 0;}
 
 .ftr{background:var(--ground); border-top:1px solid var(--line);
-  margin-top:52px; padding:32px 20px 26px;}
+  margin-top:56px; padding:34px 30px 28px;}
 .ftr .cols{max-width:var(--maxw); margin:0 auto; display:flex; gap:44px;
   flex-wrap:wrap;}
 .ftr .col b{display:block; font-family:"Archivo",sans-serif; font-size:11.5px;
@@ -184,12 +190,15 @@ h1.page + .sub{font-size:13px; color:var(--ink-mute); margin:-4px 0 16px;
 
 .ctabar{display:none;}
 @media (max-width:760px){
+  .hdr{padding:9px 20px;}
+  .wrap{padding-left:22px; padding-right:22px;}
+  .ftr{padding-left:20px; padding-right:20px;}
   .ctabar{position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex;
-    align-items:center; gap:10px; padding:9px 12px 9px 14px; background:var(--navy);
-    border-top:1px solid rgba(255,255,255,.12);}
+    align-items:center; gap:10px; padding:9px 12px 9px 16px; background:var(--navy);
+    border-top:1px solid var(--line);}
   .ctabar p{margin:0; flex:1; font-size:12.5px; color:#fff; line-height:1.3;}
   .ctabar .btn{padding:8px 13px; font-size:13px;}
-  .ctabar .x{background:none; border:0; color:#8AA3B6; font-size:20px;
+  .ctabar .x{background:none; border:0; color:var(--ink-mute); font-size:20px;
     line-height:1; padding:2px 4px; cursor:pointer;}
   body.has-bar{padding-bottom:60px;}
   .steps{grid-template-columns:1fr;}
@@ -201,12 +210,12 @@ h1.page + .sub{font-size:13px; color:var(--ink-mute); margin:-4px 0 16px;
 <header class="hdr"><a class="brand" href="/"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="10" cy="10" r="6"></circle><line x1="14.6" y1="14.6" x2="20" y2="20"></line></svg></span><span>Bursa<span class="s">Search</span></span></a><nav class="nav"><a href="/bursaries/">Universities</a><a href="/bursaries/#circumstance">Circumstance</a><a href="/bursaries/#subject">Subject</a><a href="/bursaries/#region">Region</a><a href="/bursaries/closing-soon/">Closing soon</a></nav><span class="grow"></span><a class="btn" href="/get">Get matched — free</a></header>
 
 <main class="wrap">
-<nav class="crumb"><a href="/">Home</a><span>›</span><a href="/bursaries/">Bursaries by university</a><span>›</span><a href="/bursaries/university-of-cambridge/">University of Cambridge</a><span>›</span><span>Subject Star Award (Cambridge)</span></nav><h1 class="page">Subject Star Award (Cambridge)</h1><p class="sub">University of Cambridge &middot; Scholarship</p><p class="lede">The Subject Star Award (Cambridge) is a scholarship worth £300 at University of Cambridge. Every detail here is taken from the official page — you apply directly with University of Cambridge, not through us.</p><dl class="kv"><div><dt>Amount</dt><dd>£300</dd></div><div><dt>Type</dt><dd>Scholarship</dd></div><div><dt>Deadline</dt><dd>Set annually — check the official page</dd></div><div><dt>Study level</dt><dd>Undergraduate</dd></div><div><dt>Administered by</dt><dd><a href="/bursaries/university-of-cambridge/">University of Cambridge</a></dd></div></dl><h2>Who can apply</h2><ul class="crit"><li>You are studying at undergraduate level.</li><li>You are in course year 1.</li></ul><p class="note">This is a summary — always confirm the full eligibility rules on the official page before applying.</p><div class="match"><div class="txt"><p><strong>Match the Subject Star Award (Cambridge) to your circumstances</strong> &mdash; and every other UK bursary. The free app checks university, national and independent funds against your details, tells you which ones you qualify for and why, then tracks each application and reminds you before the deadline.</p><p class="pts">Every source, one place &middot; Eligibility explained &middot; Deadline reminders</p></div><a class="btn" href="/get">Get matched &mdash; free</a><span class="stores"><a href="https://apps.apple.com/app/id6795890396">App Store</a> &middot; <a href="https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3Dbursasearch_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site">Google Play</a></span></div><h2>How to apply</h2><p>Apply directly to University of Cambridge — BursaSearch doesn't process applications. The official page has the current form and closing date.</p><p class="applybtn"><a class="btn" href="https://www.undergraduate.study.cam.ac.uk/finance/" target="_blank" rel="noopener">Open the official page →</a></p><h2>Common questions</h2><div class="faq"><details><summary>How much is the Subject Star Award (Cambridge)?</summary><p>The Subject Star Award (Cambridge) is worth £300.</p></details><details><summary>What is the deadline for the Subject Star Award (Cambridge)?</summary><p>University of Cambridge sets the deadline for the Subject Star Award (Cambridge) each year. Check the official page for the current closing date.</p></details><details><summary>Do I apply through BursaSearch?</summary><p>No. You apply directly with University of Cambridge using the official link on this page — BursaSearch is not part of the application.</p></details></div><h2>Other funds at University of Cambridge</h2><div class="tiles"><a href="/bursaries/university-of-cambridge/cambridge-bursary-scheme/"><b>Cambridge Bursary Scheme</b></a><a href="/bursaries/university-of-cambridge/cambridge-commonwealth-european-and-international-trust-awards/"><b>Cambridge Commonwealth, European and International Trust awards</b></a><a href="/bursaries/university-of-cambridge/childcare-grant-cambridge/"><b>Childcare Grant (Cambridge)</b></a><a href="/bursaries/university-of-cambridge/choral-awards-cambridge/"><b>Choral Awards (Cambridge)</b></a><a href="/bursaries/university-of-cambridge/disabled-students-allowances-dsas-cambridge/"><b>Disabled Students&#x27; Allowances (DSAs, Cambridge)</b></a><a href="/bursaries/university-of-cambridge/"><b>See all University of Cambridge bursaries →</b></a></div><div class="ctastrip"><p><strong>Get matched to every fund you qualify for</strong> &mdash; across universities, national bodies and independent trusts. Track your applications and get a reminder before every deadline.<span class="sub">Free &middot; no account needed to browse &middot; iOS &amp; Android</span></p><a class="btn" href="/get">Get the app</a></div>
+<nav class="crumb"><a href="/">Home</a><span>›</span><a href="/bursaries/">Bursaries by university</a><span>›</span><a href="/bursaries/university-of-cambridge/">University of Cambridge</a><span>›</span><span>Subject Star Award (Cambridge)</span></nav><h1 class="page">Subject Star Award (Cambridge)</h1><p class="sub">University of Cambridge &middot; Scholarship</p><p class="lede">The Subject Star Award (Cambridge) is a scholarship worth £300 at University of Cambridge. Every detail here is taken from the official page — you apply directly with University of Cambridge, not through us.</p><dl class="kv"><div><dt>Amount</dt><dd>£300</dd></div><div><dt>Type</dt><dd>Scholarship</dd></div><div><dt>Deadline</dt><dd>Set annually — check the official page</dd></div><div><dt>Study level</dt><dd>Undergraduate</dd></div><div><dt>Administered by</dt><dd><a href="/bursaries/university-of-cambridge/">University of Cambridge</a></dd></div></dl><h2>Who can apply</h2><ul class="crit"><li>You are studying at undergraduate level.</li><li>You are in course year 1.</li></ul><p class="note">This is a summary — always confirm the full eligibility rules on the official page before applying.</p><aside class="cta"><p class="ey">BursaSearch app</p><h3>One search across every UK funding source &mdash; matched to everything you're eligible for</h3><p>We check the Subject Star Award (Cambridge) and every other UK bursary, grant and trust against your income, region, subject and background in one pass &mdash; universities, national bodies and independent funders together. You see every fund you qualify for, and the reason for each match.</p><ul><li>Every source in one search &mdash; we connect across categories, not within one</li><li>Tells you why you qualify, fund by fund</li><li>Tracks each application and reminds you before the deadline</li></ul><p class="act"><a class="btn" href="/get">See everything I&rsquo;m eligible for &rarr;</a><span class="fine">Free &middot; no account &middot; iOS &amp; Android</span></p></aside><h2>How to apply</h2><p>Apply directly to University of Cambridge — BursaSearch doesn't process applications. The official page has the current form and closing date.</p><p class="applybtn"><a class="btn" href="https://www.undergraduate.study.cam.ac.uk/finance/" target="_blank" rel="noopener">Open the official page →</a></p><h2>Common questions</h2><div class="faq"><details><summary>How much is the Subject Star Award (Cambridge)?</summary><p>The Subject Star Award (Cambridge) is worth £300.</p></details><details><summary>What is the deadline for the Subject Star Award (Cambridge)?</summary><p>University of Cambridge sets the deadline for the Subject Star Award (Cambridge) each year. Check the official page for the current closing date.</p></details><details><summary>Do I apply through BursaSearch?</summary><p>No. You apply directly with University of Cambridge using the official link on this page — BursaSearch is not part of the application.</p></details></div><h2>Other funds at University of Cambridge</h2><div class="tiles"><a href="/bursaries/university-of-cambridge/cambridge-bursary-scheme/"><b>Cambridge Bursary Scheme</b></a><a href="/bursaries/university-of-cambridge/cambridge-commonwealth-european-and-international-trust-awards/"><b>Cambridge Commonwealth, European and International Trust awards</b></a><a href="/bursaries/university-of-cambridge/childcare-grant-cambridge/"><b>Childcare Grant (Cambridge)</b></a><a href="/bursaries/university-of-cambridge/choral-awards-cambridge/"><b>Choral Awards (Cambridge)</b></a><a href="/bursaries/university-of-cambridge/disabled-students-allowances-dsas-cambridge/"><b>Disabled Students&#x27; Allowances (DSAs, Cambridge)</b></a><a href="/bursaries/university-of-cambridge/"><b>See all University of Cambridge bursaries →</b></a></div>
 </main>
 <footer class="ftr"><div class="cols"><div class="col"><b>Browse</b><a href="/bursaries/">By university</a><a href="/bursaries/#circumstance">By circumstance</a><a href="/bursaries/#subject">By subject</a><a href="/bursaries/#region">By region</a></div><div class="col"><b>Popular</b><a href="/bursaries/closing-soon/">Closing soon</a><a href="/bursaries/highest-value/">Highest value</a><a href="/bursaries/circumstance/care-leavers/">Care leaver bursaries</a><a href="/bursaries/circumstance/low-income-students/">Low-income bursaries</a></div><div class="col"><b>About</b><a href="https://apps.apple.com/app/id6795890396">iOS app</a><a href="https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3Dbursasearch_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site">Android app</a><a href="https://bursasearchp.github.io/bursasearch-legal/support.html">Support</a></div></div><p class="fine">Bursary details are compiled from official university and provider pages and can change &mdash; always confirm on the official link before applying. &copy; Bursa Group Ltd.</p></footer>
 <div class="ctabar" id="ctabar">
-<p>Match every UK bursary &middot; track applications &middot; deadline alerts</p>
-<a class="btn" href="/get">Get matched</a>
+<p>Every UK funding source, matched to you &middot; deadline reminders</p>
+<a class="btn" href="/get">Match me</a>
 <button class="x" type="button" aria-label="Dismiss" onclick="try{localStorage.setItem('bs_cta_x','1')}catch(e){}document.getElementById('ctabar').style.display='none'">&times;</button>
 <script>try{if(localStorage.getItem('bs_cta_x'))document.getElementById('ctabar').style.display='none'}catch(e){}</script>
 </div>
