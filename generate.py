@@ -900,6 +900,16 @@ def _is_international(row):
     fs = clean(row.get("Fee status", "")).lower()
     return "overseas" in fs or "international" in fs
 
+def _time_has(row, needle):
+    return needle in clean(row.get("Time spent on course", "")).lower()
+
+def _ethnicity_has(row, *needles):
+    e = clean(row.get("Ethnicity", "")).lower()
+    return any(n in e for n in needles)
+
+def _is_women_scholarship(row):
+    return "female" in clean(row.get("Gender", "")).lower()
+
 CIRCUMSTANCES = [
     # (slug, h1, plural noun phrase used in copy, filter fn)
     ("low-income-students", "Bursaries for Low-Income Students",
@@ -914,6 +924,23 @@ CIRCUMSTANCES = [
      "disabled students", lambda r: vuln_has(r, "disab")),
     ("refugees-and-asylum-seekers", "Scholarships for Refugees and Asylum Seekers",
      "refugees and asylum seekers", lambda r: vuln_has(r, "refugee", "asylum")),
+    # Expanded 2026-09-04 — real, well-spread tags profiled from the live
+    # dataset (see the seo-improvement-plan memory): each of these clears
+    # 30+ funds across 20+ universities, same bar the original six meet.
+    ("student-carers", "Bursaries for Student Carers",
+     "student carers", lambda r: vuln_has(r, "carer (adult)")),
+    ("young-carers", "Bursaries for Young Carers",
+     "young carers", lambda r: vuln_has(r, "young carer")),
+    ("low-participation-areas", "Bursaries for Students from Low-Participation Areas",
+     "students from areas with low progression to higher education",
+     lambda r: vuln_has(r, "polar", "low participation")),
+    ("part-time-students", "Bursaries for Part-Time Students",
+     "part-time students", lambda r: _time_has(r, "part-time")),
+    ("ethnic-minority-students", "Bursaries for Black and Minority Ethnic Students",
+     "Black and minority ethnic students",
+     lambda r: _ethnicity_has(r, "ethnic minority", "black", "gypsy", "south asian")),
+    ("women-scholarships", "Scholarships for Women",
+     "women", _is_women_scholarship),
 ]
 
 def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede_tail, canon_by_key,
@@ -1012,12 +1039,55 @@ SUBJECTS = [
     ("music", "Bursaries for Music Students", "music students", _subj_match(r"\bmusic\b")),
     ("veterinary-studies", "Bursaries for Veterinary Students", "veterinary students",
      lambda r: "veterinary" in _subj(r)),
+    # Expanded 2026-09-04 — the live "Study subject" field is far cleaner than
+    # it was when only 5 subjects cleared the bar (labels are already mostly
+    # normalised, e.g. "Engineering", "Social Sciences"); every one of these
+    # clears 10+ funds across 5+ universities (see seo-improvement-plan memory
+    # for the full profiling). Long-tail subject pages get 5–10x the
+    # click-through of the head-term university pages — they don't compete
+    # against the university's own official page the way "[uni] bursary" does.
+    ("humanities", "Bursaries for Humanities Students", "humanities students",
+     _subj_match(r"\bhumanities\b")),
+    ("social-sciences", "Bursaries for Social Sciences Students", "social sciences students",
+     _subj_match(r"\bsocial sciences\b")),
+    ("education-teaching", "Bursaries for Education & Teaching Students",
+     "education and teaching students", _subj_match(r"\beducation\b|\bteaching\b")),
+    ("media-communications", "Bursaries for Media & Communications Students",
+     "media and communications students", _subj_match(r"\bmedia\b|\bcommunications\b")),
+    ("environmental-science", "Bursaries for Environmental Science Students",
+     "environmental science students", _subj_match(r"\benvironmental science\b")),
+    ("biology", "Bursaries for Biology Students", "biology students",
+     _subj_match(r"\bbiology\b|\bbiomedical\b")),
+    ("architecture", "Bursaries for Architecture Students", "architecture students",
+     _subj_match(r"\barchitecture\b")),
+    ("finance", "Bursaries for Finance Students", "finance students",
+     _subj_match(r"\bfinance\b")),
+    ("mathematics", "Bursaries for Mathematics Students", "mathematics students",
+     _subj_match(r"\bmathematics\b")),
+    ("agriculture", "Bursaries for Agriculture Students", "agriculture students",
+     _subj_match(r"\bagriculture\b")),
+    ("physics", "Bursaries for Physics Students", "physics students",
+     _subj_match(r"\bphysics\b")),
+    ("history", "Bursaries for History Students", "history students",
+     _subj_match(r"\bhistory\b")),
+    ("psychology", "Bursaries for Psychology Students", "psychology students",
+     _subj_match(r"\bpsychology\b")),
+    ("social-work", "Bursaries for Social Work Students", "social work students",
+     _subj_match(r"\bsocial work\b")),
+    ("chemistry", "Bursaries for Chemistry Students", "chemistry students",
+     _subj_match(r"\bchemistry\b")),
 ]
 # Short label per subject, for the "<Label> bursaries at <University>" pages.
 SUBJECT_LABEL = {
     "law": "Law", "business": "Business", "medicine": "Medicine", "nursing": "Nursing",
     "engineering": "Engineering", "computer-science": "Computer Science",
     "art-and-design": "Art & Design", "music": "Music", "veterinary-studies": "Veterinary",
+    "humanities": "Humanities", "social-sciences": "Social Sciences",
+    "education-teaching": "Education & Teaching", "media-communications": "Media & Communications",
+    "environmental-science": "Environmental Science", "biology": "Biology",
+    "architecture": "Architecture", "finance": "Finance", "mathematics": "Mathematics",
+    "agriculture": "Agriculture", "physics": "Physics", "history": "History",
+    "psychology": "Psychology", "social-work": "Social Work", "chemistry": "Chemistry",
 }
 
 def render_subject_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
