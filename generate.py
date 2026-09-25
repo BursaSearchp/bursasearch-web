@@ -19,20 +19,40 @@ from collections import defaultdict
 from datetime import date, datetime
 
 SITE_URL = "https://bursasearch.com"
-# Apple has no equivalent of Play's &referrer= campaign tracking from a plain
-# URL — attributing App Store installs to this site needs a provider/campaign
-# token from App Analytics in App Store Connect (one-time setup only the
-# account owner can do), then the link becomes
-# https://apps.apple.com/app/id6795890396?pt=<providerID>&ct=<campaignToken>&mt=8
-APP_STORE_URL = "https://apps.apple.com/app/id6795890396"
-# &referrer= is Google Play's documented custom-campaign format — installs
-# that came through this link now show up in Play Console's Acquisition
-# reports under source "bursasearch_web" / campaign "seo_site", instead of
-# being invisible in the "organic" bucket like every other install.
-PLAY_URL = (
-    "https://play.google.com/store/apps/details?id=fresherforgev2.com"
-    "&referrer=utm_source%3Dbursasearch_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site"
-)
+# Both stores get a campaign tag on every link we control, so App Store
+# Connect (Acquisition -> Campaigns, by ct=) and Play Console (acquisition
+# reports, by utm_source) can say which channel each install came from.
+# pt = Bursa Group's App Store provider token (App Analytics -> Campaigns ->
+# "Generate a Campaign Link"); ct = campaign name, max 30 chars.
+APPLE_PROVIDER_TOKEN = "129237255"
+
+
+def app_store_url(campaign):
+    return (f"https://apps.apple.com/app/apple-store/id6795890396"
+            f"?pt={APPLE_PROVIDER_TOKEN}&ct={campaign}&mt=8")
+
+
+def play_url(source, medium="referral", campaign=None):
+    return ("https://play.google.com/store/apps/details?id=fresherforgev2.com"
+            f"&referrer=utm_source%3D{source}%26utm_medium%3D{medium}"
+            f"%26utm_campaign%3D{campaign or source}")
+
+
+APP_STORE_URL = app_store_url("seo_site")
+PLAY_URL = play_url("bursasearch_web", "referral", "seo_site")
+
+# /go/<channel> - one tagged smart link per marketing channel (bio links,
+# emails to schools, etc.). Each sends phones to the right store with that
+# channel's tag. Add a channel here and it exists after the next rebuild.
+GO_CHANNELS = {
+    "tiktok": "social",
+    "instagram": "social",
+    "youtube": "social",
+    "reddit": "community",
+    "tsr": "community",
+    "school": "outreach",
+    "email": "outreach",
+}
 OG_IMAGE = f"{SITE_URL}/og-image.png"
 OUT_DIR = "bursaries"
 TODAY = date.today().isoformat()
@@ -609,15 +629,19 @@ STICKY_BAR = """<div class="ctabar" id="ctabar">
 <script>try{if(localStorage.getItem('bs_cta_x'))document.getElementById('ctabar').style.display='none'}catch(e){}</script>
 </div>"""
 
-GET_REDIRECT_HTML = (
-    '<!doctype html><html lang="en"><head><meta charset="UTF-8">'
-    '<meta name="robots" content="noindex"><title>Get the BursaSearch app</title>'
-    f'<meta http-equiv="refresh" content="0;url={APP_STORE_URL}">'
-    f'<script>var a={json.dumps(APP_STORE_URL)},p={json.dumps(PLAY_URL)};'
-    'location.replace(/android/i.test(navigator.userAgent||"")?p:a);</script>'
-    f'</head><body>Opening the app&hellip; <a href="{APP_STORE_URL}">App Store</a> '
-    f'&middot; <a href="{PLAY_URL}">Google Play</a></body></html>'
-)
+def redirect_html(ios_url, android_url):
+    return (
+        '<!doctype html><html lang="en"><head><meta charset="UTF-8">'
+        '<meta name="robots" content="noindex"><title>Get the BursaSearch app</title>'
+        f'<meta http-equiv="refresh" content="0;url={ios_url}">'
+        f'<script>var a={json.dumps(ios_url)},p={json.dumps(android_url)};'
+        'location.replace(/android/i.test(navigator.userAgent||"")?p:a);</script>'
+        f'</head><body>Opening the app&hellip; <a href="{ios_url}">App Store</a> '
+        f'&middot; <a href="{android_url}">Google Play</a></body></html>'
+    )
+
+
+GET_REDIRECT_HTML = redirect_html(APP_STORE_URL, PLAY_URL)
 
 def jsonld_script(obj_json):
     return f'<script type="application/ld+json">{obj_json}</script>'
@@ -1748,6 +1772,12 @@ if os.path.exists("index.html"):
 os.makedirs("get", exist_ok=True)
 with open(os.path.join("get", "index.html"), "w", encoding="utf-8") as f:
     f.write(GET_REDIRECT_HTML)
+
+# /go/<channel> - same redirect, tagged per channel (also noindex, not in sitemap).
+for channel, medium in GO_CHANNELS.items():
+    os.makedirs(os.path.join("go", channel), exist_ok=True)
+    with open(os.path.join("go", channel, "index.html"), "w", encoding="utf-8") as f:
+        f.write(redirect_html(app_store_url(channel), play_url(channel, medium)))
 
 # sitemap — every URL's lastmod comes from lastmod_map (only bumped above
 # when that page's content actually changed), not blindly stamped TODAY.

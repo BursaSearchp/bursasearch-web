@@ -338,5 +338,17 @@
   </footer>
 
 </div>
+<script>
+/* Tag the store buttons so each install can be traced to a channel.
+   bursasearch.com/?c=tiktok -> ct=tiktok; no ?c -> ct=homepage. */
+(function(){
+  var c="homepage";
+  try{var m=/[?&]c=([a-z0-9_]{1,30})/.exec(location.search);if(m)c=m[1];}catch(e){}
+  var ios="https://apps.apple.com/app/apple-store/id6795890396?pt=129237255&ct="+c+"&mt=8";
+  var play="https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3D"+c+"%26utm_medium%3Dhomepage%26utm_campaign%3D"+c;
+  var links=document.querySelectorAll("a[href^='https://apps.apple.com/'],a[href^='https://play.google.com/store/']");
+  for(var i=0;i<links.length;i++){links[i].href=/play\.google/.test(links[i].href)?play:ios;}
+})();
+</script>
 </body>
 </html>
