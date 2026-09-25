@@ -194,6 +194,11 @@ def load_lastmod():
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
+_CHECKED_RE = re.compile(r'<b>[^<]*</b>last checked')
+
+def _strip_checked(html_text):
+    return _CHECKED_RE.sub('', html_text)
+
 def write_page(url, path, content, lastmod_map, changed_urls):
     """Writes a page, records its sitemap lastmod — bumped to TODAY only when
     the content actually changed from the last run, not on every
@@ -207,7 +212,10 @@ def write_page(url, path, content, lastmod_map, changed_urls):
             existing = f.read()
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
-    if existing != content or url not in lastmod_map:
+    # stat_line()'s "last checked" date changes every run by design; it is
+    # not a content change, so it must not bump lastmod (it was faking a
+    # daily update on ~400 pages and teaching Google to ignore our lastmod).
+    if existing is None or _strip_checked(existing) != _strip_checked(content) or url not in lastmod_map:
         lastmod_map[url] = TODAY
         changed_urls.append(url)
     return url
@@ -1237,6 +1245,13 @@ def fund_has_page(row):
         return False
     return sum(1 for f in FUND_SIGNAL_FIELDS if clean(row.get(f, ""))) >= FUND_PAGE_MIN_SIGNALS
 
+def fund_in_sitemap(row):
+    """Fund pages still render (and are linked from their university page)
+    either way, but only the ones with a concrete amount or deadline go in
+    the sitemap - on a young domain Google rations crawling, so point it at
+    the pages with the most to offer a searcher."""
+    return bool(clean(row.get("Amount", "")) or clean(row.get("Deadline", "")))
+
 def assign_fund_slug(fkey, name, pinned, used):
     """Slug for a fund within its university. `pinned` = fund_slugs.json — a
     fund keeps its slug across runs (a light rename mustn't move the URL), so
@@ -1556,11 +1571,10 @@ def submit_indexnow(urls):
     (SEO_DATA_URL set); a local dev run shouldn't spam this on every tweak."""
     if not urls or not SEO_DATA_URL or os.environ.get("SKIP_INDEXNOW"):
         return
-    if len(urls) > 800:
-        # A mass regeneration (e.g. a site-wide template change) — don't fire
-        # thousands of "instant crawl" pings; the sitemap covers it.
-        print(f"IndexNow: skipping bulk submit of {len(urls)} URL(s).")
-        return
+    for i in range(0, len(urls), 1000):
+        _indexnow_post(urls[i:i + 1000])
+
+def _indexnow_post(urls):
     payload = json.dumps({
         "host": "bursasearch.com",
         "key": INDEXNOW_KEY,
@@ -1739,6 +1753,7 @@ if valued_matched:
 
 # ── Phase 3: one page per individual fund that cleared the gate. ────────────
 fund_urls = []
+sitemap_fund_urls = []
 for uslug, specs in fund_specs_by_uni.items():
     d = os.path.join(OUT_DIR, uslug)
     for name, r, uni_name, fslug in specs:
@@ -1749,6 +1764,8 @@ for uslug, specs in fund_specs_by_uni.items():
                    render_fund_page(r, uni_name, uslug, fslug, specs),
                    lastmod_map, changed_urls)
         fund_urls.append(url)
+        if fund_in_sitemap(r):
+            sitemap_fund_urls.append(url)
 
 # Persist the fund slug map so a light rename in the sheet doesn't churn URLs.
 with open(FUND_SLUGS_FILE, "w", encoding="utf-8") as f:
@@ -1790,12 +1807,41 @@ urls += [f"{SITE_URL}/bursaries/region/{slug}/" for slug, _, _ in region_counts]
 urls += [f"{SITE_URL}/bursaries/closing-soon/" for _ in closing_soon_counts]
 urls += [f"{SITE_URL}/bursaries/highest-value/" for _ in highest_value_counts]
 urls += uni_subject_urls
+core_urls = list(urls)
 urls += fund_urls
-sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-for u in urls:
-    lm = lastmod_map.get(u, TODAY)
-    sitemap += f"  <url><loc>{u}</loc><lastmod>{lm}</lastmod></url>\n"
-sitemap += "</urlset>\n"
+
+# Homepage: keep a plain link to every university page between markers in
+# the hand-authored index.html, so the one page Google already trusts links
+# straight to each uni page (the rest of the homepage is left untouched).
+if os.path.exists("index.html"):
+    with open("index.html", encoding="utf-8") as f:
+        home = f.read()
+    links = "".join(f'<a href="/bursaries/{slug}/">{html.escape(name)}</a>' for name, slug, _ in uni_list)
+    block = ('<!-- UNI-LINKS:START -->\n    <div class="unis"><h3>Bursaries at your university</h3>'
+             f'<p>{links}</p></div>\n    <!-- UNI-LINKS:END -->')
+    new_home = re.sub(r"<!-- UNI-LINKS:START -->.*?<!-- UNI-LINKS:END -->", lambda m: block, home, flags=re.S)
+    if new_home != home:
+        with open("index.html", "w", encoding="utf-8") as f:
+            f.write(new_home)
+        lastmod_map[home_url] = TODAY
+
+# Split sitemaps (core pages vs individual funds) so Search Console reports
+# indexing for each separately; sitemap.xml is the index pointing at both.
+def write_urlset(fname, url_list):
+    out = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for u in url_list:
+        out += f"  <url><loc>{u}</loc><lastmod>{lastmod_map.get(u, TODAY)}</lastmod></url>\n"
+    out += "</urlset>\n"
+    with open(fname, "w", encoding="utf-8") as f:
+        f.write(out)
+    return max((lastmod_map.get(u, TODAY) for u in url_list), default=TODAY)
+
+parts = [("sitemap-core.xml", write_urlset("sitemap-core.xml", core_urls)),
+         ("sitemap-funds.xml", write_urlset("sitemap-funds.xml", sitemap_fund_urls))]
+sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+for fname, lm in parts:
+    sitemap += f"  <sitemap><loc>{SITE_URL}/{fname}</loc><lastmod>{lm}</lastmod></sitemap>\n"
+sitemap += "</sitemapindex>\n"
 with open("sitemap.xml", "w", encoding="utf-8") as f:
     f.write(sitemap)
 
@@ -1807,7 +1853,7 @@ with open(LASTMOD_FILE, "w", encoding="utf-8") as f:
 with open("robots.txt", "w", encoding="utf-8") as f:
     f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
 
-submit_indexnow(changed_urls)
+submit_indexnow(core_urls + sitemap_fund_urls if os.environ.get("INDEXNOW_ALL") else changed_urls)
 
 print(
     f"Built {len(uni_list)} university pages + {len(fund_urls)} fund pages + "
