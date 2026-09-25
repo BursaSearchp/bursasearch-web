@@ -46,6 +46,7 @@ PLAY_URL = play_url("bursasearch_web", "referral", "seo_site")
 # channel's tag. Add a channel here and it exists after the next rebuild.
 GO_CHANNELS = {
     "tiktok": "social",
+    "tiktok_promote": "paid",
     "instagram": "social",
     "youtube": "social",
     "reddit": "community",
