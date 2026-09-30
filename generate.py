@@ -55,6 +55,11 @@ GO_CHANNELS = {
     "email": "outreach",
 }
 OG_IMAGE = f"{SITE_URL}/og-image.png"
+ICON_LINKS = """<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">"""
 OUT_DIR = "bursaries"
 TODAY = date.today().isoformat()
 LASTMOD_FILE = ".lastmod.json"
@@ -196,8 +201,12 @@ def load_lastmod():
 
 _CHECKED_RE = re.compile(r'<b>[^<]*</b>last checked')
 
+_ICON_RE = re.compile(r'<link rel="(?:icon|apple-touch-icon)"[^>]*>\n?')
+
 def _strip_checked(html_text):
-    return _CHECKED_RE.sub('', html_text)
+    # Favicon tags are site chrome, not page content: adding them must not
+    # bump every page's lastmod at once.
+    return _ICON_RE.sub('', _CHECKED_RE.sub('', html_text))
 
 def write_page(url, path, content, lastmod_map, changed_urls):
     """Writes a page, records its sitemap lastmod — bumped to TODAY only when
@@ -705,6 +714,7 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <link rel="canonical" href="{canonical}">
+{ICON_LINKS}
 {FONTS}
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{description}">
