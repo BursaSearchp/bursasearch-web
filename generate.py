@@ -859,10 +859,14 @@ def render_page(uni_name, entries, slug):
         f"{uni_name} — each linking straight to the official source, no forms with us. Our app also "
         f"matches you to additional grants beyond this list, based on your specific circumstances."
     )
-    title = f"{uni_name} Bursaries & Scholarships ({date.today().year}) | BursaSearch"
+    alias = uni_alias(uni_name)
+    alias_bit = f" ({alias})" if alias else ""
+    top = max_amount_text(entries)
+    title = (f"{uni_name}{alias_bit} Bursaries {academic_year()}: {count} grants"
+             + (f" up to {top}" if top else ""))
     description = (
-        f"{count} verified bursaries and scholarships for {uni_name} students{amt_bit}. "
-        f"See eligibility, deadlines and official application links."
+        f"{count} bursaries and scholarships for {uni_name}{alias_bit} students in "
+        f"{academic_year()}{amt_bit}. See who qualifies, deadlines and how to apply."
     )
     canonical = f"{SITE_URL}/bursaries/{slug}/"
     subj_pages = UNI_SUBJECT_PAGES.get(slug, [])
@@ -899,7 +903,7 @@ def render_rollup(singles):
     all_rows.sort(key=lambda t: t[0])
     rows_html = "".join(bursary_row(r, uni=uni) for uni, r in all_rows)
     count = len(all_rows)
-    title = f"More UK University Bursaries ({date.today().year}) | BursaSearch"
+    title = f"More UK University Bursaries ({academic_year()}) | BursaSearch"
     description = f"{count} additional verified UK university bursaries and scholarships, one per institution."
     canonical = f"{SITE_URL}/bursaries/more-universities/"
     lede = (
@@ -1016,7 +1020,7 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         f"UK universities — each linking straight to the official source, no forms with us. Our app "
         f"also matches you to additional grants beyond this list, based on {lede_tail}."
     )
-    title = f"{h1} ({date.today().year}) | BursaSearch"
+    title = f"{h1} ({academic_year()}) | BursaSearch"
     description = (
         f"{count} verified bursaries and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}. "
         f"See eligibility, deadlines and official application links."
@@ -1159,7 +1163,7 @@ def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
     count = len(matched)
     h1 = f"{label} Bursaries at {uni_name}"
     canonical = f"{SITE_URL}/bursaries/{uni_slug}/subject/{subj_slug}/"
-    title = f"{label} Bursaries at {uni_name} ({date.today().year}) | BursaSearch"
+    title = f"{label} Bursaries at {uni_name} ({academic_year()}) | BursaSearch"
     amt = amount_range_text(matched)
     amt_bit = f" worth {amt}" if amt else ""
     lede = (
@@ -1326,6 +1330,77 @@ def deadline_text(row):
         return "Rolling — no fixed date"
     return raw
 
+# Short names students actually search ("mmu success fund", "uon bursary").
+# Only unambiguous ones: "UoB" could be Bath, Bristol or Birmingham, so it's left out.
+UNI_ALIASES = {
+    "manchester metropolitan university": "MMU",
+    "university of nottingham": "UoN",
+    "university of manchester": "UoM",
+    "ucl": "UCL",
+    "university college london": "UCL",
+    "king's college london": "KCL",
+    "kings college london": "KCL",
+    "queen mary university of london": "QMUL",
+    "royal holloway, university of london": "RHUL",
+    "royal holloway university of london": "RHUL",
+    "university of the west of england": "UWE",
+    "university of east anglia": "UEA",
+    "liverpool john moores university": "LJMU",
+    "nottingham trent university": "NTU",
+    "university of lancashire": "UCLan",
+    "university of central lancashire": "UCLan",
+    "london south bank university": "LSBU",
+    "birmingham city university": "BCU",
+    "university of the arts london": "UAL",
+    "london metropolitan university": "London Met",
+    "university of west london": "UWL",
+    "university of wales trinity saint david": "UWTSD",
+    "sheffield hallam university": "SHU",
+    "oxford brookes university": "Brookes",
+    "anglia ruskin university": "ARU",
+    "university of east london": "UEL",
+    "goldsmiths, university of london": "Goldsmiths",
+    "goldsmiths university of london": "Goldsmiths",
+    "imperial college london": "Imperial",
+}
+
+def uni_alias(uni_name):
+    return UNI_ALIASES.get(uni_name.strip().lower(), "")
+
+def academic_year():
+    """'2026/27' from August onwards, else the year that's running."""
+    t = date.today()
+    y = t.year if t.month >= 8 else t.year - 1
+    return f"{y}/{str(y + 1)[2:]}"
+
+def max_amount_text(entries):
+    top = max((max_amount_value(r.get("Amount", "")) for r in entries), default=0)
+    return f"£{top:,.0f}" if top >= 100 else ""
+
+def fund_title(row, name, uni_name):
+    alias = uni_alias(uni_name)
+    who = alias or uni_name
+    t = name if who.lower() in name.lower() else f"{name} – {who}"
+    amount = format_amount(row.get("Amount", ""))
+    if amount and len(amount) <= 18 and "£" in amount:
+        t += f": {amount}"
+    for cand in (f"{t} | Eligibility {academic_year()}", f"{t} ({academic_year()})"):
+        if len(cand) <= 65:
+            return cand
+    return t
+
+def fund_description(row, name, uni_name, ftype):
+    amount = format_amount(row.get("Amount", ""))
+    aud = eligibility_audience_phrase(row)
+    bits = f"{name}: " + (f"{amount} " if amount and len(amount) <= 24 else "")
+    aud = aud.replace("income of Under ", "income under ").replace("income of Over ", "income over ")
+    bits += f"{ftype.lower()}" + (f" for {aud}" if aud else "") + f" at {uni_name}"
+    alias = uni_alias(uni_name)
+    if alias and alias.lower() not in name.lower():
+        bits += f" ({alias})"
+    bits += f". Who qualifies, the {academic_year()} deadline and how to apply."
+    return bits if len(bits) <= 160 else bits[:157].rsplit(" ", 1)[0] + "…"
+
 def fund_lede(row, uni_name, ftype):
     name = clean(row.get("Bursary Name", ""))
     amount = format_amount(row.get("Amount", ""))
@@ -1432,8 +1507,8 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
     official = clean(row.get("Application URL", "")) or clean(row.get("Link", ""))
     canonical = f"{SITE_URL}/bursaries/{uni_slug}/{fund_slug}/"
     lede = fund_lede(row, uni_name, ftype)
-    description = (lede[:157].rsplit(" ", 1)[0] + "…") if len(lede) > 158 else lede
-    title = f"{name} — {uni_name} ({date.today().year}) | BursaSearch"
+    description = fund_description(row, name, uni_name, ftype)
+    title = fund_title(row, name, uni_name)
 
     kv = [("Amount", esc(format_amount(row.get("Amount", "")) or "See official page")),
           ("Type", esc(ftype)),
