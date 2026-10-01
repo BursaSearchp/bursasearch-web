@@ -17,7 +17,7 @@ function head(){var h='<div class="hd"><b>'+esc(title)+'</b><span>'+(step+1)+' o
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';return h+'</div>'}
 function ask(){var q=Q[step],h=head();
  if(q.k==='u')h+='<label class="qq" for="mq">Where are you studying, or hoping to?</label><input id="mq" type="search" autocomplete="off" placeholder="Type your university"><ul class="fres" id="mr"></ul>'
-  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">For UK students. Nothing is saved or sent.</p>';
+  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
  else{h+='<p class="qq">'+esc(q.q)+'</p>';q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
   h+='<button type="button" class="back">Back</button>'}
  box.className='chk mchk';box.innerHTML=h;if(q.k==='u')bind()}
@@ -48,9 +48,9 @@ function result(){var c=pre||A.c,here=0,top=0,nat=0;
  h+='<div><b>'+(U&&here?'+':'')+nat+'</b><span>national &amp; charity grants worth checking</span></div></div>';
  if(U&&!here)h+='<p class="top">None of '+esc(s)+'’s own funds match these answers, but these grants might.</p>';
  if(top>=100)h+='<p class="top">Biggest '+esc(s)+' award you may get: <b>£'+top.toLocaleString('en-GB')+'</b></p>';
- h+='<a class="wbtn" href="'+esc(href())+'">See all your matches in the free app</a>';
+ h+='<a class="wbtn" href="'+esc(href())+'">Get accurate matches in the app</a>';
  if(U&&location.pathname!=='/bursaries/'+U[1]+'/')h+='<a class="alt" href="/bursaries/'+U[1]+'/">See every '+esc(s)+' fund</a>';
- h+='<p class="small">'+(U?'':'University funds depend on where you study. The app checks all 144. ')+'Based on the main rules we have on file. Always check the official page.</p>'
+ h+='<p class="small">'+(U?'':'University funds depend on where you study. The app checks all 144. ')+'A quick estimate only. The app checks your course, region, fee status and more, so its matches are far more accurate.</p>'
   +'<button type="button" class="again">Change answers</button>';
  box.className='res';box.innerHTML=h;
  if(bar)bar.textContent=(U?here+' '+s+' funds + ':'')+nat+' national grants to check';

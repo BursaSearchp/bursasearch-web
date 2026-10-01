@@ -9,11 +9,11 @@ if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
   if(q[1])h+='<button type="button" class="opt" data-v="u">Not sure</button>';
   fb.className='chk';fb.innerHTML=h};
  var fres=function(){var go=fb.getAttribute('data-go'),off=fb.getAttribute('data-off'),n=+fb.getAttribute('data-n'),u=fb.getAttribute('data-uni');fb.className='res';
-  fb.innerHTML=(fok?'<p class="big">You look eligible</p><p>Check the full rules on the official page, then apply there. People who fit this usually qualify for other funds too.</p>'
+  fb.innerHTML=(fok?'<p class="big">You may be eligible</p><p>Check the full rules on the official page, then apply there. People who fit this usually qualify for other funds too.</p>'
     +'<a class="wbtn" href="/go/'+esc(go)+'/">Find my other funds in the free app</a>'
    :'<p class="big">Probably not this one</p><p>'+(n?n+' other funds at '+esc(u)+', plus national grants, may still fit you.':'National and charity grants may still fit you.')+'</p>'
     +'<a class="wbtn" href="/go/'+esc(go)+'/">See which fit in the free app</a>')
-   +'<button type="button" class="again">Change answers</button>'};
+   +'<p class="small">A quick estimate only. The app checks your course, region, fee status and more, so its matches are far more accurate.</p><button type="button" class="again">Change answers</button>'};
  fb.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
   if(t.classList.contains('opt')){if(t.getAttribute('data-v')==='n')fok=false;fs++;if(fs<FQ.length)fask();else fres()}
   else if(t.classList.contains('again')){fs=0;fok=true;fask()}});
@@ -32,7 +32,7 @@ function ask(){var q=Q[step],h='<div class="hd"><b>Which could you get?</b><span
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
  h+='</div><p class="qq">'+esc(q.q)+'</p>';
  q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
- h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">For UK students. Nothing is saved or sent.</p>';
+ h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
  box.className='chk';box.innerHTML=h}
 box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
  if(t.classList.contains('opt')){A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
@@ -53,8 +53,8 @@ function result(){var here=0;
  box.className='res';
  box.innerHTML='<div class="nums"><div><b>'+here+'</b><span>'+esc(uni)+' funds you may get</span></div>'
   +(nat?'<div><b>+'+nat+'</b><span>national &amp; charity grants worth checking</span></div>':'')+'</div>'
-  +'<a class="wbtn" href="/go/'+esc(go)+'/">See which fit you in the free app</a>'
-  +'<p class="small">Based on the main rules we have on file. Always check the official page.</p>'
+  +'<a class="wbtn" href="/go/'+esc(go)+'/">Get accurate matches in the app</a>'
+  +'<p class="small">A quick estimate only. The app checks your course, region, fee status and more, so its matches are far more accurate.</p>'
   +'<button type="button" class="again">Change answers</button>';
  if(bar)bar.textContent=here+' '+uni+' funds'+(nat?' + '+nat+' national grants':'')+' to check';
  if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'})}
