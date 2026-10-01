@@ -214,7 +214,8 @@ def _strip_checked(html_text):
     # Same for the stylesheet and the check scripts: a styling change isn't new content.
     return _CHROME_RE.sub('', _ICON_RE.sub('', _CHECKED_RE.sub('', html_text)))
 
-_CHROME_RE = re.compile(r'<style>.*?</style>|<script src="/assets/[a-z]+\.js" defer></script>', re.S)
+_CHROME_RE = re.compile(r'<style>.*?</style>|<script src="/assets/[a-z]+\.js" defer></script>'
+                        r'|<script defer src="https://static\.cloudflareinsights\.com/[^>]*></script>', re.S)
 
 def write_page(url, path, content, lastmod_map, changed_urls):
     """Writes a page, records its sitemap lastmod — bumped to TODAY only when
@@ -736,6 +737,17 @@ FONTS = (
 
 APPLE_APP_ID = "6795890396"
 
+# Cloudflare Web Analytics (free, no cookies). Paste the site token from
+# dash.cloudflare.com -> Analytics & Logs -> Web Analytics -> bursasearch.com.
+# Empty = no analytics script on any page.
+CF_ANALYTICS_TOKEN = ""
+
+def analytics_html():
+    if not CF_ANALYTICS_TOKEN:
+        return ""
+    return ('<script defer src="https://static.cloudflareinsights.com/beacon.min.js" '
+            f"data-cf-beacon='{{\"token\": \"{CF_ANALYTICS_TOKEN}\"}}'></script>")
+
 NAV_LINKS = [
     ("/bursaries/", "Universities"),
     ("/bursaries/circumstance/care-leavers/", "Care leavers"),
@@ -867,6 +879,7 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
 {footer_html()}
 {sticky}
 {scripts}
+{analytics_html()}
 </body>
 </html>
 """
@@ -2766,6 +2779,7 @@ if os.path.exists("index.html"):
                       f'<details class="more"><summary><span>Show all {len(real_unis)} universities</span></summary>'
                       f'<ul class="unilinks">{links}</ul></details>'),
         ("FOOTER", footer_html()),
+        ("ANALYTICS", analytics_html()),
     ):
         new_home = fill_block(new_home, marker, inner)
     if new_home != home:
