@@ -740,7 +740,7 @@ APPLE_APP_ID = "6795890396"
 # Cloudflare Web Analytics (free, no cookies). Paste the site token from
 # dash.cloudflare.com -> Analytics & Logs -> Web Analytics -> bursasearch.com.
 # Empty = no analytics script on any page.
-CF_ANALYTICS_TOKEN = ""
+CF_ANALYTICS_TOKEN = "425457cc8fd34e67a2a3bffa5b92aff0"
 
 def analytics_html():
     if not CF_ANALYTICS_TOKEN:
