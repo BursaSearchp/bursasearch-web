@@ -38,7 +38,7 @@
     box-shadow:0 3px 0 #444;}
   .storebtn:hover{background:#222;}
   .storebtn svg{width:18px; height:18px; flex-shrink:0;}
-  .getbox .other{display:block; text-align:center; font-size:14.5px; margin:10px 0 0;}
+  .getbox{display:flex; flex-direction:column; gap:12px;}
   .getbox .free{font-size:13.5px; color:var(--soft); text-align:center; margin:6px 0 0;}
   .steps{list-style:none; margin:8px 0 0; padding:0; max-width:620px; counter-reset:s;}
   .steps li{display:grid; grid-template-columns:34px 1fr; gap:2px 12px; padding:11px 0;
@@ -61,17 +61,19 @@
 
 <main class="wrap">
   <h1 class="page">Find every UK bursary you qualify for</h1>
-  <p class="home-lede">Pick your university and answer three quick questions to see what you could get.</p>
+  <p class="home-lede">The free app matches you to every UK bursary you qualify for, at your university and nationally, and tells you why.</p>
 
-  <!-- MATCH-BOX:START --><div id="mchk" class="chk mchk" data-go="homepage" data-c="" data-t="Which could you get?"><div class="hd"><b>Which could you get?</b><span>1 of 4</span></div><div class="prog"><i class="on"></i><i></i><i></i><i></i></div><label class="qq" for="mq">Where are you studying, or hoping to?</label><input id="mq" type="search" autocomplete="off" placeholder="Type your university"><ul class="fres" id="mr"></ul><button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">For UK students. Nothing is saved or sent.</p></div><!-- MATCH-BOX:END -->
 
   <div class="getbox" id="get">
-    <a class="storebtn" id="storemain" href="https://apps.apple.com/app/id6795890396">
+    <a class="storebtn" id="ios" href="https://apps.apple.com/app/id6795890396">
       <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-      <span>Get the free app</span>
+      <span>Download on the App Store</span>
     </a>
-    <a class="other" id="storeother" href="https://play.google.com/store/apps/details?id=fresherforgev2.com">Also on Google Play</a>
-    <p class="free">Free to start. No account needed to see your matches.</p>
+    <a class="storebtn" id="play" href="https://play.google.com/store/apps/details?id=fresherforgev2.com">
+      <svg viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M325.3 234.3L104.6 13.5c-6-3.4-13-3.8-19.1-1.6L272 192l53.3-42.3zM47.1 6.3C39.3 10.4 33.9 18.1 33.9 27.5v456.9c0 9.4 5.4 17.1 13.2 21.2L272 320 47.1 6.3zM443.9 210.9L358.6 162 296 220.9l62.6 58.9 85.3-48.9c11.6-6.6 18.8-19 18.8-32.5s-7.2-25.9-18.8-32.5zM104.6 498.5l220.7-220.8L272 235.5 85.5 500.1c6.1 2.2 13.1 1.8 19.1-1.6z"/></svg>
+      <span>Get it on Google Play</span>
+    </a>
+    <p class="free" style="margin:0">Free to start. No account needed to see your matches.</p>
   </div>
 
   <!-- STATS:START --><div class="stats"><div><b>3,000+</b><span>funds tracked</span></div><div><b>144</b><span>universities</span></div><div><b>130+</b><span>national &amp; charity funds</span></div></div><!-- STATS:END -->
@@ -115,14 +117,11 @@
   var mine=android?play:ios;
   var links=document.querySelectorAll("a[href^='https://apps.apple.com/'],a[href^='https://play.google.com/store/']");
   for(var i=0;i<links.length;i++){links[i].href=/play\.google/.test(links[i].href)?play:ios;}
-  var main=document.getElementById("storemain"),other=document.getElementById("storeother");
-  main.href=mine;
-  if(android){main.querySelector("svg").style.display="none";other.href=ios;other.textContent="Also on the App Store";}
+  /* Visitor's own store first. */
+  if(android){var g=document.getElementById("get");g.insertBefore(document.getElementById("play"),g.firstChild);}
   var bar=document.querySelector("#ctabar a");if(bar)bar.href=mine;
-  var chk=document.getElementById("mchk");if(chk)chk.setAttribute("data-href",mine);
 })();
 </script>
-<script src="/assets/match.js" defer></script>
 <!-- ANALYTICS:START --><!-- ANALYTICS:END -->
 </body>
 </html>

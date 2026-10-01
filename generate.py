@@ -1053,7 +1053,7 @@ CHECK_Q1 = (
     '<p class="qq">What will you study?</p>'
     '<button type="button" class="opt" data-v="u">Undergraduate degree</button>'
     '<button type="button" class="opt" data-v="p">Master&#x27;s or PhD</button>'
-    '<p class="fine">For UK students. Nothing is saved or sent.</p>'
+    '<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>'
 )
 
 def check_box(go, who):
@@ -1201,11 +1201,11 @@ if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
   if(q[1])h+='<button type="button" class="opt" data-v="u">Not sure</button>';
   fb.className='chk';fb.innerHTML=h};
  var fres=function(){var go=fb.getAttribute('data-go'),off=fb.getAttribute('data-off'),n=+fb.getAttribute('data-n'),u=fb.getAttribute('data-uni');fb.className='res';
-  fb.innerHTML=(fok?'<p class="big">You look eligible</p><p>Check the full rules on the official page, then apply there. People who fit this usually qualify for other funds too.</p>'
+  fb.innerHTML=(fok?'<p class="big">You may be eligible</p><p>Check the full rules on the official page, then apply there. People who fit this usually qualify for other funds too.</p>'
     +'<a class="wbtn" href="/go/'+esc(go)+'/">Find my other funds in the free app</a>'
    :'<p class="big">Probably not this one</p><p>'+(n?n+' other funds at '+esc(u)+', plus national grants, may still fit you.':'National and charity grants may still fit you.')+'</p>'
     +'<a class="wbtn" href="/go/'+esc(go)+'/">See which fit in the free app</a>')
-   +'<button type="button" class="again">Change answers</button>'};
+   +'<p class="small">A quick estimate only. The app checks your course, region, fee status and more, so its matches are far more accurate.</p><button type="button" class="again">Change answers</button>'};
  fb.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
   if(t.classList.contains('opt')){if(t.getAttribute('data-v')==='n')fok=false;fs++;if(fs<FQ.length)fask();else fres()}
   else if(t.classList.contains('again')){fs=0;fok=true;fask()}});
@@ -1224,7 +1224,7 @@ function ask(){var q=Q[step],h='<div class="hd"><b>Which could you get?</b><span
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
  h+='</div><p class="qq">'+esc(q.q)+'</p>';
  q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
- h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">For UK students. Nothing is saved or sent.</p>';
+ h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
  box.className='chk';box.innerHTML=h}
 box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
  if(t.classList.contains('opt')){A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
@@ -1245,8 +1245,8 @@ function result(){var here=0;
  box.className='res';
  box.innerHTML='<div class="nums"><div><b>'+here+'</b><span>'+esc(uni)+' funds you may get</span></div>'
   +(nat?'<div><b>+'+nat+'</b><span>national &amp; charity grants worth checking</span></div>':'')+'</div>'
-  +'<a class="wbtn" href="/go/'+esc(go)+'/">See which fit you in the free app</a>'
-  +'<p class="small">Based on the main rules we have on file. Always check the official page.</p>'
+  +'<a class="wbtn" href="/go/'+esc(go)+'/">Get accurate matches in the app</a>'
+  +'<p class="small">A quick estimate only. The app checks your course, region, fee status and more, so its matches are far more accurate.</p>'
   +'<button type="button" class="again">Change answers</button>';
  if(bar)bar.textContent=here+' '+uni+' funds'+(nat?' + '+nat+' national grants':'')+' to check';
  if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'})}
@@ -1280,7 +1280,7 @@ def match_box(go, preset="", title="Which could you get?"):
         '<input id="mq" type="search" autocomplete="off" placeholder="Type your university">'
         '<ul class="fres" id="mr"></ul>'
         '<button type="button" class="opt" data-v="none">Not decided yet</button>'
-        '<p class="fine">For UK students. Nothing is saved or sent.</p></div>'
+        '<p class="fine">Quick web estimate for UK students. The app is more accurate.</p></div>'
     )
 
 MATCH_JS = r"""(function(){
@@ -1302,7 +1302,7 @@ function head(){var h='<div class="hd"><b>'+esc(title)+'</b><span>'+(step+1)+' o
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';return h+'</div>'}
 function ask(){var q=Q[step],h=head();
  if(q.k==='u')h+='<label class="qq" for="mq">Where are you studying, or hoping to?</label><input id="mq" type="search" autocomplete="off" placeholder="Type your university"><ul class="fres" id="mr"></ul>'
-  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">For UK students. Nothing is saved or sent.</p>';
+  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
  else{h+='<p class="qq">'+esc(q.q)+'</p>';q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
   h+='<button type="button" class="back">Back</button>'}
  box.className='chk mchk';box.innerHTML=h;if(q.k==='u')bind()}
@@ -1333,9 +1333,9 @@ function result(){var c=pre||A.c,here=0,top=0,nat=0;
  h+='<div><b>'+(U&&here?'+':'')+nat+'</b><span>national &amp; charity grants worth checking</span></div></div>';
  if(U&&!here)h+='<p class="top">None of '+esc(s)+'’s own funds match these answers, but these grants might.</p>';
  if(top>=100)h+='<p class="top">Biggest '+esc(s)+' award you may get: <b>£'+top.toLocaleString('en-GB')+'</b></p>';
- h+='<a class="wbtn" href="'+esc(href())+'">See all your matches in the free app</a>';
+ h+='<a class="wbtn" href="'+esc(href())+'">Get accurate matches in the app</a>';
  if(U&&location.pathname!=='/bursaries/'+U[1]+'/')h+='<a class="alt" href="/bursaries/'+U[1]+'/">See every '+esc(s)+' fund</a>';
- h+='<p class="small">'+(U?'':'University funds depend on where you study. The app checks all 144. ')+'Based on the main rules we have on file. Always check the official page.</p>'
+ h+='<p class="small">'+(U?'':'University funds depend on where you study. The app checks all 144. ')+'A quick estimate only. The app checks your course, region, fee status and more, so its matches are far more accurate.</p>'
   +'<button type="button" class="again">Change answers</button>';
  box.className='res';box.innerHTML=h;
  if(bar)bar.textContent=(U?here+' '+s+' funds + ':'')+nat+' national grants to check';
@@ -2739,7 +2739,7 @@ core_urls = list(urls)
 urls += fund_urls
 
 # Homepage: the hand-authored index.html keeps its own layout; generate.py
-# only fills the marked blocks (check box, stats, real example funds, a plain
+# only fills the marked blocks (stats, real example funds, a plain
 # link to every university page, footer) so they stay in step with the data.
 def home_examples(n=4):
     """Real funds for the homepage: the biggest main university bursaries
@@ -2768,7 +2768,6 @@ if os.path.exists("index.html"):
     links = "".join(f'<li><a href="/bursaries/{s_}/">{html.escape(n)}</a></li>' for n, s_ in real_unis)
     new_home = home
     for marker, inner in (
-        ("MATCH-BOX", match_box("homepage")),
         ("STATS", '<div class="stats">'
                   f'<div><b>{SITE_FUND_COUNT // 500 * 500:,}+</b><span>funds tracked</span></div>'
                   f'<div><b>{len(uni_list)}</b><span>universities</span></div>'
