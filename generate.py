@@ -1569,8 +1569,33 @@ def make_og_image(slug, uni_name, headline, subline):
     y += 30
     d.text((PAD, y), headline, font=_fit(d, headline, 800, 108, W - 2 * PAD), fill="#00766F")
     d.text((PAD, H - 64), subline, font=_font(32, 500), fill="#505A5F", anchor="ls")
-    os.makedirs("og", exist_ok=True)
-    out = os.path.join("og", f"{slug}.png")
+    _save_png(im, os.path.join("og", f"{slug}.png"))
+
+def make_site_og_image(n_funds, n_unis):
+    # Default share image (og-image.png) for every page without its own.
+    W, H, PAD = 1200, 630, 72
+    im = Image.new("RGB", (W, H), "white")
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, W, 96], fill="#0B0C0C")
+    try:
+        icon = Image.open("app-icon.png").convert("RGBA").resize((56, 56), Image.LANCZOS)
+        im.paste(icon, (PAD, 20), icon)
+    except OSError:
+        pass
+    d.text((PAD + 74, 48), "BursaSearch", font=_font(34, 700), fill="white", anchor="lm")
+    d.text((W - PAD, 48), "bursasearch.com", font=_font(26, 500), fill="#C9CCCD", anchor="rm")
+    head = _font(84, 800)
+    d.text((PAD, 150), "Find every UK bursary", font=head, fill="#0B0C0C")
+    d.text((PAD, 250), "you qualify for", font=head, fill="#0B0C0C")
+    d.rectangle([PAD, 372, W - PAD, 378], fill="#0B0C0C")
+    d.text((PAD, 412), f"{n_funds // 500 * 500:,}+ verified funds · {n_unis} universities",
+           font=_font(44, 700), fill="#00766F")
+    d.text((PAD, H - 64), "University, national and charity grants in one search",
+           font=_font(32, 500), fill="#505A5F", anchor="ls")
+    _save_png(im, "og-image.png")
+
+def _save_png(im, out):
+    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     buf = __import__("io").BytesIO()
     im.save(buf, "PNG", optimize=True)
     data = buf.getvalue()
@@ -2543,6 +2568,7 @@ write_page(about_url, os.path.join("about", "index.html"),
 if HAVE_PIL:
     for s_, (n_, h_, sub_) in OG_JOBS.items():
         make_og_image(s_, n_, h_, sub_)
+    make_site_og_image(SITE_FUND_COUNT, len(uni_list))
 
 # home page (/) — hand-authored index.html at the repo root (the TikTok
 # onboarding splash: logo + tagline + direct App Store / Google Play links).
@@ -2583,7 +2609,7 @@ urls += fund_urls
 if os.path.exists("index.html"):
     with open("index.html", encoding="utf-8") as f:
         home = f.read()
-    links = "".join(f'<a href="/bursaries/{slug}/">{html.escape(name)}</a>' for name, slug, _ in uni_list)
+    links = " ".join(f'<a href="/bursaries/{slug}/">{html.escape(name)}</a>' for name, slug, _ in uni_list)
     finder = (
         '<style>.unis .finder{margin:0 0 12px}.unis .finder label{display:block;font-size:13px;font-weight:700;margin:0 0 6px}'
         '.unis .finder input{width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;'
