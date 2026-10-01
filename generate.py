@@ -211,7 +211,10 @@ _ICON_RE = re.compile(r'<link rel="(?:icon|apple-touch-icon)"[^>]*>\n?')
 def _strip_checked(html_text):
     # Favicon tags are site chrome, not page content: adding them must not
     # bump every page's lastmod at once.
-    return _ICON_RE.sub('', _CHECKED_RE.sub('', html_text))
+    # Same for the stylesheet and the check scripts: a styling change isn't new content.
+    return _CHROME_RE.sub('', _ICON_RE.sub('', _CHECKED_RE.sub('', html_text)))
+
+_CHROME_RE = re.compile(r'<style>.*?</style>|<script src="/assets/[a-z]+\.js" defer></script>', re.S)
 
 def write_page(url, path, content, lastmod_map, changed_urls):
     """Writes a page, records its sitemap lastmod — bumped to TODAY only when
@@ -696,6 +699,19 @@ h1.page + .sub{font-size:14.5px; color:var(--soft); margin:-8px 0 16px;}
 .res p{margin:0 0 12px;}
 .layout{display:block;}
 .layout > .side{margin:0 0 6px;}
+.mchk{max-width:620px; margin:0 0 18px;}
+.mchk label.qq{display:block;}
+.mchk input{width:100%; font:inherit; font-size:17px; padding:10px 12px; border:2px solid var(--ink);
+  border-radius:0; background:#fff; color:var(--ink); margin:0 0 4px; -webkit-appearance:none;}
+.mchk .fres{margin:0 0 10px;}
+.mchk .fres li{padding:0;}
+.mchk .fres li.nil{padding:9px 2px;}
+.pick{display:block; width:100%; text-align:left; background:none; border:0; padding:10px 2px; font:inherit;
+  font-weight:700; color:var(--link); text-decoration:underline; text-underline-offset:3px; cursor:pointer;}
+#mchk.res{max-width:620px; margin:0 0 18px;}
+.res .top{margin:0 0 14px; font-size:16px;}
+.res .alt{display:block; text-align:center; color:#fff; font-weight:700; margin:14px 0 0;}
+.res .alt:hover{color:#fff;}
 @media (max-width:760px){
   .nav{display:none;}
   .ctabar{display:flex;}
@@ -1233,6 +1249,108 @@ def write_check_js(rows_all):
         f.write(CHECK_JS.replace("__NAT__", json.dumps(nat, separators=(",", ":"))))
     return len(nat)
 
+# ── "Pick your uni" check (homepage, hub, circumstance pages) ───────────────
+# Same rules as the per-university check, but the first question is the
+# university, so it works on pages that aren't about one university. Data is
+# /assets/match.json (fetched on first use), code is /assets/match.js.
+MATCH_SCRIPT = '<script src="/assets/match.js" defer></script>'
+
+def match_box(go, preset="", title="Which could you get?"):
+    """Server-rendered first question; match.js takes over from there.
+    `preset` = a circumstance code the page already answers (care leavers -> c)."""
+    n = 3 if preset else 4
+    return (
+        f'<div id="mchk" class="chk mchk" data-go="{go}" data-c="{preset}" data-t="{esc(title)}">'
+        f'<div class="hd"><b>{esc(title)}</b><span>1 of {n}</span></div>'
+        '<div class="prog"><i class="on"></i>' + '<i></i>' * (n - 1) + '</div>'
+        '<label class="qq" for="mq">Where are you studying, or hoping to?</label>'
+        '<input id="mq" type="search" autocomplete="off" placeholder="Type your university">'
+        '<ul class="fres" id="mr"></ul>'
+        '<button type="button" class="opt" data-v="none">Not decided yet</button>'
+        '<p class="fine">For UK students. Nothing is saved or sent.</p></div>'
+    )
+
+MATCH_JS = r"""(function(){
+var box=document.getElementById('mchk');if(!box)return;
+var go=box.getAttribute('data-go')||'seo_site',pre=box.getAttribute('data-c')||'',title=box.getAttribute('data-t')||'Which could you get?';
+var D=null,wait=[],busy=0;
+function load(cb){if(D){cb();return}wait.push(cb);if(busy)return;busy=1;
+ fetch('/assets/match.json').then(function(r){return r.json()}).then(function(j){D=j;var w=wait;wait=[];w.forEach(function(f){f()})})
+ .catch(function(){busy=0})}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function nm(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,'')}
+var Q=[{k:'u'},
+ {k:'l',q:'What will you study?',o:[['u','Undergraduate degree'],['p',"Master's or PhD"]]},
+ {k:'i',q:'What is your household income?',o:[['0','Under £25,000'],['25000','£25,000 to £43,000'],['43000','Over £43,000'],['-1','Not sure']]},
+ {k:'c',q:'Do any of these apply to you?',o:[['c','Care-experienced'],['e','Estranged from my family'],['r',"I'm a carer"],['d','Disabled or long-term condition'],['f','Refugee or asylum seeker'],['n','None of these']]}];
+if(pre)Q.pop();
+var A={},U=null,step=0,bar=document.getElementById('ctatext'),barOrig=bar?bar.textContent:'';
+function head(){var h='<div class="hd"><b>'+esc(title)+'</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
+ for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';return h+'</div>'}
+function ask(){var q=Q[step],h=head();
+ if(q.k==='u')h+='<label class="qq" for="mq">Where are you studying, or hoping to?</label><input id="mq" type="search" autocomplete="off" placeholder="Type your university"><ul class="fres" id="mr"></ul>'
+  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">For UK students. Nothing is saved or sent.</p>';
+ else{h+='<p class="qq">'+esc(q.q)+'</p>';q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
+  h+='<button type="button" class="back">Back</button>'}
+ box.className='chk mchk';box.innerHTML=h;if(q.k==='u')bind()}
+function bind(){var inp=document.getElementById('mq');if(!inp)return;
+ inp.addEventListener('focus',function(){load(function(){})});
+ inp.addEventListener('input',suggest);
+ inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var b=box.querySelector('#mr .pick');if(b)b.click()}})}
+function suggest(){var inp=document.getElementById('mq'),o=document.getElementById('mr');if(!inp)return;var q=nm(inp.value).trim();
+ if(q.length<2){o.innerHTML='';return}
+ load(function(){if(nm(inp.value).trim()!==q)return;var m=[];
+  D.u.forEach(function(x,i){if((' '+nm(x[0]+' '+x[2])).indexOf(' '+q)>=0)m.push(i)});
+  m.sort(function(a,b){return D.u[a][0].length-D.u[b][0].length});m=m.slice(0,6);
+  o.innerHTML=m.length?m.map(function(i){return '<li><button type="button" class="pick" data-i="'+i+'">'+esc(D.u[i][0])+'</button></li>'}).join('')
+   :'<li class="nil">Not in our list yet. Choose “Not decided yet” to see national grants.</li>'})}
+function next(){step++;if(step<Q.length)ask();else load(result)}
+box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
+ if(t.classList.contains('pick')){U=D.u[+t.getAttribute('data-i')];next()}
+ else if(t.classList.contains('opt')){if(Q[step].k==='u')U=0;else A[Q[step].k]=t.getAttribute('data-v');next()}
+ else if(t.classList.contains('back')){step=Math.max(0,step-1);ask()}
+ else if(t.classList.contains('again')){A={};U=null;step=0;if(bar)bar.textContent=barOrig;ask()}});
+function href(){return box.getAttribute('data-href')||'/go/'+go+'/'}
+function result(){var c=pre||A.c,here=0,top=0,nat=0;
+ function fits(r){if(r[0]!=='a'&&r[0]!==A.l)return false;var lo=+A.i;if(r[1]>0&&lo>=0&&lo>=r[1])return false;if(r[2]&&r[2].indexOf(c)<0)return false;return true}
+ if(U)U[4].forEach(function(r){if(fits(r)&&!r[3]){here++;if(r[4]>top)top=r[4]}});
+ D.n.forEach(function(r){if(fits(r))nat++});
+ var s=U?U[3]:'',h='<div class="nums">';
+ if(U&&here)h+='<div><b>'+here+'</b><span>'+esc(s)+' funds you may get</span></div>';
+ h+='<div><b>'+(U&&here?'+':'')+nat+'</b><span>national &amp; charity grants worth checking</span></div></div>';
+ if(U&&!here)h+='<p class="top">None of '+esc(s)+'’s own funds match these answers, but these grants might.</p>';
+ if(top>=100)h+='<p class="top">Biggest '+esc(s)+' award you may get: <b>£'+top.toLocaleString('en-GB')+'</b></p>';
+ h+='<a class="wbtn" href="'+esc(href())+'">See all your matches in the free app</a>';
+ if(U&&location.pathname!=='/bursaries/'+U[1]+'/')h+='<a class="alt" href="/bursaries/'+U[1]+'/">See every '+esc(s)+' fund</a>';
+ h+='<p class="small">'+(U?'':'University funds depend on where you study. The app checks all 144. ')+'Based on the main rules we have on file. Always check the official page.</p>'
+  +'<button type="button" class="again">Change answers</button>';
+ box.className='res';box.innerHTML=h;
+ if(bar)bar.textContent=(U?here+' '+s+' funds + ':'')+nat+' national grants to check';
+ if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'})}
+bind();
+})();
+"""
+
+def write_match_assets(uni_list, by_name, rows_all):
+    """/assets/match.json: per-university check data + national funds;
+    /assets/site.css: SITE_CSS for the hand-authored homepage."""
+    def rec(r, with_amt):
+        l, cap, circ, x = check_attrs(r)
+        amt = max_amount_value(r.get("Amount", "")) if with_amt and counts_for_top_award(r) else 0
+        return [l, cap, circ, x, amt] if with_amt else [l, cap, circ, x]
+    unis = [[name, slug, uni_alias(name) or "", uni_short(name),
+             [rec(r, True) for r in by_name[name] if clean(r.get("Bursary Name", ""))]]
+            for name, slug, _ in uni_list if not name.lower().startswith("external")]
+    nat = [rec(r, False) for r in rows_all
+           if clean(r.get("University", "")).lower().startswith("external") and clean(r.get("Bursary Name", ""))]
+    os.makedirs("assets", exist_ok=True)
+    for name, text in (("match.json", json.dumps({"u": unis, "n": nat}, separators=(",", ":"))),
+                       ("match.js", MATCH_JS), ("site.css", SITE_CSS)):
+        p = os.path.join("assets", name)
+        if not os.path.exists(p) or open(p, encoding="utf-8").read() != text:
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(text)
+
 
 # ── Rollup page for single-entry universities ───────────────────────────────
 def render_rollup(singles):
@@ -1700,8 +1818,9 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         finder_items = [[n, f"/bursaries/{s}/", uni_alias(n),
                          f"{c} fund{'s' if c != 1 else ''}" + (f", up to £{m:,}" if m >= 100 else "")]
                         for s, (n, c, m) in sorted(by_u.items(), key=lambda kv: kv[1][0])]
-        pre = table
-        if finder_items:
+        check_here = kind == "circumstance" and slug != "international-students"
+        pre = (match_box("seo_tag", preset=code_ or "") if check_here else "") + table
+        if finder_items and not check_here:
             pre += uni_finder_html(finder_items, label="Where are you studying?",
                                    placeholder="Type your university")
         if nat:
@@ -1732,7 +1851,8 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
     )
     return render_shell(title=esc(title), description=esc(description),
                         canonical=canonical, body=body, sticky=sticky_bar("seo_tag"), schema=schema,
-                        go="seo_tag")
+                        go="seo_tag",
+                        scripts=MATCH_SCRIPT if 'id="mchk"' in body else "")
 
 def render_circumstance_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
     return render_tag_page(
@@ -2291,7 +2411,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     body = (
         crumb_html([("Home", "/"), ("Bursaries", None)])
         + '<h1 class="page">UK University Bursaries &amp; Scholarships</h1>'
-        + uni_finder_html(HUB_FINDER_ITEMS)
+        + match_box("seo_site")
         + stat_line()
         + f'<p class="lede">{esc(lede)}</p>'
         + '<h2>Quick links</h2>'
@@ -2316,7 +2436,8 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
         ("Bursaries", canonical),
     ]))
     return render_shell(title=esc(title), description=esc(description),
-                        canonical=canonical, body=body, schema=schema)
+                        canonical=canonical, body=body, schema=schema,
+                        sticky=sticky_bar("seo_site"), scripts=MATCH_SCRIPT)
 
 def submit_indexnow(urls):
     """Tells Bing/Yandex/Seznam about changed URLs immediately instead of
@@ -2400,6 +2521,7 @@ for uni, uslug, _ in uni_list:
             uni_subject_specs.append((uni, uslug, sslug, m))
 
 n_nat = write_check_js(rows)
+write_match_assets(uni_list, multi, rows)
 
 RANK_NOUN = {
     "low-income-students": "low-income bursaries", "care-leavers": "care-leaver bursaries",
@@ -2603,25 +2725,49 @@ urls += uni_subject_urls
 core_urls = list(urls)
 urls += fund_urls
 
-# Homepage: keep a plain link to every university page between markers in
-# the hand-authored index.html, so the one page Google already trusts links
-# straight to each uni page (the rest of the homepage is left untouched).
+# Homepage: the hand-authored index.html keeps its own layout; generate.py
+# only fills the marked blocks (check box, stats, real example funds, a plain
+# link to every university page, footer) so they stay in step with the data.
+def home_examples(n=4):
+    """Real funds for the homepage: the biggest main university bursaries
+    (open to UK undergrads, no extra conditions), one per university."""
+    picks = []
+    for name, slug, _ in uni_list:
+        named = [r for r in multi[name] if clean(r.get("Bursary Name", ""))]
+        f = flagship_fund(named, name)
+        if f and counts_for_top_award(f) and not check_attrs(f)[3]:
+            v = max_amount_value(f.get("Amount", ""))
+            if v >= 1000:
+                picks.append((-v, name, slug, f))
+    picks.sort(key=lambda t: (t[0], t[1]))
+    return [(name, slug, f) for _, name, slug, f in picks[:n]]
+
+def fill_block(page, marker, inner):
+    return re.sub(rf"<!-- {marker}:START -->.*?<!-- {marker}:END -->",
+                  lambda m: f"<!-- {marker}:START -->{inner}<!-- {marker}:END -->", page, flags=re.S)
+
 if os.path.exists("index.html"):
     with open("index.html", encoding="utf-8") as f:
         home = f.read()
-    links = " ".join(f'<a href="/bursaries/{slug}/">{html.escape(name)}</a>' for name, slug, _ in uni_list)
-    finder = (
-        '<style>.unis .finder{margin:0 0 12px}.unis .finder label{display:block;font-size:13px;font-weight:700;margin:0 0 6px}'
-        '.unis .finder input{width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;'
-        'border:1px solid var(--line);background:transparent;color:inherit}'
-        '.unis .fres{list-style:none;margin:6px 0 0;padding:0}.unis .fres li{padding:8px 2px;font-size:15px;'
-        'border-bottom:1px solid var(--line)}.unis .fres li a{color:inherit;font-weight:600}'
-        '.unis .fres li span{display:block;font-size:12px;opacity:.7}</style>'
-        + uni_finder_html(HUB_FINDER_ITEMS, label="Find your university", placeholder="Type your university")
-    )
-    block = ('<!-- UNI-LINKS:START -->\n    <div class="unis"><h3>Bursaries at your university</h3>'
-             f'{finder}<p>{links}</p></div>\n    <!-- UNI-LINKS:END -->')
-    new_home = re.sub(r"<!-- UNI-LINKS:START -->.*?<!-- UNI-LINKS:END -->", lambda m: block, home, flags=re.S)
+    ex_rows = "".join(bursary_row(r, uni=name, uni_href=f"/bursaries/{slug}/", fund_href=fund_href_for(r, name))
+                      for name, slug, r in home_examples())
+    real_unis = [(n, s_) for n, s_, _ in uni_list if not n.lower().startswith("external")]
+    links = "".join(f'<li><a href="/bursaries/{s_}/">{html.escape(n)}</a></li>' for n, s_ in real_unis)
+    new_home = home
+    for marker, inner in (
+        ("MATCH-BOX", match_box("homepage")),
+        ("STATS", '<div class="stats">'
+                  f'<div><b>{SITE_FUND_COUNT // 500 * 500:,}+</b><span>funds tracked</span></div>'
+                  f'<div><b>{len(uni_list)}</b><span>universities</span></div>'
+                  f'<div><b>{n_nat // 10 * 10}+</b><span>national &amp; charity funds</span></div></div>'),
+        ("EXAMPLES", ('<h2>Real bursaries from our list</h2>'
+                      f'<div class="list">{ex_rows}</div>') if ex_rows else ""),
+        ("UNI-LINKS", '<h2>Bursaries at your university</h2>'
+                      f'<details class="more"><summary><span>Show all {len(real_unis)} universities</span></summary>'
+                      f'<ul class="unilinks">{links}</ul></details>'),
+        ("FOOTER", footer_html()),
+    ):
+        new_home = fill_block(new_home, marker, inner)
     if new_home != home:
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(new_home)

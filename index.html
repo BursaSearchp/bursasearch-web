@@ -1,10 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>BursaSearch — Find every UK bursary you qualify for</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
 <meta name="description" content="BursaSearch matches you against 3,000+ verified UK bursaries — university, national and independent — and explains exactly why you qualify. Free to start.">
+<meta name="apple-itunes-app" content="app-id=6795890396">
 <link rel="canonical" href="https://bursasearch.com/">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
@@ -23,346 +25,103 @@
 <meta name="twitter:image" content="https://bursasearch.com/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Sora:wght@700&display=swap">
+<link rel="stylesheet" href="/assets/site.css">
 <style>
-  /* Committed to one look, always — the app itself has no light mode, so
-     letting this page flip with the visitor's OS theme just meant the
-     accent silently became a duller, off-brand green in light mode. This
-     is the app's actual palette (dashboard navy + teal), not a separate
-     invented one. */
-  :root {
-    --bg: #091723;
-    --surface: #0F2135;
-    --surface-2: #13293F;
-    --line: rgba(255,255,255,.09);
-    --text: #FFFFFF;
-    --text-muted: #7A9BB5;
-    --accent: #0F8A8A;
-    --accent-strong: #1CC4BC;
-    --warn: #F0A94E;
-  }
-
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    min-height: 100vh;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  }
-  h1, h2, h3 { font-family: 'Sora', sans-serif; }
-  a { color: inherit; }
-  img { max-width: 100%; }
-
-  .wrap { width: 100%; max-width: 420px; margin: 0 auto; padding: 0 20px; }
-
-  /* ---------- nav ---------- */
-  .nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 22px 0 6px;
-  }
-  .nav .brand { display: flex; align-items: center; gap: 8px; }
-  .nav .avatar img { display: block; }
-  .nav .wordmark { font-weight: 800; font-size: 15px; letter-spacing: -.3px; }
-  .nav .wordmark .bursa { color: var(--text); }
-  .nav .wordmark .search { color: var(--accent); }
-  .nav .navcta {
-    font-size: 12px; font-weight: 600; color: var(--accent-strong);
-    padding: 7px 12px; border: 1px solid rgba(28,196,188,.35); border-radius: 100px;
-    text-decoration: none;
-  }
-
-  /* ---------- hero ---------- */
-  .hero { padding: 26px 0 30px; text-align: center; }
-  .eyebrow {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
-    color: var(--accent-strong); background: rgba(15,138,138,.14);
-    border: 1px solid rgba(28,196,188,.28); border-radius: 100px;
-    padding: 5px 12px 5px 10px; margin-bottom: 18px;
-  }
-  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-strong); }
-  .hero h1 {
-    font-size: 30px; line-height: 1.14; font-weight: 800; letter-spacing: -.6px;
-    margin: 0 0 12px;
-  }
-  .lede {
-    font-size: 15px; line-height: 1.55; color: var(--text-muted);
-    margin: 0 auto 24px; max-width: 340px;
-  }
-
-  .storebtns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
-  .cta {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    text-decoration: none; background: var(--accent); color: #06110E;
-    font-family: 'Sora', sans-serif; font-weight: 700; font-size: 16px;
-    padding: 16px 22px; border-radius: 12px;
-  }
-  .cta:focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 3px; }
-  .cta.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
-  .cta .play-glyph, .cta .apple-glyph { width: 14px; height: 14px; flex-shrink: 0; }
-  .finetext { font-size: 12px; color: var(--text-muted); margin: 0 0 24px; }
-
-  .stats {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-    padding: 16px 0;
-  }
-  .stats div { display: flex; flex-direction: column; gap: 3px; }
-  .stats b { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; }
-  .stats span { font-size: 10.5px; color: var(--text-muted); line-height: 1.3; }
-
-  /* ---------- sections ---------- */
-  section { padding: 38px 0; }
-  .kicker {
-    font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-    color: var(--accent-strong); margin: 0 0 10px;
-  }
-  section h2 { font-size: 21px; font-weight: 700; letter-spacing: -.3px; margin: 0 0 14px; }
-
-  .steps { display: flex; flex-direction: column; }
-  .step { display: flex; gap: 15px; padding: 16px 0; position: relative; }
-  .step:not(:last-child)::after {
-    content: ""; position: absolute; left: 16px; top: 44px; bottom: -2px;
-    width: 1px; background: var(--line);
-  }
-  .step .num {
-    flex-shrink: 0; width: 33px; height: 33px; border-radius: 10px;
-    background: var(--surface-2); border: 1px solid var(--line);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Sora', sans-serif; font-weight: 700; font-size: 13px; color: var(--accent-strong);
-  }
-  .step h3 { font-size: 15px; font-weight: 700; margin: 3px 0 5px; }
-  .step p { font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0; }
-
-  .phone {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 20px;
-    padding: 16px 15px; margin-top: 22px;
-  }
-  .phone .pbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .phone .ptitle { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 13px; }
-  .phone .pcount { font-size: 10.5px; color: var(--accent-strong); font-weight: 600; }
-  .matchcard {
-    background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
-    padding: 12px 13px; margin-bottom: 9px;
-  }
-  .matchcard .mtop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 5px; }
-  .matchcard .mname { font-size: 13px; font-weight: 600; line-height: 1.3; }
-  .matchcard .mamt { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 13.5px; color: var(--accent-strong); white-space: nowrap; }
-  .matchcard .mwhy { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
-  .matchcard .mwhy b { color: var(--warn); font-weight: 600; }
-  .previewnote { font-size: 10.5px; color: var(--text-muted); text-align: center; margin: 12px 0 0; opacity: .75; }
-
-  .features { display: flex; flex-direction: column; gap: 11px; }
-  .feature {
-    display: flex; gap: 13px; align-items: flex-start;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
-    padding: 15px;
-  }
-  .feature .ficon {
-    flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px;
-    background: rgba(15,138,138,.16); display: flex; align-items: center; justify-content: center;
-  }
-  .feature .ficon svg { width: 17px; height: 17px; color: var(--accent-strong); }
-  .feature h3 { font-size: 14px; font-weight: 700; margin: 0 0 4px; }
-  .feature p { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin: 0; }
-
-  .browse {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-    padding: 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px;
-    text-decoration: none;
-  }
-  .browse .btxt h3 { font-size: 14px; margin: 0 0 3px; font-weight: 700; }
-  .browse .btxt p { font-size: 12px; color: var(--text-muted); margin: 0; }
-  .browse .arrow {
-    flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
-    background: rgba(15,138,138,.18); display: flex; align-items: center; justify-content: center;
-    color: var(--accent-strong);
-  }
-
-  .unis { margin-top: 22px; }
-  .unis h3 { font-size: 13px; font-weight: 700; margin: 0 0 8px; }
-  .unis p { font-size: 12px; line-height: 1.9; margin: 0; }
-  .unis a { color: var(--text-muted); text-decoration: none; white-space: nowrap; }
-  .unis a:hover { color: var(--accent-strong); }
-  .unis a + a::before { content: "·"; color: var(--line); padding: 0 7px 0 3px; }
-
-  .finalcta { text-align: center; }
-
-  footer {
-    border-top: 1px solid var(--line); padding: 24px 0 40px;
-  }
-  footer .fbrand { display: flex; align-items: center; gap: 7px; margin-bottom: 13px; }
-  footer .fbrand img { display: block; }
-  footer .fbrand span { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 13px; }
-  footer .flinks { display: flex; flex-wrap: wrap; gap: 12px 16px; font-size: 12px; margin-bottom: 14px; }
-  footer .flinks a { color: var(--text-muted); text-decoration: none; }
-  footer .fmeta { font-size: 11px; color: var(--text-muted); opacity: .7; line-height: 1.6; }
+  /* Homepage-only additions; everything else comes from /assets/site.css,
+     which generate.py writes from the same SITE_CSS as every other page. */
+  h1.page{margin-top:22px;}
+  .home-lede{font-size:17px; margin:0 0 16px; max-width:40ch;}
+  .getbox{max-width:620px; margin:0 0 22px;}
+  .storebtn{display:flex; align-items:center; justify-content:center; gap:10px; background:var(--ink);
+    color:#fff !important; text-decoration:none !important; font-weight:800; font-size:17px; padding:14px 16px;
+    box-shadow:0 3px 0 #444;}
+  .storebtn:hover{background:#222;}
+  .storebtn svg{width:18px; height:18px; flex-shrink:0;}
+  .getbox .other{display:block; text-align:center; font-size:14.5px; margin:10px 0 0;}
+  .getbox .free{font-size:13.5px; color:var(--soft); text-align:center; margin:6px 0 0;}
+  .steps{list-style:none; margin:8px 0 0; padding:0; max-width:620px; counter-reset:s;}
+  .steps li{display:grid; grid-template-columns:34px 1fr; gap:2px 12px; padding:11px 0;
+    border-bottom:1px solid var(--line); counter-increment:s;}
+  .steps li::before{content:counter(s); grid-row:span 2; width:28px; height:28px; display:flex;
+    align-items:center; justify-content:center; background:var(--ink); color:#fff; font-weight:800; font-size:14px;}
+  .steps b{font-size:16.5px;}
+  .steps span{font-size:14.5px; color:var(--soft);}
+  .unilinks{list-style:none; margin:0 0 12px; padding:0; columns:2 220px; column-gap:24px; font-size:14.5px;}
+  .unilinks li{padding:4px 0; break-inside:avoid;}
 </style>
 </head>
-<body>
-<div class="wrap">
+<body class="has-bar">
+<header class="hdr"><div class="in">
+  <a class="brand" href="/"><img src="/app-icon.png" alt="" width="26" height="26"><span>BursaSearch</span></a>
+  <nav class="nav"><a href="/bursaries/">Universities</a><a href="/bursaries/circumstance/care-leavers/">Care leavers</a><a href="/bursaries/closing-soon/">Closing soon</a><a href="/about/">Our data</a></nav>
+  <span class="grow"></span>
+  <a class="get" href="#get">Get the app</a>
+</div></header>
 
-  <nav class="nav">
-    <div class="brand">
-      <span class="avatar"><img src="app-icon.png" alt="" width="22" height="22" style="border-radius:6px;display:block;"></span>
-      <span class="wordmark"><span class="bursa">Bursa</span><span class="search">Search</span></span>
-    </div>
-    <a class="navcta" href="#get">Get the app</a>
-  </nav>
+<main class="wrap">
+  <h1 class="page">Find every UK bursary you qualify for</h1>
+  <p class="home-lede">Pick your university and answer three quick questions to see what you could get.</p>
 
-  <header class="hero">
-    <div class="eyebrow"><span class="dot"></span>Free to start</div>
-    <h1>Find every UK bursary you actually qualify for</h1>
-    <p class="lede">Answer a 2-minute quiz and BursaSearch matches you against thousands of UK bursaries &mdash; university, national and independent &mdash; and tells you exactly why you qualify.</p>
+  <!-- MATCH-BOX:START --><div id="mchk" class="chk mchk" data-go="homepage" data-c="" data-t="Which could you get?"><div class="hd"><b>Which could you get?</b><span>1 of 4</span></div><div class="prog"><i class="on"></i><i></i><i></i><i></i></div><label class="qq" for="mq">Where are you studying, or hoping to?</label><input id="mq" type="search" autocomplete="off" placeholder="Type your university"><ul class="fres" id="mr"></ul><button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">For UK students. Nothing is saved or sent.</p></div><!-- MATCH-BOX:END -->
 
-    <div class="storebtns" id="get">
-      <a class="cta" href="https://apps.apple.com/app/id6795890396" target="_blank" rel="noopener">
-        <svg class="apple-glyph" viewBox="0 0 384 512" fill="currentColor"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-        Download on the App Store
-      </a>
-      <a class="cta secondary" href="https://play.google.com/store/apps/details?id=fresherforgev2.com" target="_blank" rel="noopener">
-        <svg class="play-glyph" viewBox="0 0 512 512" fill="currentColor"><path d="M325.3 234.3L104.6 13.5c-6-3.4-13-3.8-19.1-1.6L272 192l53.3-42.3zM47.1 6.3C39.3 10.4 33.9 18.1 33.9 27.5v456.9c0 9.4 5.4 17.1 13.2 21.2L272 320 47.1 6.3zM443.9 210.9L358.6 162 296 220.9l62.6 58.9 85.3-48.9c11.6-6.6 18.8-19 18.8-32.5s-7.2-25.9-18.8-32.5zM104.6 498.5l220.7-220.8L272 235.5 85.5 500.1c6.1 2.2 13.1 1.8 19.1-1.6z"/></svg>
-        Get it on Google Play
-      </a>
-    </div>
-    <p class="finetext">Free to try &mdash; no account needed to see what you qualify for.</p>
-
-    <div class="stats">
-      <div><b>3,000+</b><span>funds tracked</span></div>
-      <div><b>144</b><span>UK universities</span></div>
-      <div><b>Daily</b><span>data refresh</span></div>
-    </div>
-  </header>
-
-  <section id="how">
-    <p class="kicker">How it works</p>
-    <h2>Three steps, no forms to fill in twice</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="num">1</div>
-        <div>
-          <h3>Answer a short quiz</h3>
-          <p>Course, region, household income, fee status &mdash; about two minutes, once.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="num">2</div>
-        <div>
-          <h3>See everything you qualify for</h3>
-          <p>Matched across university funds, national bodies and independent trusts in one list &mdash; with the reason for every match, in plain English.</p>
-        </div>
-      </div>
-      <div class="step">
-        <div class="num">3</div>
-        <div>
-          <h3>Track deadlines and apply</h3>
-          <p>Save your matches, get reminded before a deadline passes, apply straight through the official source.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="phone" role="img" aria-label="Illustration of the app's matched bursary list">
-      <div class="pbar">
-        <span class="ptitle">Your matches</span>
-        <span class="pcount">14 found</span>
-      </div>
-      <div class="matchcard">
-        <div class="mtop"><span class="mname">Access to Success Bursary</span><span class="mamt">&pound;1,500</span></div>
-        <div class="mwhy">Matched on <b>household income</b> and home region</div>
-      </div>
-      <div class="matchcard">
-        <div class="mtop"><span class="mname">Care Leaver Support Fund</span><span class="mamt">&pound;2,000</span></div>
-        <div class="mwhy">Matched on <b>care-experienced</b> status</div>
-      </div>
-      <div class="matchcard">
-        <div class="mtop"><span class="mname">National STEM Futures Award</span><span class="mamt">&pound;800</span></div>
-        <div class="mwhy">Matched on <b>subject</b> and year of study</div>
-      </div>
-    </div>
-    <p class="previewnote">Illustrative preview of the in-app matches screen.</p>
-  </section>
-
-  <section id="why">
-    <p class="kicker">Why BursaSearch</p>
-    <h2>What the app does that a search engine can't</h2>
-    <div class="features">
-      <div class="feature">
-        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
-        <div><h3>Every source, one search</h3><p>University bursaries, national bodies and independent trusts &mdash; checked together, not three separate searches.</p></div>
-      </div>
-      <div class="feature">
-        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div>
-        <div><h3>Plain-English eligibility</h3><p>Every match says exactly why you qualify &mdash; no wading through eligibility PDFs to find out.</p></div>
-      </div>
-      <div class="feature">
-        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
-        <div><h3>Deadline tracking</h3><p>Save the funds you're applying to and get reminded before you miss the closing date.</p></div>
-      </div>
-      <div class="feature">
-        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M4 12l8-8 8 8"/></svg></div>
-        <div><h3>Verified, kept current</h3><p>Funds are checked and refreshed daily &mdash; no dead links or bursaries that quietly closed months ago.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="browse">
-    <a class="browse" href="https://bursasearch.com/bursaries/">
-      <div class="btxt">
-        <h3>Not ready to download?</h3>
-        <p>Browse verified bursaries by university, free.</p>
-      </div>
-      <span class="arrow">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </span>
+  <div class="getbox" id="get">
+    <a class="storebtn" id="storemain" href="https://apps.apple.com/app/id6795890396">
+      <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+      <span>Get the free app</span>
     </a>
-    <!-- UNI-LINKS:START -->
-    <div class="unis"><h3>Bursaries at your university</h3><style>.unis .finder{margin:0 0 12px}.unis .finder label{display:block;font-size:13px;font-weight:700;margin:0 0 6px}.unis .finder input{width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:inherit}.unis .fres{list-style:none;margin:6px 0 0;padding:0}.unis .fres li{padding:8px 2px;font-size:15px;border-bottom:1px solid var(--line)}.unis .fres li a{color:inherit;font-weight:600}.unis .fres li span{display:block;font-size:12px;opacity:.7}</style><div class="finder"><label for="uq">Find your university</label><input id="uq" type="search" placeholder="Type your university" autocomplete="off"><ul class="fres" id="uqr"></ul><script type="application/json" id="uqd">[["Abertay University","/bursaries/abertay-university/","","7 funds"],["Aberystwyth University","/bursaries/aberystwyth-university/","","59 funds"],["Anglia Ruskin University","/bursaries/anglia-ruskin-university/","ARU","37 funds"],["Arden University","/bursaries/arden-university/","","3 funds"],["Arts University Bournemouth","/bursaries/arts-university-bournemouth/","","5 funds"],["Aston University","/bursaries/aston-university/","","32 funds"],["BPP University","/bursaries/bpp-university/","","7 funds"],["Bangor University","/bursaries/bangor-university/","","48 funds"],["Bath Spa University","/bursaries/bath-spa-university/","","20 funds"],["Birkbeck University of London","/bursaries/birkbeck-university-of-london/","","5 funds"],["Birmingham City University","/bursaries/birmingham-city-university/","BCU","39 funds"],["Bishop Grosseteste University","/bursaries/bishop-grosseteste-university/","","5 funds"],["Bournemouth University","/bursaries/bournemouth-university/","","7 funds"],["Brunel University London","/bursaries/brunel-university-london/","","5 funds"],["Buckinghamshire New University","/bursaries/buckinghamshire-new-university/","","10 funds"],["Canterbury Christ Church University","/bursaries/canterbury-christ-church-university/","","22 funds"],["Cardiff Metropolitan University","/bursaries/cardiff-metropolitan-university/","","10 funds"],["Cardiff University","/bursaries/cardiff-university/","","11 funds"],["City, University of London","/bursaries/city-university-of-london/","","6 funds"],["Coventry University","/bursaries/coventry-university/","","6 funds"],["De Montfort University","/bursaries/de-montfort-university/","","10 funds"],["Durham University","/bursaries/durham-university/","","109 funds"],["Edge Hill University","/bursaries/edge-hill-university/","","14 funds"],["Edinburgh Napier University","/bursaries/edinburgh-napier-university/","","19 funds"],["External / National Bodies","/bursaries/external-national-bodies/","","131 funds"],["Falmouth University","/bursaries/falmouth-university/","","4 funds"],["Glasgow Caledonian University","/bursaries/glasgow-caledonian-university/","","8 funds"],["Glasgow School of Art","/bursaries/glasgow-school-of-art/","","8 funds"],["Goldsmiths University of London","/bursaries/goldsmiths-university-of-london/","Goldsmiths","16 funds"],["Harper Adams University","/bursaries/harper-adams-university/","","4 funds"],["Hartpury University","/bursaries/hartpury-university/","","7 funds"],["Heriot-Watt University","/bursaries/heriot-watt-university/","","9 funds"],["Imperial College London","/bursaries/imperial-college-london/","Imperial","14 funds"],["Keele University","/bursaries/keele-university/","","13 funds"],["King's College London","/bursaries/king-s-college-london/","KCL","25 funds"],["Kingston University","/bursaries/kingston-university/","","7 funds"],["LSE","/bursaries/lse/","","12 funds"],["Lancaster University","/bursaries/lancaster-university/","","23 funds"],["Leeds Arts University","/bursaries/leeds-arts-university/","","4 funds"],["Leeds Beckett University","/bursaries/leeds-beckett-university/","","19 funds"],["Leeds Trinity University","/bursaries/leeds-trinity-university/","","5 funds"],["Liverpool Hope University","/bursaries/liverpool-hope-university/","","7 funds"],["Liverpool John Moores University","/bursaries/liverpool-john-moores-university/","LJMU","19 funds"],["London Metropolitan University","/bursaries/london-metropolitan-university/","London Met","19 funds"],["London South Bank University","/bursaries/london-south-bank-university/","LSBU","10 funds"],["Loughborough University","/bursaries/loughborough-university/","","44 funds"],["Loughborough University London","/bursaries/loughborough-university-london/","","5 funds"],["Manchester Metropolitan University","/bursaries/manchester-metropolitan-university/","MMU","6 funds"],["Middlesex University","/bursaries/middlesex-university/","","16 funds"],["Newcastle University","/bursaries/newcastle-university/","","55 funds"],["Newman University","/bursaries/newman-university/","","6 funds"],["Northumbria University","/bursaries/northumbria-university/","","34 funds"],["Norwich University of the Arts","/bursaries/norwich-university-of-the-arts/","","6 funds"],["Nottingham Trent University","/bursaries/nottingham-trent-university/","NTU","9 funds"],["Oxford Brookes University","/bursaries/oxford-brookes-university/","Brookes","33 funds"],["Plymouth Marjon University","/bursaries/plymouth-marjon-university/","","4 funds"],["Queen Margaret University","/bursaries/queen-margaret-university/","","6 funds"],["Queen Mary University of London","/bursaries/queen-mary-university-of-london/","QMUL","49 funds"],["Queen's University Belfast","/bursaries/queen-s-university-belfast/","","55 funds"],["Ravensbourne University London","/bursaries/ravensbourne-university-london/","","7 funds"],["Robert Gordon University","/bursaries/robert-gordon-university/","","8 funds"],["Roehampton University","/bursaries/roehampton-university/","","13 funds"],["Royal Agricultural University","/bursaries/royal-agricultural-university/","","20 funds"],["Royal Central School of Speech and Drama","/bursaries/royal-central-school-of-speech-and-drama/","","5 funds"],["Royal Conservatoire of Scotland","/bursaries/royal-conservatoire-of-scotland/","","7 funds"],["Royal Holloway University of London","/bursaries/royal-holloway-university-of-london/","RHUL","23 funds"],["SOAS University of London","/bursaries/soas-university-of-london/","","6 funds"],["SRUC","/bursaries/sruc/","","3 funds"],["Sheffield Hallam University","/bursaries/sheffield-hallam-university/","SHU","36 funds"],["Southampton Solent University","/bursaries/southampton-solent-university/","","23 funds"],["St Mary's University Twickenham","/bursaries/st-mary-s-university-twickenham/","","7 funds"],["Staffordshire University","/bursaries/staffordshire-university/","","8 funds"],["Swansea University","/bursaries/swansea-university/","","36 funds"],["Teesside University","/bursaries/teesside-university/","","20 funds"],["The Open University","/bursaries/the-open-university/","","8 funds"],["UCL","/bursaries/ucl/","UCL","55 funds"],["Ulster University","/bursaries/ulster-university/","","8 funds"],["University College Birmingham","/bursaries/university-college-birmingham/","","7 funds"],["University of Aberdeen","/bursaries/university-of-aberdeen/","","34 funds"],["University of Bath","/bursaries/university-of-bath/","","57 funds"],["University of Bedfordshire","/bursaries/university-of-bedfordshire/","","8 funds"],["University of Birmingham","/bursaries/university-of-birmingham/","","26 funds"],["University of Bolton","/bursaries/university-of-bolton/","","6 funds"],["University of Bradford","/bursaries/university-of-bradford/","","5 funds"],["University of Brighton","/bursaries/university-of-brighton/","","6 funds"],["University of Bristol","/bursaries/university-of-bristol/","","22 funds"],["University of Buckingham","/bursaries/university-of-buckingham/","","8 funds"],["University of Cambridge","/bursaries/university-of-cambridge/","","23 funds"],["University of Chester","/bursaries/university-of-chester/","","4 funds"],["University of Chichester","/bursaries/university-of-chichester/","","7 funds"],["University of Cumbria","/bursaries/university-of-cumbria/","","5 funds"],["University of Derby","/bursaries/university-of-derby/","","21 funds"],["University of Dundee","/bursaries/university-of-dundee/","","10 funds"],["University of East Anglia","/bursaries/university-of-east-anglia/","UEA","4 funds"],["University of East London","/bursaries/university-of-east-london/","UEL","10 funds"],["University of Edinburgh","/bursaries/university-of-edinburgh/","","57 funds"],["University of Essex","/bursaries/university-of-essex/","","16 funds"],["University of Exeter","/bursaries/university-of-exeter/","","41 funds"],["University of Glasgow","/bursaries/university-of-glasgow/","","25 funds"],["University of Gloucestershire","/bursaries/university-of-gloucestershire/","","6 funds"],["University of Greenwich","/bursaries/university-of-greenwich/","","28 funds"],["University of Hertfordshire","/bursaries/university-of-hertfordshire/","","4 funds"],["University of Huddersfield","/bursaries/university-of-huddersfield/","","61 funds"],["University of Hull","/bursaries/university-of-hull/","","17 funds"],["University of Kent","/bursaries/university-of-kent/","","8 funds"],["University of Lancashire","/bursaries/university-of-lancashire/","UCLan","38 funds"],["University of Law","/bursaries/university-of-law/","","10 funds"],["University of Leeds","/bursaries/university-of-leeds/","","37 funds"],["University of Leicester","/bursaries/university-of-leicester/","","5 funds"],["University of Lincoln","/bursaries/university-of-lincoln/","","43 funds"],["University of Liverpool","/bursaries/university-of-liverpool/","","67 funds"],["University of Manchester","/bursaries/university-of-manchester/","UoM","71 funds"],["University of Northampton","/bursaries/university-of-northampton/","","10 funds"],["University of Nottingham","/bursaries/university-of-nottingham/","UoN","35 funds"],["University of Oxford","/bursaries/university-of-oxford/","","3 funds"],["University of Plymouth","/bursaries/university-of-plymouth/","","31 funds"],["University of Portsmouth","/bursaries/university-of-portsmouth/","","32 funds"],["University of Reading","/bursaries/university-of-reading/","","55 funds"],["University of Salford","/bursaries/university-of-salford/","","40 funds"],["University of Sheffield","/bursaries/university-of-sheffield/","","56 funds"],["University of South Wales","/bursaries/university-of-south-wales/","","11 funds"],["University of Southampton","/bursaries/university-of-southampton/","","70 funds"],["University of St Andrews","/bursaries/university-of-st-andrews/","","4 funds"],["University of Stirling","/bursaries/university-of-stirling/","","49 funds"],["University of Strathclyde","/bursaries/university-of-strathclyde/","","8 funds"],["University of Suffolk","/bursaries/university-of-suffolk/","","7 funds"],["University of Sunderland","/bursaries/university-of-sunderland/","","5 funds"],["University of Surrey","/bursaries/university-of-surrey/","","38 funds"],["University of Sussex","/bursaries/university-of-sussex/","","49 funds"],["University of Wales Trinity Saint David","/bursaries/university-of-wales-trinity-saint-david/","UWTSD","15 funds"],["University of Warwick","/bursaries/university-of-warwick/","","36 funds"],["University of West London","/bursaries/university-of-west-london/","UWL","9 funds"],["University of Westminster","/bursaries/university-of-westminster/","","28 funds"],["University of Winchester","/bursaries/university-of-winchester/","","7 funds"],["University of Wolverhampton","/bursaries/university-of-wolverhampton/","","7 funds"],["University of Worcester","/bursaries/university-of-worcester/","","7 funds"],["University of York","/bursaries/university-of-york/","","29 funds"],["University of the Arts London","/bursaries/university-of-the-arts-london/","UAL","3 funds"],["University of the Highlands and Islands","/bursaries/university-of-the-highlands-and-islands/","","18 funds"],["University of the West of England","/bursaries/university-of-the-west-of-england/","UWE","45 funds"],["University of the West of Scotland","/bursaries/university-of-the-west-of-scotland/","","7 funds"],["Wrexham University","/bursaries/wrexham-university/","","6 funds"],["Writtle University College","/bursaries/writtle-university-college/","","5 funds"],["York St John University","/bursaries/york-st-john-university/","","8 funds"]]</script><script>(function(){var d=JSON.parse(document.getElementById('uqd').textContent),i=document.getElementById('uq'),o=document.getElementById('uqr');function n(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,'')}i.addEventListener('input',function(){var q=n(i.value).trim();o.innerHTML='';if(q.length<2)return;var m=d.filter(function(x){return (' '+n(x[0]+' '+x[2])).indexOf(' '+q)>=0}).slice(0,6);if(!m.length){o.innerHTML='<li class="nil">No match. Try the full list below.</li>';return}m.forEach(function(x){var li=document.createElement('li'),a=document.createElement('a');a.href=x[1];a.textContent=x[0];li.appendChild(a);if(x[3]){var s=document.createElement('span');s.textContent=x[3];li.appendChild(s)}o.appendChild(li)})});i.addEventListener('keydown',function(e){if(e.key==='Enter'){var a=o.querySelector('a');if(a){e.preventDefault();location.href=a.href}}})})();</script></div><p><a href="/bursaries/abertay-university/">Abertay University</a> <a href="/bursaries/aberystwyth-university/">Aberystwyth University</a> <a href="/bursaries/anglia-ruskin-university/">Anglia Ruskin University</a> <a href="/bursaries/arden-university/">Arden University</a> <a href="/bursaries/arts-university-bournemouth/">Arts University Bournemouth</a> <a href="/bursaries/aston-university/">Aston University</a> <a href="/bursaries/bpp-university/">BPP University</a> <a href="/bursaries/bangor-university/">Bangor University</a> <a href="/bursaries/bath-spa-university/">Bath Spa University</a> <a href="/bursaries/birkbeck-university-of-london/">Birkbeck University of London</a> <a href="/bursaries/birmingham-city-university/">Birmingham City University</a> <a href="/bursaries/bishop-grosseteste-university/">Bishop Grosseteste University</a> <a href="/bursaries/bournemouth-university/">Bournemouth University</a> <a href="/bursaries/brunel-university-london/">Brunel University London</a> <a href="/bursaries/buckinghamshire-new-university/">Buckinghamshire New University</a> <a href="/bursaries/canterbury-christ-church-university/">Canterbury Christ Church University</a> <a href="/bursaries/cardiff-metropolitan-university/">Cardiff Metropolitan University</a> <a href="/bursaries/cardiff-university/">Cardiff University</a> <a href="/bursaries/city-university-of-london/">City, University of London</a> <a href="/bursaries/coventry-university/">Coventry University</a> <a href="/bursaries/de-montfort-university/">De Montfort University</a> <a href="/bursaries/durham-university/">Durham University</a> <a href="/bursaries/edge-hill-university/">Edge Hill University</a> <a href="/bursaries/edinburgh-napier-university/">Edinburgh Napier University</a> <a href="/bursaries/external-national-bodies/">External / National Bodies</a> <a href="/bursaries/falmouth-university/">Falmouth University</a> <a href="/bursaries/glasgow-caledonian-university/">Glasgow Caledonian University</a> <a href="/bursaries/glasgow-school-of-art/">Glasgow School of Art</a> <a href="/bursaries/goldsmiths-university-of-london/">Goldsmiths University of London</a> <a href="/bursaries/harper-adams-university/">Harper Adams University</a> <a href="/bursaries/hartpury-university/">Hartpury University</a> <a href="/bursaries/heriot-watt-university/">Heriot-Watt University</a> <a href="/bursaries/imperial-college-london/">Imperial College London</a> <a href="/bursaries/keele-university/">Keele University</a> <a href="/bursaries/king-s-college-london/">King&#x27;s College London</a> <a href="/bursaries/kingston-university/">Kingston University</a> <a href="/bursaries/lse/">LSE</a> <a href="/bursaries/lancaster-university/">Lancaster University</a> <a href="/bursaries/leeds-arts-university/">Leeds Arts University</a> <a href="/bursaries/leeds-beckett-university/">Leeds Beckett University</a> <a href="/bursaries/leeds-trinity-university/">Leeds Trinity University</a> <a href="/bursaries/liverpool-hope-university/">Liverpool Hope University</a> <a href="/bursaries/liverpool-john-moores-university/">Liverpool John Moores University</a> <a href="/bursaries/london-metropolitan-university/">London Metropolitan University</a> <a href="/bursaries/london-south-bank-university/">London South Bank University</a> <a href="/bursaries/loughborough-university/">Loughborough University</a> <a href="/bursaries/loughborough-university-london/">Loughborough University London</a> <a href="/bursaries/manchester-metropolitan-university/">Manchester Metropolitan University</a> <a href="/bursaries/middlesex-university/">Middlesex University</a> <a href="/bursaries/newcastle-university/">Newcastle University</a> <a href="/bursaries/newman-university/">Newman University</a> <a href="/bursaries/northumbria-university/">Northumbria University</a> <a href="/bursaries/norwich-university-of-the-arts/">Norwich University of the Arts</a> <a href="/bursaries/nottingham-trent-university/">Nottingham Trent University</a> <a href="/bursaries/oxford-brookes-university/">Oxford Brookes University</a> <a href="/bursaries/plymouth-marjon-university/">Plymouth Marjon University</a> <a href="/bursaries/queen-margaret-university/">Queen Margaret University</a> <a href="/bursaries/queen-mary-university-of-london/">Queen Mary University of London</a> <a href="/bursaries/queen-s-university-belfast/">Queen&#x27;s University Belfast</a> <a href="/bursaries/ravensbourne-university-london/">Ravensbourne University London</a> <a href="/bursaries/robert-gordon-university/">Robert Gordon University</a> <a href="/bursaries/roehampton-university/">Roehampton University</a> <a href="/bursaries/royal-agricultural-university/">Royal Agricultural University</a> <a href="/bursaries/royal-central-school-of-speech-and-drama/">Royal Central School of Speech and Drama</a> <a href="/bursaries/royal-conservatoire-of-scotland/">Royal Conservatoire of Scotland</a> <a href="/bursaries/royal-holloway-university-of-london/">Royal Holloway University of London</a> <a href="/bursaries/soas-university-of-london/">SOAS University of London</a> <a href="/bursaries/sruc/">SRUC</a> <a href="/bursaries/sheffield-hallam-university/">Sheffield Hallam University</a> <a href="/bursaries/southampton-solent-university/">Southampton Solent University</a> <a href="/bursaries/st-mary-s-university-twickenham/">St Mary&#x27;s University Twickenham</a> <a href="/bursaries/staffordshire-university/">Staffordshire University</a> <a href="/bursaries/swansea-university/">Swansea University</a> <a href="/bursaries/teesside-university/">Teesside University</a> <a href="/bursaries/the-open-university/">The Open University</a> <a href="/bursaries/ucl/">UCL</a> <a href="/bursaries/ulster-university/">Ulster University</a> <a href="/bursaries/university-college-birmingham/">University College Birmingham</a> <a href="/bursaries/university-of-aberdeen/">University of Aberdeen</a> <a href="/bursaries/university-of-bath/">University of Bath</a> <a href="/bursaries/university-of-bedfordshire/">University of Bedfordshire</a> <a href="/bursaries/university-of-birmingham/">University of Birmingham</a> <a href="/bursaries/university-of-bolton/">University of Bolton</a> <a href="/bursaries/university-of-bradford/">University of Bradford</a> <a href="/bursaries/university-of-brighton/">University of Brighton</a> <a href="/bursaries/university-of-bristol/">University of Bristol</a> <a href="/bursaries/university-of-buckingham/">University of Buckingham</a> <a href="/bursaries/university-of-cambridge/">University of Cambridge</a> <a href="/bursaries/university-of-chester/">University of Chester</a> <a href="/bursaries/university-of-chichester/">University of Chichester</a> <a href="/bursaries/university-of-cumbria/">University of Cumbria</a> <a href="/bursaries/university-of-derby/">University of Derby</a> <a href="/bursaries/university-of-dundee/">University of Dundee</a> <a href="/bursaries/university-of-east-anglia/">University of East Anglia</a> <a href="/bursaries/university-of-east-london/">University of East London</a> <a href="/bursaries/university-of-edinburgh/">University of Edinburgh</a> <a href="/bursaries/university-of-essex/">University of Essex</a> <a href="/bursaries/university-of-exeter/">University of Exeter</a> <a href="/bursaries/university-of-glasgow/">University of Glasgow</a> <a href="/bursaries/university-of-gloucestershire/">University of Gloucestershire</a> <a href="/bursaries/university-of-greenwich/">University of Greenwich</a> <a href="/bursaries/university-of-hertfordshire/">University of Hertfordshire</a> <a href="/bursaries/university-of-huddersfield/">University of Huddersfield</a> <a href="/bursaries/university-of-hull/">University of Hull</a> <a href="/bursaries/university-of-kent/">University of Kent</a> <a href="/bursaries/university-of-lancashire/">University of Lancashire</a> <a href="/bursaries/university-of-law/">University of Law</a> <a href="/bursaries/university-of-leeds/">University of Leeds</a> <a href="/bursaries/university-of-leicester/">University of Leicester</a> <a href="/bursaries/university-of-lincoln/">University of Lincoln</a> <a href="/bursaries/university-of-liverpool/">University of Liverpool</a> <a href="/bursaries/university-of-manchester/">University of Manchester</a> <a href="/bursaries/university-of-northampton/">University of Northampton</a> <a href="/bursaries/university-of-nottingham/">University of Nottingham</a> <a href="/bursaries/university-of-oxford/">University of Oxford</a> <a href="/bursaries/university-of-plymouth/">University of Plymouth</a> <a href="/bursaries/university-of-portsmouth/">University of Portsmouth</a> <a href="/bursaries/university-of-reading/">University of Reading</a> <a href="/bursaries/university-of-salford/">University of Salford</a> <a href="/bursaries/university-of-sheffield/">University of Sheffield</a> <a href="/bursaries/university-of-south-wales/">University of South Wales</a> <a href="/bursaries/university-of-southampton/">University of Southampton</a> <a href="/bursaries/university-of-st-andrews/">University of St Andrews</a> <a href="/bursaries/university-of-stirling/">University of Stirling</a> <a href="/bursaries/university-of-strathclyde/">University of Strathclyde</a> <a href="/bursaries/university-of-suffolk/">University of Suffolk</a> <a href="/bursaries/university-of-sunderland/">University of Sunderland</a> <a href="/bursaries/university-of-surrey/">University of Surrey</a> <a href="/bursaries/university-of-sussex/">University of Sussex</a> <a href="/bursaries/university-of-wales-trinity-saint-david/">University of Wales Trinity Saint David</a> <a href="/bursaries/university-of-warwick/">University of Warwick</a> <a href="/bursaries/university-of-west-london/">University of West London</a> <a href="/bursaries/university-of-westminster/">University of Westminster</a> <a href="/bursaries/university-of-winchester/">University of Winchester</a> <a href="/bursaries/university-of-wolverhampton/">University of Wolverhampton</a> <a href="/bursaries/university-of-worcester/">University of Worcester</a> <a href="/bursaries/university-of-york/">University of York</a> <a href="/bursaries/university-of-the-arts-london/">University of the Arts London</a> <a href="/bursaries/university-of-the-highlands-and-islands/">University of the Highlands and Islands</a> <a href="/bursaries/university-of-the-west-of-england/">University of the West of England</a> <a href="/bursaries/university-of-the-west-of-scotland/">University of the West of Scotland</a> <a href="/bursaries/wrexham-university/">Wrexham University</a> <a href="/bursaries/writtle-university-college/">Writtle University College</a> <a href="/bursaries/york-st-john-university/">York St John University</a></p></div>
-    <!-- UNI-LINKS:END -->
-  </section>
+    <a class="other" id="storeother" href="https://play.google.com/store/apps/details?id=fresherforgev2.com">Also on Google Play</a>
+    <p class="free">Free to start. No account needed to see your matches.</p>
+  </div>
 
-  <section class="finalcta">
-    <p class="kicker">Get started</p>
-    <h2>Find your funding in the next five minutes</h2>
-    <p class="lede">Free to try. No account needed to see what you qualify for.</p>
-    <div class="storebtns">
-      <a class="cta" href="https://apps.apple.com/app/id6795890396" target="_blank" rel="noopener">
-        <svg class="apple-glyph" viewBox="0 0 384 512" fill="currentColor"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-        Download on the App Store
-      </a>
-      <a class="cta secondary" href="https://play.google.com/store/apps/details?id=fresherforgev2.com" target="_blank" rel="noopener">
-        <svg class="play-glyph" viewBox="0 0 512 512" fill="currentColor"><path d="M325.3 234.3L104.6 13.5c-6-3.4-13-3.8-19.1-1.6L272 192l53.3-42.3zM47.1 6.3C39.3 10.4 33.9 18.1 33.9 27.5v456.9c0 9.4 5.4 17.1 13.2 21.2L272 320 47.1 6.3zM443.9 210.9L358.6 162 296 220.9l62.6 58.9 85.3-48.9c11.6-6.6 18.8-19 18.8-32.5s-7.2-25.9-18.8-32.5zM104.6 498.5l220.7-220.8L272 235.5 85.5 500.1c6.1 2.2 13.1 1.8 19.1-1.6z"/></svg>
-        Get it on Google Play
-      </a>
-    </div>
-  </section>
+  <!-- STATS:START --><div class="stats"><div><b>3,000+</b><span>funds tracked</span></div><div><b>144</b><span>universities</span></div><div><b>130+</b><span>national &amp; charity funds</span></div></div><!-- STATS:END -->
 
-  <footer>
-    <div class="fbrand">
-      <img src="app-icon.png" alt="" width="16" height="16" style="border-radius:5px;display:block;">
-      <span>BursaSearch</span>
-    </div>
-    <div class="flinks">
-      <a href="https://bursasearch.com/bursaries/">Browse bursaries</a>
-      <a href="https://bursasearchp.github.io/bursasearch-legal/support.html">Support</a>
-      <a href="https://www.tiktok.com/@bursasearch" target="_blank" rel="noopener">TikTok</a>
-    </div>
-    <p class="fmeta">UK&rsquo;s largest independent bursary database. &copy; Bursa Group Ltd.</p>
-  </footer>
+  <h2>How it works</h2>
+  <ol class="steps">
+    <li><b>Answer a 2-minute quiz</b><span>Course, region, household income and fee status. Once.</span></li>
+    <li><b>See everything you qualify for</b><span>University, national and charity funds in one list, with the reason for each match.</span></li>
+    <li><b>Track deadlines and apply</b><span>Save your matches, get a reminder before they close, apply on the official page.</span></li>
+  </ol>
 
+  <!-- EXAMPLES:START --><h2>Real bursaries from our list</h2><div class="list"><div class="row"><a class="nm" href="/bursaries/imperial-college-london/imperial-bursary-for-home-students/">Imperial Bursary for Home students</a><span class="amt">£1,000-£5,000</span><span class="m"><a href="/bursaries/imperial-college-london/">Imperial College London</a> · Income under £70k</span></div><div class="row"><a class="nm" href="/bursaries/lse/lse-bursary/">LSE Bursary</a><span class="amt">£1,250-£4,250</span><span class="m"><a href="/bursaries/lse/">LSE</a> · Income under £50k</span></div><div class="row"><a class="nm" href="/bursaries/university-of-cambridge/cambridge-bursary-scheme/">Cambridge Bursary Scheme</a><span class="amt">£100-£3,500</span><span class="m"><span class="t g">AUTOMATIC</span><a href="/bursaries/university-of-cambridge/">University of Cambridge</a> · Income under £62.2k</span></div><div class="row"><a class="nm" href="/bursaries/bournemouth-university/bu-maintenance-bursary/">BU Maintenance Bursary</a><span class="amt">£2,400-£3,200</span><span class="m"><span class="t g">AUTOMATIC</span><a href="/bursaries/bournemouth-university/">Bournemouth University</a> · Income under £25k</span></div></div><!-- EXAMPLES:END -->
+
+  <!-- UNI-LINKS:START --><h2>Bursaries at your university</h2><p class="unilinks"><a href="/bursaries/abertay-university/">Abertay University</a> <a href="/bursaries/aberystwyth-university/">Aberystwyth University</a> <a href="/bursaries/anglia-ruskin-university/">Anglia Ruskin University</a> <a href="/bursaries/arden-university/">Arden University</a> <a href="/bursaries/arts-university-bournemouth/">Arts University Bournemouth</a> <a href="/bursaries/aston-university/">Aston University</a> <a href="/bursaries/bpp-university/">BPP University</a> <a href="/bursaries/bangor-university/">Bangor University</a> <a href="/bursaries/bath-spa-university/">Bath Spa University</a> <a href="/bursaries/birkbeck-university-of-london/">Birkbeck University of London</a> <a href="/bursaries/birmingham-city-university/">Birmingham City University</a> <a href="/bursaries/bishop-grosseteste-university/">Bishop Grosseteste University</a> <a href="/bursaries/bournemouth-university/">Bournemouth University</a> <a href="/bursaries/brunel-university-london/">Brunel University London</a> <a href="/bursaries/buckinghamshire-new-university/">Buckinghamshire New University</a> <a href="/bursaries/canterbury-christ-church-university/">Canterbury Christ Church University</a> <a href="/bursaries/cardiff-metropolitan-university/">Cardiff Metropolitan University</a> <a href="/bursaries/cardiff-university/">Cardiff University</a> <a href="/bursaries/city-university-of-london/">City, University of London</a> <a href="/bursaries/coventry-university/">Coventry University</a> <a href="/bursaries/de-montfort-university/">De Montfort University</a> <a href="/bursaries/durham-university/">Durham University</a> <a href="/bursaries/edge-hill-university/">Edge Hill University</a> <a href="/bursaries/edinburgh-napier-university/">Edinburgh Napier University</a> <a href="/bursaries/external-national-bodies/">External / National Bodies</a> <a href="/bursaries/falmouth-university/">Falmouth University</a> <a href="/bursaries/glasgow-caledonian-university/">Glasgow Caledonian University</a> <a href="/bursaries/glasgow-school-of-art/">Glasgow School of Art</a> <a href="/bursaries/goldsmiths-university-of-london/">Goldsmiths University of London</a> <a href="/bursaries/harper-adams-university/">Harper Adams University</a> <a href="/bursaries/hartpury-university/">Hartpury University</a> <a href="/bursaries/heriot-watt-university/">Heriot-Watt University</a> <a href="/bursaries/imperial-college-london/">Imperial College London</a> <a href="/bursaries/keele-university/">Keele University</a> <a href="/bursaries/king-s-college-london/">King&#x27;s College London</a> <a href="/bursaries/kingston-university/">Kingston University</a> <a href="/bursaries/lse/">LSE</a> <a href="/bursaries/lancaster-university/">Lancaster University</a> <a href="/bursaries/leeds-arts-university/">Leeds Arts University</a> <a href="/bursaries/leeds-beckett-university/">Leeds Beckett University</a> <a href="/bursaries/leeds-trinity-university/">Leeds Trinity University</a> <a href="/bursaries/liverpool-hope-university/">Liverpool Hope University</a> <a href="/bursaries/liverpool-john-moores-university/">Liverpool John Moores University</a> <a href="/bursaries/london-metropolitan-university/">London Metropolitan University</a> <a href="/bursaries/london-south-bank-university/">London South Bank University</a> <a href="/bursaries/loughborough-university/">Loughborough University</a> <a href="/bursaries/loughborough-university-london/">Loughborough University London</a> <a href="/bursaries/manchester-metropolitan-university/">Manchester Metropolitan University</a> <a href="/bursaries/middlesex-university/">Middlesex University</a> <a href="/bursaries/newcastle-university/">Newcastle University</a> <a href="/bursaries/newman-university/">Newman University</a> <a href="/bursaries/northumbria-university/">Northumbria University</a> <a href="/bursaries/norwich-university-of-the-arts/">Norwich University of the Arts</a> <a href="/bursaries/nottingham-trent-university/">Nottingham Trent University</a> <a href="/bursaries/oxford-brookes-university/">Oxford Brookes University</a> <a href="/bursaries/plymouth-marjon-university/">Plymouth Marjon University</a> <a href="/bursaries/queen-margaret-university/">Queen Margaret University</a> <a href="/bursaries/queen-mary-university-of-london/">Queen Mary University of London</a> <a href="/bursaries/queen-s-university-belfast/">Queen&#x27;s University Belfast</a> <a href="/bursaries/ravensbourne-university-london/">Ravensbourne University London</a> <a href="/bursaries/robert-gordon-university/">Robert Gordon University</a> <a href="/bursaries/roehampton-university/">Roehampton University</a> <a href="/bursaries/royal-agricultural-university/">Royal Agricultural University</a> <a href="/bursaries/royal-central-school-of-speech-and-drama/">Royal Central School of Speech and Drama</a> <a href="/bursaries/royal-conservatoire-of-scotland/">Royal Conservatoire of Scotland</a> <a href="/bursaries/royal-holloway-university-of-london/">Royal Holloway University of London</a> <a href="/bursaries/soas-university-of-london/">SOAS University of London</a> <a href="/bursaries/sruc/">SRUC</a> <a href="/bursaries/sheffield-hallam-university/">Sheffield Hallam University</a> <a href="/bursaries/southampton-solent-university/">Southampton Solent University</a> <a href="/bursaries/st-mary-s-university-twickenham/">St Mary&#x27;s University Twickenham</a> <a href="/bursaries/staffordshire-university/">Staffordshire University</a> <a href="/bursaries/swansea-university/">Swansea University</a> <a href="/bursaries/teesside-university/">Teesside University</a> <a href="/bursaries/the-open-university/">The Open University</a> <a href="/bursaries/ucl/">UCL</a> <a href="/bursaries/ulster-university/">Ulster University</a> <a href="/bursaries/university-college-birmingham/">University College Birmingham</a> <a href="/bursaries/university-of-aberdeen/">University of Aberdeen</a> <a href="/bursaries/university-of-bath/">University of Bath</a> <a href="/bursaries/university-of-bedfordshire/">University of Bedfordshire</a> <a href="/bursaries/university-of-birmingham/">University of Birmingham</a> <a href="/bursaries/university-of-bolton/">University of Bolton</a> <a href="/bursaries/university-of-bradford/">University of Bradford</a> <a href="/bursaries/university-of-brighton/">University of Brighton</a> <a href="/bursaries/university-of-bristol/">University of Bristol</a> <a href="/bursaries/university-of-buckingham/">University of Buckingham</a> <a href="/bursaries/university-of-cambridge/">University of Cambridge</a> <a href="/bursaries/university-of-chester/">University of Chester</a> <a href="/bursaries/university-of-chichester/">University of Chichester</a> <a href="/bursaries/university-of-cumbria/">University of Cumbria</a> <a href="/bursaries/university-of-derby/">University of Derby</a> <a href="/bursaries/university-of-dundee/">University of Dundee</a> <a href="/bursaries/university-of-east-anglia/">University of East Anglia</a> <a href="/bursaries/university-of-east-london/">University of East London</a> <a href="/bursaries/university-of-edinburgh/">University of Edinburgh</a> <a href="/bursaries/university-of-essex/">University of Essex</a> <a href="/bursaries/university-of-exeter/">University of Exeter</a> <a href="/bursaries/university-of-glasgow/">University of Glasgow</a> <a href="/bursaries/university-of-gloucestershire/">University of Gloucestershire</a> <a href="/bursaries/university-of-greenwich/">University of Greenwich</a> <a href="/bursaries/university-of-hertfordshire/">University of Hertfordshire</a> <a href="/bursaries/university-of-huddersfield/">University of Huddersfield</a> <a href="/bursaries/university-of-hull/">University of Hull</a> <a href="/bursaries/university-of-kent/">University of Kent</a> <a href="/bursaries/university-of-lancashire/">University of Lancashire</a> <a href="/bursaries/university-of-law/">University of Law</a> <a href="/bursaries/university-of-leeds/">University of Leeds</a> <a href="/bursaries/university-of-leicester/">University of Leicester</a> <a href="/bursaries/university-of-lincoln/">University of Lincoln</a> <a href="/bursaries/university-of-liverpool/">University of Liverpool</a> <a href="/bursaries/university-of-manchester/">University of Manchester</a> <a href="/bursaries/university-of-northampton/">University of Northampton</a> <a href="/bursaries/university-of-nottingham/">University of Nottingham</a> <a href="/bursaries/university-of-oxford/">University of Oxford</a> <a href="/bursaries/university-of-plymouth/">University of Plymouth</a> <a href="/bursaries/university-of-portsmouth/">University of Portsmouth</a> <a href="/bursaries/university-of-reading/">University of Reading</a> <a href="/bursaries/university-of-salford/">University of Salford</a> <a href="/bursaries/university-of-sheffield/">University of Sheffield</a> <a href="/bursaries/university-of-south-wales/">University of South Wales</a> <a href="/bursaries/university-of-southampton/">University of Southampton</a> <a href="/bursaries/university-of-st-andrews/">University of St Andrews</a> <a href="/bursaries/university-of-stirling/">University of Stirling</a> <a href="/bursaries/university-of-strathclyde/">University of Strathclyde</a> <a href="/bursaries/university-of-suffolk/">University of Suffolk</a> <a href="/bursaries/university-of-sunderland/">University of Sunderland</a> <a href="/bursaries/university-of-surrey/">University of Surrey</a> <a href="/bursaries/university-of-sussex/">University of Sussex</a> <a href="/bursaries/university-of-wales-trinity-saint-david/">University of Wales Trinity Saint David</a> <a href="/bursaries/university-of-warwick/">University of Warwick</a> <a href="/bursaries/university-of-west-london/">University of West London</a> <a href="/bursaries/university-of-westminster/">University of Westminster</a> <a href="/bursaries/university-of-winchester/">University of Winchester</a> <a href="/bursaries/university-of-wolverhampton/">University of Wolverhampton</a> <a href="/bursaries/university-of-worcester/">University of Worcester</a> <a href="/bursaries/university-of-york/">University of York</a> <a href="/bursaries/university-of-the-arts-london/">University of the Arts London</a> <a href="/bursaries/university-of-the-highlands-and-islands/">University of the Highlands and Islands</a> <a href="/bursaries/university-of-the-west-of-england/">University of the West of England</a> <a href="/bursaries/university-of-the-west-of-scotland/">University of the West of Scotland</a> <a href="/bursaries/wrexham-university/">Wrexham University</a> <a href="/bursaries/writtle-university-college/">Writtle University College</a> <a href="/bursaries/york-st-john-university/">York St John University</a></p><!-- UNI-LINKS:END -->
+
+  <aside class="cta">
+    <b>See every bursary you qualify for</b>
+    <p>The free app checks you against every UK fund, including national and charity grants, and reminds you before deadlines.</p>
+    <a class="gbtn" href="#get">Get the free app</a>
+  </aside>
+</main>
+
+<!-- FOOTER:START --><footer class="ftr"><div class="in"><div class="cols"><div class="col"><b>Browse</b><a href="/bursaries/">By university</a><a href="/bursaries/#circumstance">By circumstance</a><a href="/bursaries/#subject">By subject</a><a href="/bursaries/#region">By region</a></div><div class="col"><b>Popular</b><a href="/bursaries/closing-soon/">Closing soon</a><a href="/bursaries/highest-value/">Highest value</a><a href="/bursaries/circumstance/care-leavers/">Care leaver bursaries</a><a href="/bursaries/circumstance/low-income-students/">Low-income bursaries</a></div><div class="col"><b>BursaSearch</b><a href="https://apps.apple.com/app/apple-store/id6795890396?pt=129237255&ct=seo_site&mt=8">iPhone app</a><a href="https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3Dbursasearch_web%26utm_medium%3Dreferral%26utm_campaign%3Dseo_site">Android app</a><a href="/about/">How we check our data</a><a href="https://bursasearchp.github.io/bursasearch-legal/support.html">Support</a></div></div><p class="fine">Details come from official university and provider pages and can change. Always check the official page before applying. BursaSearch is not affiliated with any university; university names and logos belong to their owners. &copy; Bursa Group Ltd.</p></div></footer><!-- FOOTER:END -->
+
+<div class="ctabar" id="ctabar">
+  <p id="ctatext">Find every bursary you qualify for</p>
+  <a href="https://apps.apple.com/app/id6795890396">Open app</a>
+  <button type="button" aria-label="Close" onclick="try{localStorage.setItem('bs_cta_x','1')}catch(e){}document.getElementById('ctabar').style.display='none';document.body.classList.remove('has-bar')">&times;</button>
+  <script>try{if(localStorage.getItem('bs_cta_x')){document.getElementById('ctabar').style.display='none';document.body.classList.remove('has-bar')}}catch(e){}</script>
 </div>
+
 <script>
-/* Tag the store buttons so each install can be traced to a channel.
-   bursasearch.com/?c=tiktok -> ct=tiktok; no ?c -> ct=homepage. */
+/* Every store link on this page goes to the visitor's own store, tagged with
+   where they came from: bursasearch.com/?c=tiktok -> ct=tiktok; no ?c -> homepage. */
 (function(){
   var c="homepage";
   try{var m=/[?&]c=([a-z0-9_]{1,30})/.exec(location.search);if(m)c=m[1];}catch(e){}
   var ios="https://apps.apple.com/app/apple-store/id6795890396?pt=129237255&ct="+c+"&mt=8";
   var play="https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3D"+c+"%26utm_medium%3Dhomepage%26utm_campaign%3D"+c;
+  var android=/android/i.test(navigator.userAgent||"");
+  var mine=android?play:ios;
   var links=document.querySelectorAll("a[href^='https://apps.apple.com/'],a[href^='https://play.google.com/store/']");
   for(var i=0;i<links.length;i++){links[i].href=/play\.google/.test(links[i].href)?play:ios;}
+  var main=document.getElementById("storemain"),other=document.getElementById("storeother");
+  main.href=mine;
+  if(android){main.querySelector("svg").style.display="none";other.href=ios;other.textContent="Also on the App Store";}
+  var bar=document.querySelector("#ctabar a");if(bar)bar.href=mine;
+  var chk=document.getElementById("mchk");if(chk)chk.setAttribute("data-href",mine);
 })();
 </script>
+<script src="/assets/match.js" defer></script>
 </body>
 </html>
