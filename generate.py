@@ -53,6 +53,11 @@ GO_CHANNELS = {
     "tsr": "community",
     "school": "outreach",
     "email": "outreach",
+    # Organic search, split by page type so the stores show which pages install.
+    "seo_site": "organic",
+    "seo_uni": "organic",
+    "seo_fund": "organic",
+    "seo_tag": "organic",
 }
 OG_IMAGE = f"{SITE_URL}/og-image.png"
 ICON_LINKS = """<link rel="icon" href="/favicon.ico" sizes="any">
@@ -199,7 +204,7 @@ def load_lastmod():
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
-_CHECKED_RE = re.compile(r'<b>[^<]*</b>last checked')
+_CHECKED_RE = re.compile(r'Last checked <b>[^<]*</b>|<b>[^<]*</b>last checked')
 
 _ICON_RE = re.compile(r'<link rel="(?:icon|apple-touch-icon)"[^>]*>\n?')
 
@@ -238,6 +243,9 @@ def format_amount(v):
     if not v or not re.fullmatch(r"[\d,]+(\.\d+)?", v):
         return v
     n = float(v.replace(",", ""))
+    if 0 < n < 1:
+        # The sheet stores a percentage fee discount as a fraction (0.1 = 10%).
+        return f"{n * 100:.0f}% off fees"
     return f"£{n:,.0f}" if n == int(n) else f"£{n:,.2f}"
 
 def format_deadline(v):
@@ -278,7 +286,8 @@ def max_amount_value(v):
     """Best-effort single numeric value for ranking by amount — uses the
     highest number found (e.g. '£500 - £3,000' -> 3000), for the
     'highest-value' page. Returns 0 (sorts last) when nothing numeric."""
-    nums = [int(n.replace(",", "")) for n in re.findall(r"£?\s?([\d,]{2,7})", clean(v))]
+    nums = [int(n.replace(",", "")) for n in re.findall(r"£?\s?([\d,]{2,7})", clean(v))
+            if n.replace(",", "").isdigit()]
     return max(nums) if nums else 0
 
 ELIGIBILITY_FIELDS = [
@@ -306,63 +315,173 @@ def eligibility_badges(row):
 _ROLLING_HINTS = ("rolling", "ongoing", "no deadline", "any time", "anytime",
                   "year-round", "year round", "open all year", "continuous")
 
+def _blob(row, *cols):
+    return " ".join(clean(row.get(c, "")) for c in cols).lower()
+
+def is_automatic(row):
+    """Paid without a separate application (usually via the Student Finance
+    income assessment) — only when the data actually says so."""
+    b = _blob(row, "Deadline", "Extra Requirement", "AI Notes")
+    return "automatic" in b or "no application" in b or "no need to apply" in b
+
 def deadline_line(row):
-    """A single 'Deadline …' / 'Rolling …' line for a bursary row, honest about
-    what the data actually says: a parseable future date (flagged 'closing
-    soon' inside 60 days), an open-ended cell, or — when there's no deadline
-    data at all — nothing (never a fabricated 'automatic')."""
+    """Kept for any caller that still wants the old one-line deadline text."""
+    tag = deadline_tag(row)
+    return tag
+
+def deadline_tag(row):
+    """A small tag when the deadline changes what the student should do:
+    'AUTOMATIC', a real future closing date, or 'ROLLING'. Otherwise nothing."""
+    if is_automatic(row):
+        return '<span class="t g">AUTOMATIC</span>'
     raw = clean(row.get("Deadline", ""))
     if not raw:
         return ""
     d = parse_deadline_date(raw)
     if d:
         if d < date.today():
-            return ""  # a one-off deadline that's already passed — stale, hide it
-        soon = (d - date.today()).days <= 60
-        txt = f"Deadline {format_deadline(raw)}" + (" · closing soon" if soon else "")
-        return f'<span class="dl{" soon" if soon else ""}">{esc(txt)}</span>'
+            return ""
+        return f'<span class="t y">CLOSES {d.day} {d.strftime("%b").upper()}</span>'
     if any(h in raw.lower() for h in _ROLLING_HINTS):
-        return '<span class="dl">Rolling — apply any time</span>'
-    return f'<span class="dl">Deadline: {esc(raw)}</span>'
+        return '<span class="t g">ROLLING</span>'
+    return ""
 
-def bursary_row(row, uni=None, uni_href=None, fund_href=None):
-    """One fund as a row in a hairline-separated list (CSS grid: name left,
-    amount right, provider / chips / footer below). `uni`/`uni_href` show +
-    link the provider (used on the cross-cutting pages). `fund_href` links the
-    name to the fund's own page."""
+# ── Who-it's-for, in a handful of words, from the data ─────────────────────
+CIRC_CODES = [  # (code, short label, needles in the Vulnerabilities cell)
+    ("c", "Care-experienced", ("care leaver", "care experienced", "care-experienced")),
+    ("e", "Estranged", ("estranged",)),
+    ("r", "Carer", ("carer",)),
+    ("d", "Disabled", ("disab",)),
+    ("f", "Refugee or asylum seeker", ("refugee", "asylum")),
+]
+# Circumstances the web check doesn't ask about but which are broad enough
+# not to rule anyone out (low-participation postcodes, low income, etc.).
+_LENIENT_VULN = ("polar", "low participation", "low income", "fsm", "free school meal",
+                 "means", "widening", "first gen", "first in", "mature", "pupil premium")
+
+def _vuln_parts(row):
+    return [p.strip().lower() for p in clean(row.get("Vulnerabilities (multi-select)", "")).split(",")
+            if p.strip()]
+
+def income_cap(row):
+    """Household-income ceiling in £ (0 = none stated)."""
+    hh = clean(row.get("Household income", ""))
+    nums = [int(n.replace(",", "")) for n in re.findall(r"([\d,]{4,7})", hh) if n.replace(",", "").isdigit()]
+    if nums:
+        return max(nums)
+    if hh or any(k in p for p in _vuln_parts(row) for k in ("low income", "fsm", "free school meal")):
+        return 25000 if ("low" in hh.lower() or not hh) else 0
+    return 0
+
+def _k(n):
+    return f"£{n // 1000}k" if n % 1000 == 0 else f"£{n / 1000:.1f}k".replace(".0k", "k")
+
+def level_code(row):
+    lvl = clean(row.get("Study level", "")).lower()
+    ug, pg = ("undergrad" in lvl or "foundation" in lvl), "postgrad" in lvl
+    return "a" if (ug and pg) or not (ug or pg) else ("p" if pg else "u")
+
+def check_attrs(row):
+    """(level, income cap, circumstance codes, maybe-flag) for the on-page
+    eligibility check. maybe=1 marks funds that depend on something the
+    check doesn't ask (course, sport, ethnicity, international fee status):
+    they're never greyed out but aren't counted as a match either."""
+    parts = _vuln_parts(row)
+    circ = "".join(code for code, _, needles in CIRC_CODES if any(n in p for p in parts for n in needles))
+    unknown = [p for p in parts
+               if not any(n in p for _, _, needles in CIRC_CODES for n in needles)
+               and not any(k in p for k in _LENIENT_VULN)]
+    fs = clean(row.get("Fee status", "")).lower()
+    intl_only = ("overseas" in fs or "international" in fs) and "home" not in fs and "uk" not in fs
+    b = _blob(row, "Extra Requirement", "Bursary Name")
+    maybe = bool(
+        (unknown and not circ) or intl_only or clean(row.get("Study subject", ""))
+        or "sport" in b or "athlet" in b or clean(row.get("Ethnicity", "")) or clean(row.get("Gender", ""))
+    )
+    return level_code(row), income_cap(row), circ, 1 if maybe else 0
+
+def who_line(row):
+    """At most two short pieces: 'Income under £43k · first-years'."""
+    bits = []
+    labels = [lab for code, lab, needles in CIRC_CODES
+              if any(n in p for p in _vuln_parts(row) for n in needles)]
+    if labels:
+        bits.append(" or ".join(labels[:2]) if len(labels) <= 2 else labels[0] + " and others")
+    cap = income_cap(row)
+    if clean(row.get("Household income", "")) and cap:
+        bits.append(f"Income under {_k(cap)}")
+    b = _blob(row, "Extra Requirement", "Bursary Name")
+    if "sport" in b or "athlet" in b:
+        bits.append("Sport")
+    subj = clean(row.get("Study subject", ""))
+    if subj and len(subj) <= 24:
+        bits.append(subj)
+    yr = clean(row.get("Course Year", ""))
+    if yr in ("1", "1st", "First", "Year 1"):
+        bits.append("First-years")
+    fs = clean(row.get("Fee status", "")).lower()
+    if ("overseas" in fs or "international" in fs) and "home" not in fs:
+        bits.append("International students")
+    if not bits:
+        lc = level_code(row)
+        if lc != "a":
+            bits.append({"u": "Undergraduates", "p": "Postgraduates"}[lc])
+        elif is_automatic(row):
+            bits.append("No form needed")
+    return " · ".join(bits[:2])
+
+def display_amount(row):
+    a = format_amount(row.get("Amount", ""))
+    if a:
+        return f'<span class="amt">{esc(a if len(a) <= 22 else a[:21] + "…")}</span>'
+    if clean(row.get("Household income", "")) or is_automatic(row):
+        return '<span class="amt v">Income-based</span>'
+    return '<span class="amt v">Varies</span>'
+
+def short_fund_name(name, uni_name=None):
+    """'Accommodation Bursary (Manchester)' -> 'Accommodation Bursary' on that
+    university's own page, where the bracket is noise."""
+    if not uni_name:
+        return name
+    m = re.match(r"^(.*?)\s*\(([^)]*)\)\s*$", name)
+    if m and (m.group(2).lower() in uni_name.lower() or m.group(2) == uni_alias(uni_name)):
+        return m.group(1)
+    return name
+
+def bursary_row(row, uni=None, uni_href=None, fund_href=None, own_uni=None, check=False):
+    """One fund as a single compact row: name + amount, then one short line
+    (provider on cross-university pages, tags, who it's for). `own_uni` = the
+    university whose page this is (shortens the name). `check` = add the data
+    attributes the on-page eligibility check reads."""
     name = clean(row.get("Bursary Name", "")) or "Bursary"
-    amount = format_amount(row.get("Amount", ""))
+    shown = short_fund_name(name, own_uni)
     link = clean(row.get("Application URL", "")) or clean(row.get("Link", ""))
-    subject = clean(row.get("Study subject", ""))
-    chips = eligibility_badges(row)
-    if subject:
-        chips = [f"Subject: {subject}"] + chips
-    chips = chips[:3]
-
     if fund_href:
-        name_html = f'<a class="nm" href="{esc(fund_href)}">{esc(name)}</a>'
+        name_html = f'<a class="nm" href="{esc(fund_href)}">{esc(shown)}</a>'
+    elif link:
+        name_html = f'<a class="nm" href="{esc(link)}" rel="noopener" target="_blank">{esc(shown)}</a>'
     else:
-        name_html = f'<span class="nm">{esc(name)}</span>'
-    amt_html = f'<span class="amt">{esc(amount)}</span>' if amount else ""
-    if uni and uni_href:
-        prov = f'<div class="prov"><a href="{esc(uni_href)}">{esc(uni)}</a></div>'
-    elif uni:
-        prov = f'<div class="prov">{esc(uni)}</div>'
-    else:
-        prov = ""
-    chip_html = "".join(f'<span class="chip">{esc(c)}</span>' for c in chips)
-    chips_block = f'<div class="chips">{chip_html}</div>' if chip_html else ""
-    dl = deadline_line(row)
-    go = (
-        f'<a class="go" href="{esc(link)}" target="_blank" rel="noopener">Official details →</a>'
-        if link else ""
-    )
-    foot = f'<div class="foot{" split" if dl else ""}">{dl}{go}</div>' if (dl or go) else ""
-    return (
-        '<div class="row">'
-        f'{name_html}{amt_html}{prov}{chips_block}{foot}'
-        '</div>'
-    )
+        name_html = f'<span class="nm">{esc(shown)}</span>'
+    prov = ""
+    if uni:
+        prov = (f'<a href="{esc(uni_href)}">{esc(uni)}</a> · ' if uni_href else f'{esc(uni)} · ')
+    attrs = ""
+    if check:
+        l, cap, circ, maybe = check_attrs(row)
+        attrs = f' data-l="{l}" data-i="{cap}" data-c="{circ}" data-x="{maybe}"'
+    return (f'<div class="row"{attrs}>{name_html}{display_amount(row)}'
+            f'<span class="m">{deadline_tag(row)}{prov}{esc(who_line(row))}</span></div>')
+
+def fold_rows(rows_html, show=4, more_label="Show {n} more"):
+    """First `show` rows visible, the rest inside a native <details> (still in
+    the HTML, so search engines read them)."""
+    head, tail = rows_html[:show], rows_html[show:]
+    out = "".join(head)
+    if tail:
+        out += (f'<details class="more"><summary><span>{esc(more_label.format(n=len(tail)))}</span>'
+                f'</summary>{"".join(tail)}</details>')
+    return out
+
 
 RANGE_AMOUNT_FLOOR = 100  # see amount_range_text
 
@@ -390,236 +509,214 @@ def amount_range_text(entries):
     return f"£{lo:,}–£{hi:,}"
 
 # ── Presentation layer ──────────────────────────────────────────────────────
-# The website uses ONE dark theme, matched to the app's own palette (dashboard
-# navy grounds + teal accent). The app has no light mode, and a bursary
-# directory that looks like the product it feeds reads as one brand. Hairline
-# rules and open space instead of stacked boxes — only the call-to-action is a
-# contained panel. Headings: Archivo. Body: Inter. Wordmark: Sora.
+# Light, plain, high-contrast — modelled on GOV.UK / Citizens Advice, because a
+# student arriving from Google's white results page should land on something
+# that reads like a trustworthy reference, not an app ad. Black top bar with the
+# white BursaSearch mark; teal only for actions and links. Numbers over
+# sentences, one question at a time, fold anything past the first few rows.
+# Type: Public Sans throughout; Sora for the wordmark only.
 SITE_CSS = """
 *{box-sizing:border-box;}
 :root{
-  --paper:#0A1B29; --ground:#0F2135; --ink:#EAF1F6; --ink-strong:#FFFFFF;
-  --ink-soft:#AEC5D6; --ink-mute:#7E9AB0; --line:rgba(255,255,255,.09);
-  --teal:#0F8A8A; --teal-ink:#1CC4BC; --teal-wash:rgba(28,196,188,.08);
-  --navy:#102A3D; --warn:#F0A868; --maxw:960px;
+  --ink:#0B0C0C; --soft:#505A5F; --line:#B1B4B6; --hair:#E5E6E7; --paper:#FFFFFF;
+  --panel:#F3F2F1; --teal:#00766F; --teal-dark:#00403C; --link:#00605A;
+  --warn-bg:#FFF7BF; --warn:#594D00; --ok-bg:#CCE2D8; --ok:#005A30; --maxw:1020px;
 }
 html{-webkit-text-size-adjust:100%;}
-body{
-  margin:0; background:var(--paper); color:var(--ink);
-  font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;
-}
-a{color:var(--teal-ink); text-decoration:none;}
-a:hover{text-decoration:underline;}
-strong{font-weight:600; color:var(--ink-strong);}
-:focus-visible{outline:2px solid var(--teal-ink); outline-offset:2px;}
+body{margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Public Sans",Arial,system-ui,sans-serif; font-size:16px; line-height:1.45;}
+a{color:var(--link); text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px;}
+a:hover{text-decoration-thickness:3px; color:var(--teal-dark);}
+:focus-visible{outline:3px solid #FFDD00; outline-offset:0; box-shadow:0 4px 0 var(--ink);}
 
-.hdr{
-  position:sticky; top:0; z-index:20; display:flex; align-items:center;
-  gap:14px 22px; flex-wrap:wrap; padding:10px 30px; min-height:56px;
-  background:rgba(10,27,41,.92); backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--line);
-}
-.brand{display:flex; align-items:center; gap:8px; font-family:"Sora",sans-serif;
-  font-weight:700; font-size:16px; letter-spacing:-.01em; color:var(--ink-strong);}
-.brand:hover{text-decoration:none;}
-.brand .mk{width:24px; height:24px; border-radius:5px; background:var(--teal);
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-.brand .mk svg{width:14px; height:14px;}
-.brand .s{color:var(--teal-ink);}
-.nav{display:flex; flex-wrap:wrap; gap:6px 16px;}
-.nav a{font-size:13.5px; font-weight:500; color:var(--ink-soft);}
-.nav a:hover{color:var(--ink-strong); text-decoration:none;}
+.hdr{background:var(--ink); color:#fff;}
+.hdr .in{max-width:var(--maxw); margin:0 auto; display:flex; align-items:center; gap:10px 22px;
+  padding:11px 16px; flex-wrap:wrap;}
+.brand{display:flex; align-items:center; gap:8px; color:#fff; text-decoration:none;
+  font-family:"Sora",Arial,sans-serif; font-weight:700; font-size:16px; letter-spacing:-.01em;}
+.brand:hover{color:#fff;}
+.brand img{width:26px; height:26px; border-radius:6px; display:block;}
+.nav{display:flex; gap:6px 18px; flex-wrap:wrap;}
+.nav a{color:#fff; font-size:14.5px; font-weight:600;}
 .hdr .grow{flex:1;}
-.btn{display:inline-flex; align-items:center; gap:7px; font-weight:700;
-  font-size:13.5px; background:var(--teal-ink); color:#06221E; padding:9px 16px;
-  border-radius:3px; border:1px solid var(--teal-ink); cursor:pointer;}
-.btn:hover{background:#43D6CE; text-decoration:none; color:#06221E;}
-.btn.lg{font-size:15px; padding:12px 22px;}
+.hdr .get{color:#fff; font-weight:700; font-size:14.5px;}
 
-.hero{background:var(--ground); color:#fff; padding:54px 20px 46px;}
-.hero .in{max-width:var(--maxw); margin:0 auto;}
-.hero h1{font-family:"Archivo",sans-serif; font-weight:700;
-  font-size:clamp(28px,4.6vw,44px); line-height:1.07; letter-spacing:-.02em;
-  margin:0 0 14px; text-wrap:balance; max-width:19ch;}
-.hero p{font-size:17px; color:var(--ink-soft); margin:0 0 24px; max-width:54ch;}
-.hero .actions{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
-.hero .stores{font-size:13px; color:var(--ink-mute);}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 16px 56px;}
+.crumb{font-size:13.5px; color:var(--soft); padding:12px 0 0;}
+.crumb a{color:var(--ink);}
+.crumb .sep{margin:0 6px; color:var(--soft);}
+.yr{display:flex; align-items:center; gap:10px; margin:18px 0 6px; font-size:13.5px;
+  font-weight:700; color:var(--soft);}
+.yr img{height:32px; width:auto; max-width:160px; object-fit:contain;}
+h1.page{font-weight:800; font-size:clamp(25px,4.4vw,38px); line-height:1.1;
+  letter-spacing:-.015em; margin:0 0 16px; text-wrap:balance; max-width:24ch;}
+.lede{font-size:17px; max-width:62ch; margin:0 0 18px;}
+.wrap h2{font-weight:800; font-size:21px; letter-spacing:-.01em; margin:30px 0 4px;
+  display:flex; justify-content:space-between; align-items:baseline; gap:12px;}
+.wrap h2 small{font-size:14px; font-weight:600; color:var(--soft);}
+.fresh{font-size:13px; color:var(--soft); margin:0 0 14px;}
 
-.wrap{max-width:var(--maxw); margin:0 auto; padding:0 30px 76px;}
-.crumb{display:flex; flex-wrap:wrap; gap:6px; font-size:12.5px;
-  color:var(--ink-mute); padding:18px 0; border-bottom:1px solid var(--line);}
-.crumb a{color:var(--ink-mute);}
-.crumb a:hover{color:var(--ink-soft);}
-h1.page{font-family:"Archivo",sans-serif; font-weight:700;
-  font-size:clamp(25px,3.6vw,33px); line-height:1.13; letter-spacing:-.015em;
-  margin:26px 0 14px; text-wrap:balance; color:var(--ink-strong);}
-.lede{font-size:15.5px; color:var(--ink-soft); max-width:66ch; margin:0 0 18px;}
-.wrap h2{font-family:"Archivo",sans-serif; font-weight:600; font-size:13px;
-  letter-spacing:.06em; text-transform:uppercase; color:var(--ink-mute);
-  margin:34px 0 16px; padding-left:12px; border-left:3px solid var(--teal-ink);}
+.stats{display:grid; grid-template-columns:repeat(3,1fr); border-top:3px solid var(--ink);
+  border-bottom:1px solid var(--line); margin:0 0 18px; max-width:620px;}
+.stats div{padding:10px 8px 11px 0; min-width:0;}
+.stats div + div{padding-left:12px; border-left:1px solid var(--line);}
+.stats b{display:block; font-size:24px; font-weight:800; letter-spacing:-.02em; line-height:1.05;
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere;}
+.stats span{font-size:13px; color:var(--soft);}
 
-.stats{display:flex; flex-wrap:wrap; gap:8px 34px; margin:0 0 8px;
-  padding:16px 0 18px; border-bottom:1px solid var(--line);}
-.stats div{font-size:12.5px; color:var(--ink-mute);}
-.stats b{font-family:"Archivo",sans-serif; font-weight:700; font-size:15px;
-  color:var(--teal-ink); letter-spacing:-.01em; font-variant-numeric:tabular-nums;
-  margin-right:7px;}
+.chk{background:var(--panel); padding:16px;}
+.chk .hd{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin:0 0 10px;}
+.chk .hd b{font-size:19px; font-weight:800;}
+.chk .hd span{font-size:13.5px; color:var(--soft); font-variant-numeric:tabular-nums;}
+.prog{display:flex; gap:4px; margin:0 0 14px;}
+.prog i{flex:1; height:5px; background:#D1D3D4;} .prog i.on{background:var(--teal);}
+.chk .qq{font-size:17px; font-weight:700; margin:0 0 10px;}
+.opt{display:block; width:100%; text-align:left; background:#fff; color:var(--ink);
+  border:2px solid var(--ink); padding:11px 14px; font:inherit; font-weight:700; font-size:16px;
+  margin:0 0 8px; box-shadow:0 2px 0 var(--ink); cursor:pointer;}
+.opt:hover{background:#F8F8F8;}
+.opt:active{transform:translateY(2px); box-shadow:none;}
+.chk .fine{font-size:13px; color:var(--soft); margin:6px 0 0;}
+.chk .back{background:none; border:0; padding:0; font:inherit; font-size:14px; color:var(--link);
+  text-decoration:underline; cursor:pointer; margin-top:6px;}
+.res{background:var(--teal); color:#fff; padding:16px;}
+.res .nums{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 0 14px;}
+.res .nums b{display:block; font-size:42px; font-weight:800; letter-spacing:-.03em; line-height:1;}
+.res .nums span{display:block; font-size:14px; line-height:1.25; margin-top:5px;}
+.wbtn{display:block; text-align:center; background:#fff; color:var(--teal-dark) !important;
+  text-decoration:none !important; font-weight:800; font-size:16px; padding:12px;
+  box-shadow:0 3px 0 #002B28;}
+.res .again{display:block; margin:12px auto 0; background:none; border:0; color:#fff;
+  font:inherit; font-size:14px; text-decoration:underline; cursor:pointer;}
+.res .small{font-size:12.5px; margin:10px 0 0; text-align:center; opacity:.9;}
 
-.cta{background:var(--ground); border-radius:5px; padding:26px 26px 24px;
-  margin:36px 0 8px;}
-.cta .ey{font-family:"Archivo",sans-serif; font-weight:600; font-size:11px;
-  letter-spacing:.14em; text-transform:uppercase; color:var(--teal-ink); margin:0 0 10px;}
-.cta h3{font-family:"Archivo",sans-serif; font-weight:700; font-size:20px;
-  line-height:1.22; letter-spacing:-.01em; margin:0 0 10px; color:var(--ink-strong);
-  text-wrap:balance; max-width:36ch;}
-.cta > p{margin:0 0 14px; font-size:14px; line-height:1.6; color:var(--ink-soft);
-  max-width:62ch;}
-.cta ul{list-style:none; margin:0 0 18px; padding:0; display:grid; gap:7px;}
-.cta li{font-size:13px; color:var(--ink); padding-left:22px; position:relative;}
-.cta li::before{content:"\\2713"; position:absolute; left:0; color:var(--teal-ink);
-  font-weight:700;}
-.cta .act{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:0;}
-.cta .fine{font-size:12px; color:var(--ink-mute);}
+.list .row{display:grid; grid-template-columns:1fr auto; gap:2px 14px; padding:11px 0;
+  border-bottom:1px solid var(--line);}
+.row .nm{font-weight:700; font-size:16.5px; line-height:1.25;}
+.row .amt{font-weight:800; font-size:16.5px; text-align:right; white-space:nowrap;
+  font-variant-numeric:tabular-nums;}
+.row .amt.v{font-weight:600; font-size:14px; color:var(--soft);}
+.row .m{grid-column:1/-1; font-size:14px; color:var(--soft);}
+.row .m a{color:var(--soft);}
+.row.no{opacity:.42;}
+.t{display:inline-block; font-size:12px; font-weight:800; padding:1px 6px; margin-right:6px;
+  letter-spacing:.02em; vertical-align:1px;}
+.t.g{background:var(--ok-bg); color:var(--ok);} .t.y{background:var(--warn-bg); color:var(--warn);}
+.t.k{background:var(--ink); color:#fff;}
+details.more{border-bottom:1px solid var(--line);}
+details.more > summary{list-style:none; cursor:pointer; padding:13px 0; display:flex;
+  justify-content:space-between; gap:10px; font-weight:700; color:var(--link);}
+details.more > summary::-webkit-details-marker{display:none;}
+details.more > summary span:first-child{text-decoration:underline; text-underline-offset:3px;}
+details.more > summary::after{content:"+"; font-size:22px; line-height:.9; color:var(--ink);}
+details.more[open] > summary::after{content:"\\2212";}
+details.more > summary small{margin-left:auto; color:var(--soft); font-weight:600;}
+details.more .row:last-child{border-bottom:0;}
+.none{padding:11px 0; color:var(--soft); border-bottom:1px solid var(--line);}
 
-.list{background:transparent;}
-.list .row{position:relative; display:grid; grid-template-columns:1fr auto;
-  gap:4px 18px; padding:18px 4px; border-top:1px solid var(--line);}
-.list .row:first-child{border-top:0;}
-.list .row:hover{background:rgba(255,255,255,.025);}
-.list .row:hover::before{content:""; position:absolute; left:-9px; top:0; bottom:0;
-  width:3px; background:var(--teal-ink);}
-.row .nm{grid-column:1; font-family:"Archivo",sans-serif; font-weight:600;
-  font-size:15.5px; color:var(--ink-strong);}
-a.nm:hover{color:var(--teal-ink); text-decoration:none;}
-.row .amt{grid-column:2; grid-row:1; text-align:right; align-self:start;
-  font-weight:700; font-size:15.5px; color:var(--teal-ink);
-  font-variant-numeric:tabular-nums; white-space:nowrap;}
-.row .prov{grid-column:1; font-size:12.5px; color:var(--ink-mute); margin-top:1px;}
-.row .prov a{color:var(--ink-soft);}
-.row .chips{grid-column:1/-1; display:flex; flex-wrap:wrap; gap:7px; margin:11px 0 0;}
-.row .chip{font-size:11px; font-weight:500; color:var(--ink-soft);
-  border:1px solid var(--line); border-radius:2px; padding:2px 8px;}
-.row .foot{grid-column:1/-1; display:flex; align-items:center; gap:16px;
-  flex-wrap:wrap; margin-top:11px;}
-.row .foot.split{justify-content:flex-start;}
-.row .dl{font-size:12px; color:var(--ink-mute);}
-.row .dl.soon{color:var(--warn); font-weight:600;}
-.row .go{font-size:12px; font-weight:600; color:var(--teal-ink); white-space:nowrap;}
-.listmeta{font-size:12px; color:var(--ink-mute); margin:13px 4px 0;}
-
-.tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(228px,1fr));
-  gap:10px;}
-.tiles a{display:block; background:transparent; border:1px solid var(--line);
-  border-radius:3px; padding:13px 15px;}
-.tiles a:hover{border-color:var(--teal-ink); background:var(--teal-wash);
-  text-decoration:none;}
-.tiles a b{display:block; font-family:"Archivo",sans-serif; font-weight:600;
-  font-size:14px; color:var(--ink-strong);}
-.tiles a span{display:block; font-size:12.5px; color:var(--ink-mute);
-  margin-top:2px; font-variant-numeric:tabular-nums;}
-
-h1.page + .sub{font-size:13px; color:var(--ink-mute); margin:-4px 0 16px;
-  letter-spacing:.01em;}
-.kv{border:1px solid var(--line); border-radius:4px; overflow:hidden; margin:22px 0;}
-.kv > div{display:flex; gap:14px; padding:11px 16px; border-top:1px solid var(--line);
-  font-size:13.5px;}
-.kv > div:first-child{border-top:0;}
-.kv dt{flex:0 0 132px; color:var(--ink-mute);}
-.kv dd{margin:0; flex:1; font-weight:500;}
-.kv dd a{font-weight:600;}
-.crit{margin:10px 0 0; padding:0 0 0 20px;}
-.crit li{margin:0 0 6px; font-size:14px; color:var(--ink-soft);}
-.crit + p.note{font-size:12.5px; color:var(--ink-mute); margin-top:10px;}
-.applybtn{margin:14px 0 0;}
-
-.steps{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
-.steps .step{border:1px solid var(--line); border-radius:3px; padding:15px;
-  background:transparent;}
-.steps .step i{display:inline-flex; width:23px; height:23px; border-radius:2px;
-  background:var(--teal-wash); color:var(--teal-ink); font-family:"Archivo",sans-serif;
-  font-weight:700; font-size:12.5px; align-items:center; justify-content:center;
-  margin-bottom:8px; font-style:normal;}
-.steps .step b{display:block; font-family:"Archivo",sans-serif; font-size:14px;
-  margin-bottom:3px; color:var(--ink-strong);}
-.steps .step p{margin:0; font-size:13px; color:var(--ink-soft);}
-
-.faq details{border-top:1px solid var(--line); padding:12px 0;}
-.faq details:first-child{border-top:0;}
-.faq summary{font-family:"Archivo",sans-serif; font-weight:600; font-size:14px;
-  cursor:pointer; list-style:none; display:flex; justify-content:space-between;
-  gap:12px; color:var(--ink-strong);}
+.faq details{border-bottom:1px solid var(--line);}
+.faq summary{list-style:none; cursor:pointer; padding:13px 0; font-weight:700; color:var(--link);
+  display:flex; justify-content:space-between; gap:12px;}
 .faq summary::-webkit-details-marker{display:none;}
-.faq summary::after{content:"+"; color:var(--teal-ink); font-weight:700;}
-.faq details[open] summary::after{content:"\\2013";}
-.faq p{font-size:13.5px; color:var(--ink-soft); margin:9px 0 0;}
+.faq summary span{text-decoration:underline; text-underline-offset:3px;}
+.faq summary::after{content:"+"; font-size:22px; line-height:.9; color:var(--ink);}
+.faq details[open] summary::after{content:"\\2212";}
+.faq p{margin:0 0 14px; max-width:62ch;}
 
-.ftr{background:var(--ground); border-top:1px solid var(--line);
-  margin-top:56px; padding:34px 30px 28px;}
-.ftr .cols{max-width:var(--maxw); margin:0 auto; display:flex; gap:44px;
-  flex-wrap:wrap;}
-.ftr .col b{display:block; font-family:"Archivo",sans-serif; font-size:11.5px;
-  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-mute);
-  margin-bottom:9px;}
-.ftr .col a{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:6px;}
-.ftr .fine{max-width:var(--maxw); margin:24px auto 0; padding-top:16px;
-  border-top:1px solid var(--line); font-size:12px; color:var(--ink-mute);}
+.cta{background:var(--panel); padding:18px 16px; margin:26px 0 0; max-width:620px;}
+.cta b{display:block; font-size:19px; font-weight:800; margin:0 0 4px;}
+.cta p{margin:0 0 12px; color:var(--soft); font-size:15px;}
+.gbtn{display:inline-block; background:var(--teal); color:#fff !important; text-decoration:none !important;
+  font-weight:700; font-size:16px; padding:10px 15px; box-shadow:0 3px 0 var(--teal-dark);}
+.gbtn:hover{background:#005F59;}
 
-.ctabar{display:none;}
+.links{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:4px 24px;
+  margin:6px 0 0; padding:0; list-style:none;}
+.links li{padding:7px 0; border-bottom:1px solid var(--hair); font-size:15.5px;}
+.links li span{color:var(--soft); font-size:13.5px; margin-left:6px;}
+.tiles{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:4px 24px; margin:6px 0 0;}
+.tiles a{display:block; padding:7px 0; border-bottom:1px solid var(--hair); font-size:15.5px;}
+.tiles a b{font-weight:600;}
+.tiles a span{color:var(--soft); font-size:13.5px; margin-left:6px; text-decoration:none; display:inline-block;}
+
+h1.page + .sub{font-size:14.5px; color:var(--soft); margin:-8px 0 16px;}
+.kv{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); border-top:3px solid var(--ink);
+  border-bottom:1px solid var(--line); margin:0 0 18px;}
+.kv > div{padding:10px 12px 11px 0; border-bottom:1px solid var(--hair);}
+.kv dt{font-size:13px; color:var(--soft);}
+.kv dd{margin:0; font-weight:800; font-size:17px;}
+.crit{margin:6px 0 0; padding:0; list-style:none;}
+.crit li{display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--hair);}
+.crit li::before{content:"\\2713"; font-weight:800; color:var(--teal);}
+.note{font-size:13.5px; color:var(--soft); margin-top:10px;}
+.applybtn{margin:16px 0 0;}
+.btn{display:inline-block; background:#fff; color:var(--ink) !important; text-decoration:none !important;
+  border:2px solid var(--ink); font-weight:700; padding:10px 14px; box-shadow:0 2px 0 var(--ink);}
+
+.ftr{background:var(--panel); border-top:4px solid var(--ink); margin-top:40px;}
+.ftr .in{max-width:var(--maxw); margin:0 auto; padding:28px 16px 30px;}
+.ftr .cols{display:flex; flex-wrap:wrap; gap:22px 48px;}
+.ftr .col b{display:block; font-size:15px; margin-bottom:6px;}
+.ftr .col a{display:block; font-size:14.5px; color:var(--ink); margin-bottom:6px;}
+.ftr .fine{font-size:13.5px; color:var(--soft); margin:22px 0 0; padding-top:14px;
+  border-top:1px solid var(--line); max-width:70ch;}
+
+.ctabar{position:fixed; left:0; right:0; bottom:0; z-index:30; display:none; align-items:center; gap:10px;
+  padding:9px 10px 9px 16px; padding-bottom:calc(9px + env(safe-area-inset-bottom,0px));
+  background:var(--ink); color:#fff;}
+.ctabar p{margin:0; flex:1; font-size:14px; font-weight:700; line-height:1.25;}
+.ctabar a{background:#14B3AA; color:#06221E !important; text-decoration:none !important; font-weight:800;
+  font-size:14px; padding:8px 12px; white-space:nowrap;}
+.ctabar button{background:none; border:0; color:#fff; font-size:22px; line-height:1; padding:0 4px; cursor:pointer;}
+
+.layout{display:block;}
+.layout > .side{margin:0 0 6px;}
 @media (max-width:760px){
-  .hdr{padding:9px 20px;}
-  .wrap{padding-left:22px; padding-right:22px;}
-  .ftr{padding-left:20px; padding-right:20px;}
-  .ctabar{position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex;
-    align-items:center; gap:10px; padding:9px 12px 9px 16px; background:var(--navy);
-    border-top:1px solid var(--line);}
-  .ctabar p{margin:0; flex:1; font-size:12.5px; color:#fff; line-height:1.3;}
-  .ctabar .btn{padding:8px 13px; font-size:13px;}
-  .ctabar .x{background:none; border:0; color:var(--ink-mute); font-size:20px;
-    line-height:1; padding:2px 4px; cursor:pointer;}
-  body.has-bar{padding-bottom:60px;}
-  .steps{grid-template-columns:1fr;}
-  .ftr .cols{gap:26px;}
+  .nav{display:none;}
+  .ctabar{display:flex;}
+  body.has-bar{padding-bottom:64px;}
 }
+@media (min-width:900px){
+  .layout{display:grid; grid-template-columns:minmax(0,1fr) 340px; column-gap:48px;
+    grid-template-areas:"head side" "body side";}
+  .layout > .head{grid-area:head;}
+  .layout > .side{grid-area:side; align-self:start; position:sticky; top:16px; margin:18px 0 0;}
+  .layout > .body{grid-area:body; min-width:0;}
+}
+@media (prefers-reduced-motion:reduce){.opt:active{transform:none;}}
 """
 
 FONTS = (
     '<link rel="preconnect" href="https://fonts.googleapis.com">'
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
     '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?'
-    'family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&'
-    'family=Sora:wght@700;800&display=swap">'
+    'family=Public+Sans:wght@400;600;700;800&family=Sora:wght@700&display=swap">'
 )
 
-LOGO_SVG = (
-    '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" '
-    'stroke-linecap="round"><circle cx="10" cy="10" r="6"></circle>'
-    '<line x1="14.6" y1="14.6" x2="20" y2="20"></line></svg>'
-)
+APPLE_APP_ID = "6795890396"
 
 NAV_LINKS = [
     ("/bursaries/", "Universities"),
-    ("/bursaries/#circumstance", "Circumstance"),
-    ("/bursaries/#subject", "Subject"),
-    ("/bursaries/#region", "Region"),
+    ("/bursaries/circumstance/care-leavers/", "Care leavers"),
+    ("/bursaries/#subject", "Subjects"),
     ("/bursaries/closing-soon/", "Closing soon"),
 ]
 
-def header_html():
+def header_html(go="seo_site"):
     nav = "".join(f'<a href="{h}">{esc(t)}</a>' for h, t in NAV_LINKS)
     return (
-        '<header class="hdr">'
-        f'<a class="brand" href="/"><span class="mk">{LOGO_SVG}</span>'
-        '<span>Bursa<span class="s">Search</span></span></a>'
+        '<header class="hdr"><div class="in">'
+        '<a class="brand" href="/"><img src="/app-icon.png" alt="" width="26" height="26">'
+        '<span>BursaSearch</span></a>'
         f'<nav class="nav">{nav}</nav>'
         '<span class="grow"></span>'
-        '<a class="btn" href="/get">Get matched — free</a>'
-        '</header>'
+        f'<a class="get" href="/go/{go}/">Get the app</a>'
+        '</div></header>'
     )
 
 def footer_html():
     return (
-        '<footer class="ftr"><div class="cols">'
+        '<footer class="ftr"><div class="in"><div class="cols">'
         '<div class="col"><b>Browse</b>'
         '<a href="/bursaries/">By university</a>'
         '<a href="/bursaries/#circumstance">By circumstance</a>'
@@ -630,22 +727,30 @@ def footer_html():
         '<a href="/bursaries/highest-value/">Highest value</a>'
         '<a href="/bursaries/circumstance/care-leavers/">Care leaver bursaries</a>'
         '<a href="/bursaries/circumstance/low-income-students/">Low-income bursaries</a></div>'
-        '<div class="col"><b>About</b>'
-        f'<a href="{APP_STORE_URL}">iOS app</a>'
+        '<div class="col"><b>BursaSearch</b>'
+        f'<a href="{APP_STORE_URL}">iPhone app</a>'
         f'<a href="{PLAY_URL}">Android app</a>'
         '<a href="https://bursasearchp.github.io/bursasearch-legal/support.html">Support</a></div>'
         '</div>'
-        '<p class="fine">Bursary details are compiled from official university and '
-        'provider pages and can change &mdash; always confirm on the official link '
-        'before applying. &copy; Bursa Group Ltd.</p></footer>'
+        '<p class="fine">Details come from official university and provider pages and can change. '
+        'Always check the official page before applying. BursaSearch is not affiliated with any '
+        'university; university names and logos belong to their owners. &copy; Bursa Group Ltd.</p>'
+        '</div></footer>'
     )
 
-STICKY_BAR = """<div class="ctabar" id="ctabar">
-<p>Every UK funding source, matched to you &middot; deadline reminders</p>
-<a class="btn" href="/get">Match me</a>
-<button class="x" type="button" aria-label="Dismiss" onclick="try{localStorage.setItem('bs_cta_x','1')}catch(e){}document.getElementById('ctabar').style.display='none'">&times;</button>
-<script>try{if(localStorage.getItem('bs_cta_x'))document.getElementById('ctabar').style.display='none'}catch(e){}</script>
-</div>"""
+def sticky_bar(go="seo_site", text="Find every bursary you qualify for"):
+    return (
+        '<div class="ctabar" id="ctabar">'
+        f'<p id="ctatext">{esc(text)}</p>'
+        f'<a href="/go/{go}/">Open app</a>'
+        '<button type="button" aria-label="Close" onclick="try{localStorage.setItem(\'bs_cta_x\',\'1\')}catch(e){}'
+        'document.getElementById(\'ctabar\').style.display=\'none\';document.body.classList.remove(\'has-bar\')">&times;</button>'
+        '<script>try{if(localStorage.getItem(\'bs_cta_x\')){document.getElementById(\'ctabar\').style.display=\'none\';'
+        'document.body.classList.remove(\'has-bar\')}}catch(e){}</script>'
+        '</div>'
+    )
+
+STICKY_BAR = sticky_bar()
 
 def redirect_html(ios_url, android_url):
     return (
@@ -665,44 +770,25 @@ def jsonld_script(obj_json):
     return f'<script type="application/ld+json">{obj_json}</script>'
 
 def stat_line():
-    """Site-wide scope as a plain figure row under the H1 — hairline-ruled, no
-    box, no per-category count."""
+    """One quiet freshness line. The date changes every run by design and is
+    stripped before the lastmod comparison (see _strip_checked)."""
     d = date.today()
-    return (
-        '<div class="stats">'
-        f'<div><b>{SITE_FUND_COUNT:,}</b>funds tracked</div>'
-        f'<div><b>{SITE_UNI_COUNT}</b>UK universities</div>'
-        '<div><b>+</b>national bodies &amp; independent trusts</div>'
-        f'<div><b>{d.day} {d.strftime("%b %Y")}</b>last checked</div>'
-        '</div>'
-    )
+    return (f'<p class="fresh">{SITE_FUND_COUNT:,} UK funds tracked &middot; '
+            f'Last checked <b>{d.day} {d.strftime("%b %Y")}</b></p>')
 
-def app_cta(lead=None):
-    """The one call-to-action per page — a single contained panel. `lead`
-    optionally names what the visitor is on ('the Smith Bursary'); the pitch
-    is the cross-source match, never a category total."""
-    checked = (f"We check {lead} and every other UK bursary" if lead
-               else "We check every fund on this page and every other UK bursary")
+def app_cta(lead=None, go="seo_site"):
+    """The one app panel on pages without the eligibility check."""
+    what = f"Check if you qualify for {lead}" if lead else "See which of these you qualify for"
     return (
         '<aside class="cta">'
-        '<p class="ey">BursaSearch app</p>'
-        "<h3>One search across every UK funding source &mdash; matched to "
-        "everything you're eligible for</h3>"
-        f"<p>{checked}, grant and trust against your income, region, subject and "
-        "background in one pass &mdash; universities, national bodies and independent "
-        "funders together. You see every fund you qualify for, and the reason for "
-        "each match.</p>"
-        "<ul>"
-        "<li>Every source in one search &mdash; we connect across categories, not within one</li>"
-        "<li>Tells you why you qualify, fund by fund</li>"
-        "<li>Tracks each application and reminds you before the deadline</li>"
-        "</ul>"
-        '<p class="act"><a class="btn" href="/get">See everything I&rsquo;m eligible for &rarr;</a>'
-        '<span class="fine">Free &middot; no account &middot; iOS &amp; Android</span></p>'
-        "</aside>"
+        f'<b>{esc(what)}</b>'
+        '<p>The free app matches you to every UK bursary, including national and charity grants, '
+        'and reminds you before deadlines.</p>'
+        f'<a class="gbtn" href="/go/{go}/">Get the free app</a>'
+        '</aside>'
     )
 
-def render_shell(*, title, description, canonical, body, hero="", sticky="", schema=""):
+def render_shell(*, title, description, canonical, body, hero="", sticky="", schema="", scripts="", go="seo_site"):
     """The one page template for the whole site. `title`/`description` arrive
     already escaped by the caller (same as the old PAGE_TEMPLATE contract)."""
     return f"""<!doctype html>
@@ -712,7 +798,8 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
 <title>{title}</title>
 <meta name="description" content="{description}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light">
+<meta name="apple-itunes-app" content="app-id={APPLE_APP_ID}">
 <link rel="canonical" href="{canonical}">
 {ICON_LINKS}
 {FONTS}
@@ -729,56 +816,50 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
 <style>{SITE_CSS}</style>
 </head>
 <body class="{'has-bar' if sticky else ''}">
-{header_html()}
+{header_html(go)}
 {hero}
 <main class="wrap">
 {body}
 </main>
 {footer_html()}
 {sticky}
+{scripts}
 </body>
 </html>
 """
 
-def faq_block(uni_name, count, scope_phrase="this university"):
-    items = [
-        ("Is this list free to use?",
-         f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
-        ("Do I apply through BursaSearch?",
-         "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
-        ("How do I know which ones I actually qualify for?",
-         f"This page lists what's publicly available for {scope_phrase}. The free BursaSearch app checks your circumstances — income, region, fee status and more — against every UK bursary, including national and independent funds beyond this list, tells you exactly which ones you qualify for and why, then tracks your applications and reminds you before each deadline."),
-    ]
-    out = []
-    for q, a in items:
-        out.append(f"""
-        <details>
-          <summary>{esc(q)}</summary>
-          <p>{esc(a)}</p>
-        </details>""")
-    return "".join(out)
 
-def faq_jsonld(uni_name, scope_phrase="this university"):
-    items = [
+def faq_items_generic(uni_name, scope_phrase="this university"):
+    return [
         ("Is this list free to use?",
          f"Yes. Every bursary listed here for {uni_name} is free to browse — no account or payment needed to see what's available."),
         ("Do I apply through BursaSearch?",
-         "No — every listing links directly to the official university or provider page, and you apply there. We connect you straight to the source, not through a form with us."),
+         "No — every listing links directly to the official university or provider page, and you apply there."),
         ("How do I know which ones I actually qualify for?",
-         f"This page lists what's publicly available for {scope_phrase}. The free BursaSearch app checks your circumstances against every UK bursary, including national and independent funds beyond this list, tells you exactly which ones you qualify for and why, then tracks your applications and reminds you before each deadline."),
+         f"This page lists what's publicly available for {scope_phrase}. The free BursaSearch app checks your circumstances against every UK bursary, including national and independent funds, and tells you which ones you qualify for and why."),
     ]
+
+def faq_html_from(items):
+    return "".join(
+        f"<details><summary><span>{esc(q)}</span></summary><p>{esc(a)}</p></details>"
+        for q, a in items
+    )
+
+def faq_jsonld_from(items):
     return json.dumps({
         "@context": "https://schema.org",
         "@type": "FAQPage",
         "mainEntity": [
-            {
-                "@type": "Question",
-                "name": q,
-                "acceptedAnswer": {"@type": "Answer", "text": a},
-            }
+            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
             for q, a in items
         ],
     })
+
+def faq_block(uni_name, count, scope_phrase="this university"):
+    return faq_html_from(faq_items_generic(uni_name, scope_phrase))
+
+def faq_jsonld(uni_name, scope_phrase="this university"):
+    return faq_jsonld_from(faq_items_generic(uni_name, scope_phrase))
 
 def breadcrumb_jsonld(crumbs):
     return json.dumps({
@@ -798,20 +879,25 @@ def crumb_html(trail):
             parts.append(f'<a href="{href}">{esc(label)}</a>')
         else:
             parts.append(f'<span>{esc(label)}</span>')
-    return '<nav class="crumb">' + '<span>›</span>'.join(parts) + '</nav>'
+    return '<nav class="crumb">' + '<span class="sep">›</span>'.join(parts) + '</nav>'
 
-def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html, related_html):
-    """Assembles the shared body of a listing page (university / rollup /
-    circumstance / subject / region / closing-soon / highest-value)."""
+_ROW_RE = re.compile(r'<div class="row".*?</span></div>', re.S)
+
+def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html, related_html, go="seo_tag"):
+    """Shared body of the listing pages (rollup / circumstance / subject /
+    region / closing-soon / highest-value / uni×subject)."""
+    rows = _ROW_RE.findall(rows_html)
+    lede = lede.split(" — each linking")[0].rstrip(". ") + "."
     return (
         crumb_html(trail)
+        + f'<p class="yr">{academic_year()}</p>'
         + f'<h1 class="page">{esc(h1)}</h1>'
-        + stat_line()
         + f'<p class="lede">{esc(lede)}</p>'
-        + '<h2>Bursaries on this page</h2>'
-        + f'<div class="list">{rows_html}</div>'
-        + app_cta()
-        + '<h2>Common questions</h2>'
+        + stat_line()
+        + f'<h2>Funds <small>{len(rows)}</small></h2>'
+        + f'<div class="list">{fold_rows(rows, show=8)}</div>'
+        + app_cta(go=go)
+        + '<h2>Questions</h2>'
         + f'<div class="faq">{faq_html}</div>'
         + related_html
     )
@@ -820,10 +906,8 @@ def related_links_html(entries, exclude=None):
     """Cross-links a page out to the circumstance/subject/region pages its
     own bursaries actually qualify for — used on university pages (nothing
     to exclude) and on the tag pages themselves (excluding their own family
-    member, e.g. the Care Leavers page shouldn't link to itself), so these
-    clusters connect to each other instead of only being reachable from the
-    hub, which is a dead end for crawl depth and for students who'd
-    genuinely want to see them."""
+    member), so these clusters connect to each other instead of only being
+    reachable from the hub."""
     links = []
     for slug, h1, noun_phrase, filt in CIRCUMSTANCES:
         if exclude == ("circumstance", slug):
@@ -846,22 +930,125 @@ def related_links_html(entries, exclude=None):
     items = "".join(f'<a href="{esc(href)}"><b>{esc(label)}</b></a>' for href, label in links)
     return f'<h2>Also see</h2><div class="tiles">{items}</div>'
 
+# ── University page ─────────────────────────────────────────────────────────
+HARDSHIP_RE = re.compile(r"hardship|emergency|crisis|cost of living|access to learning|"
+                         r"support fund|financial assistance", re.I)
+
+def is_hardship(row):
+    return bool(HARDSHIP_RE.search(clean(row.get("Bursary Name", ""))))
+
+def uni_short(uni_name):
+    """'University of Manchester' -> 'Manchester'; alias wins when we have one."""
+    alias = uni_alias(uni_name)
+    if alias:
+        return alias
+    s = re.sub(r"^(the\s+)?university\s+of\s+(the\s+)?", "", uni_name, flags=re.I)
+    s = re.sub(r"\s+university.*$", "", s, flags=re.I)
+    s = re.sub(r",.*$", "", s)
+    return s.strip() or uni_name
+
+_NOT_FLAGSHIP = ("accommodation", "sport", "abroad", "placement", "alumni", "care", "estranged",
+                 "refugee", "sanctuary", "music", "master", "phd", "foundation year", "nhs")
+
+def flagship_fund(entries, uni_name):
+    """The university's main income-based undergraduate bursary, when the data
+    makes it identifiable ('The Manchester Bursary'). None otherwise."""
+    short = re.sub(r"^(the\s+)?university\s+of\s+(the\s+)?", "", uni_name, flags=re.I)
+    short = re.sub(r"\s+university.*$", "", short, flags=re.I).lower()
+    best, best_score = None, 0
+    for r in entries:
+        name = clean(r.get("Bursary Name", "")).lower()
+        if level_code(r) == "p" or is_hardship(r) or any(w in name for w in _NOT_FLAGSHIP):
+            continue
+        score = 0
+        if "bursary" in name and short.split(" ")[0] in name:
+            score += 3
+        if is_automatic(r):
+            score += 2
+        if clean(r.get("Household income", "")):
+            score += 1
+        if score > best_score:
+            best, best_score = r, score
+    return best if best_score >= 3 else None
+
+_NOT_UNI_OWN = re.compile(r"allowance|dsa|nhs|childcare grant|dependants|learning support fund|"
+                          r"social work bursar|trust|foundation|society|commission|daad|lpdp|"
+                          r"leverhulme|postgrad solutions", re.I)
+
+def counts_for_top_award(row):
+    """The headline 'top award' should be the university's own money that a UK
+    student could get — not a government allowance (DSA, Childcare Grant), an
+    outside charity listed on the uni's page, or an international-only award."""
+    if _NOT_UNI_OWN.search(clean(row.get("Bursary Name", ""))):
+        return False
+    fs = clean(row.get("Fee status", "")).lower()
+    return not (("overseas" in fs or "international" in fs) and "home" not in fs and "uk" not in fs)
+
+def uni_logo(slug, uni_name):
+    if os.path.exists(os.path.join("logos", f"{slug}.png")):
+        return f'<img src="/logos/{slug}.png" alt="{esc(uni_name)} logo" height="32">'
+    return ""
+
+CHECK_Q1 = (
+    '<div class="hd"><b>Which could you get?</b><span>1 of 3</span></div>'
+    '<div class="prog"><i class="on"></i><i></i><i></i></div>'
+    '<p class="qq">What will you study?</p>'
+    '<button type="button" class="opt" data-v="u">Undergraduate degree</button>'
+    '<button type="button" class="opt" data-v="p">Master&#x27;s or PhD</button>'
+    '<p class="fine">For UK students. Nothing is saved or sent.</p>'
+)
+
+def check_box(go, who):
+    return (f'<div id="chk" class="chk" data-go="{go}" data-uni="{esc(who)}">{CHECK_Q1}</div>')
+
+CHECK_SCRIPT = '<script src="/assets/check.js" defer></script>'
+
+def uni_faq_items(uni_name, flag, ug, hard, pg, entries):
+    items = []
+    if flag is not None:
+        fname = clean(flag.get("Bursary Name", ""))
+        if is_automatic(flag):
+            items.append((f"Do I need to apply for the {fname}?",
+                          f"No. The {fname} is paid automatically, based on the household income "
+                          "you give Student Finance. Check the official page for the income bands."))
+    priced = [r for r in ug if max_amount_value(r.get("Amount", "")) >= 100]
+    if priced:
+        top = max(priced, key=lambda r: max_amount_value(r.get("Amount", "")))
+        who = who_line(top)
+        items.append((f"What is the biggest undergraduate bursary at {uni_name}?",
+                      f"The {clean(top.get('Bursary Name', ''))}, worth {format_amount(top.get('Amount', ''))}"
+                      + (f" ({who.lower()})." if who and who != "Undergraduates" else ".")))
+    if hard:
+        names = [clean(r.get("Bursary Name", "")) for r in hard[:3]]
+        items.append((f"Does {uni_name} have a hardship fund?",
+                      f"Yes. {uni_name} lists " + (names[0] if len(names) == 1 else
+                                                   ", ".join(names[:-1]) + " and " + names[-1])
+                      + ". These help if you run short of money during your course."))
+    care = [r for r in entries if any(c in check_attrs(r)[2] for c in "ce")]
+    if care:
+        bits = []
+        for r in care[:3]:
+            a = format_amount(r.get("Amount", ""))
+            bits.append(clean(r.get("Bursary Name", "")) + (f" ({a})" if a else ""))
+        items.append((f"What does {uni_name} offer care leavers and estranged students?",
+                      "; ".join(bits) + "."))
+    if pg:
+        names = [clean(r.get("Bursary Name", "")) for r in pg[:2]]
+        items.append((f"Is there funding for master's and PhD students at {uni_name}?",
+                      f"Yes, {len(pg)} postgraduate funds, including " + " and ".join(names) + "."))
+    if not items:
+        items = faq_items_generic(uni_name)[2:]
+    return items
+
 def render_page(uni_name, entries, slug):
-    entries_sorted = sorted(entries, key=lambda r: clean(r.get("Bursary Name", "")))
-    rows_html = "".join(
-        bursary_row(r, fund_href=fund_href_for(r, uni_name)) for r in entries_sorted
-    )
     count = len(entries)
     amt_range = amount_range_text(entries)
     amt_bit = f" worth {amt_range}" if amt_range else ""
-    lede = (
-        f"{count} verified bursaries and scholarships{amt_bit} currently listed for students at "
-        f"{uni_name} — each linking straight to the official source, no forms with us. Our app also "
-        f"matches you to additional grants beyond this list, based on your specific circumstances."
-    )
     alias = uni_alias(uni_name)
     alias_bit = f" ({alias})" if alias else ""
     top = max_amount_text(entries)
+    # Titles + descriptions unchanged from the 30 Sep version (frozen while
+    # that change is measured in Search Console).
     title = (f"{uni_name}{alias_bit} Bursaries {academic_year()}: {count} grants"
              + (f" up to {top}" if top else ""))
     description = (
@@ -869,30 +1056,130 @@ def render_page(uni_name, entries, slug):
         f"{academic_year()}{amt_bit}. See who qualifies, deadlines and how to apply."
     )
     canonical = f"{SITE_URL}/bursaries/{slug}/"
+
+    named = [r for r in entries if clean(r.get("Bursary Name", ""))]
+    flag = flagship_fund(named, uni_name)
+    hard = sorted([r for r in named if is_hardship(r)], key=lambda r: clean(r.get("Bursary Name", "")))
+    pg = sorted([r for r in named if not is_hardship(r) and level_code(r) == "p"],
+                key=lambda r: (-max_amount_value(r.get("Amount", "")), clean(r.get("Bursary Name", ""))))
+    ug = sorted([r for r in named if not is_hardship(r) and level_code(r) != "p"],
+                key=lambda r: (r is not flag, not is_automatic(r), check_attrs(r)[3],
+                               -max_amount_value(r.get("Amount", "")), clean(r.get("Bursary Name", ""))))
+
+    def rows(rs):
+        return [bursary_row(r, fund_href=fund_href_for(r, uni_name), own_uni=uni_name, check=True) for r in rs]
+
+    def group(key, heading, rs, show):
+        if not rs:
+            return ""
+        return (f'<section class="grp" data-g="{key}"><h2>{esc(heading)} <small>{len(rs)}</small></h2>'
+                f'<div class="list">{fold_rows(rows(rs), show=show)}</div></section>')
+
+    # Three numbers instead of a paragraph.
+    top_ug = max((max_amount_value(r.get("Amount", "")) for r in ug if counts_for_top_award(r)), default=0)
+    stats = []
+    stats.append((f"£{top_ug:,}", "top award") if top_ug >= 100 else (f"{count}", "funds listed"))
+    stats.append((f"{len(ug)}", "for undergrads") if ug else (f"{len(pg)}", "postgrad funds"))
+    if flag is not None and is_automatic(flag):
+        stats.append(("Auto", "main bursary"))
+    elif hard:
+        stats.append((f"{len(hard)}", "hardship fund" + ("" if len(hard) == 1 else "s")))
+    elif pg and ug:
+        stats.append((f"{len(pg)}", "postgrad funds"))
+    stats_html = '<div class="stats">' + "".join(
+        f"<div><b>{esc(v)}</b><span>{esc(l)}</span></div>" for v, l in stats) + "</div>"
+
     subj_pages = UNI_SUBJECT_PAGES.get(slug, [])
     subj_block = ""
     if subj_pages:
-        subj_block = f'<h2>Subject-specific funds at {esc(uni_name)}</h2>' + tiles_html([
-            (f"/bursaries/{slug}/subject/{s}/", f"{SUBJECT_LABEL.get(s, s)} bursaries", f"{c} funds")
+        subj_block = f'<h2>By subject at {esc(uni_name)}</h2>' + tiles_html([
+            (f"/bursaries/{slug}/subject/{s}/", f"{SUBJECT_LABEL.get(s, s)} bursaries", f"{c}")
             for s, _, c in sorted(subj_pages, key=lambda t: -t[2])
         ])
-    body = content_body(
-        trail=[("Home", "/"), ("Bursaries by university", "/bursaries/"), (uni_name, None)],
-        h1=f"{uni_name} Bursaries & Scholarships",
-        lede=lede,
-        context_phrase=f"these {count} {uni_name} funds",
-        count=count,
-        rows_html=rows_html,
-        faq_html=faq_block(uni_name, count),
-        related_html=subj_block + related_links_html(entries),
+
+    faq_items = uni_faq_items(uni_name, flag, ug, hard, pg, named)
+    head = (
+        crumb_html([("Home", "/"), ("Universities", "/bursaries/"), (uni_name, None)])
+        + f'<p class="yr">{uni_logo(slug, uni_name)}<span>{academic_year()}</span></p>'
+        + f'<h1 class="page">{esc(uni_name)} Bursaries &amp; Scholarships</h1>'
+        + stats_html
     )
-    schema = jsonld_script(faq_jsonld(uni_name)) + jsonld_script(breadcrumb_jsonld([
+    body_html = (
+        group("ug", "For undergraduates", ug, 4)
+        + group("h", "Hardship funds", hard, 2)
+        + group("pg", "Master's and PhD funding", pg, 2)
+        + '<h2>Questions</h2>'
+        + f'<div class="faq">{faq_html_from(faq_items)}</div>'
+        + subj_block + related_links_html(entries)
+        + stat_line()
+    )
+    body = (f'<div class="layout"><div class="head">{head}</div>'
+            f'<div class="side">{check_box("seo_uni", uni_short(uni_name))}</div>'
+            f'<div class="body">{body_html}</div></div>')
+    schema = jsonld_script(faq_jsonld_from(faq_items)) + jsonld_script(breadcrumb_jsonld([
         ("BursaSearch", f"{SITE_URL}/"),
         ("Bursaries by university", f"{SITE_URL}/bursaries/"),
         (uni_name, canonical),
     ]))
-    return render_shell(title=esc(title), description=esc(description),
-                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
+    return render_shell(title=esc(title), description=esc(description), canonical=canonical,
+                        body=body, sticky=sticky_bar("seo_uni"), schema=schema,
+                        scripts=CHECK_SCRIPT, go="seo_uni")
+
+CHECK_JS = r"""(function(){
+var NAT=__NAT__;
+var box=document.getElementById('chk'); if(!box) return;
+var go=box.getAttribute('data-go')||'seo_site', uni=box.getAttribute('data-uni')||'University';
+var Q=[
+ {k:'l',q:'What will you study?',o:[['u','Undergraduate degree'],['p',"Master's or PhD"]]},
+ {k:'i',q:'What is your household income?',o:[['0','Under £25,000'],['25000','£25,000 to £43,000'],['43000','Over £43,000'],['-1','Not sure']]},
+ {k:'c',q:'Do any of these apply to you?',o:[['c','Care-experienced'],['e','Estranged from my family'],['r',"I'm a carer"],['d','Disabled or long-term condition'],['f','Refugee or asylum seeker'],['n','None of these']]}
+];
+var A={},step=0,groups=[].slice.call(document.querySelectorAll('.grp[data-g]')),orig=groups.map(function(g){return g.innerHTML});
+var bar=document.getElementById('ctatext'),barOrig=bar?bar.textContent:'';
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fits(l,cap,circ){if(l!=='a'&&l!==A.l)return false;var lo=+A.i;if(cap>0&&lo>=0&&lo>=cap)return false;if(circ&&circ.indexOf(A.c)<0)return false;return true}
+function ask(){var q=Q[step],h='<div class="hd"><b>Which could you get?</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
+ for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
+ h+='</div><p class="qq">'+esc(q.q)+'</p>';
+ q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
+ h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">For UK students. Nothing is saved or sent.</p>';
+ box.className='chk';box.innerHTML=h}
+box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
+ if(t.classList.contains('opt')){A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
+ else if(t.classList.contains('back')){step=Math.max(0,step-1);ask()}
+ else if(t.classList.contains('again')){A={};step=0;groups.forEach(function(g,i){g.innerHTML=orig[i]});if(bar)bar.textContent=barOrig;ask()}});
+function result(){var here=0;
+ groups.forEach(function(g,gi){if(g.getAttribute('data-g')==='h')return;g.innerHTML=orig[gi];
+  var rows=[].slice.call(g.querySelectorAll('.row[data-l]')),yes=[],no=[];
+  rows.forEach(function(r){var ok=fits(r.getAttribute('data-l'),+r.getAttribute('data-i'),r.getAttribute('data-c'));
+   if(ok&&r.getAttribute('data-x')!=='1')here++;(ok?yes:no).push(r)});
+  var list=g.querySelector('.list');list.innerHTML='';
+  yes.forEach(function(r){list.appendChild(r)});
+  if(!yes.length){var p=document.createElement('p');p.className='none';p.textContent='None of these match your answers.';list.appendChild(p)}
+  if(no.length){var d=document.createElement('details');d.className='more';d.innerHTML='<summary><span>'+no.length+(no.length===1?' doesn\'t':' don\'t')+' match your answers</span></summary>';
+   no.forEach(function(r){r.classList.add('no');d.appendChild(r)});list.appendChild(d)}
+  var sm=g.querySelector('h2 small');if(sm)sm.textContent=yes.length+' of '+rows.length});
+ var nat=0;NAT.forEach(function(n){if(fits(n[0],n[1],n[2]))nat++});
+ box.className='res';
+ box.innerHTML='<div class="nums"><div><b>'+here+'</b><span>'+esc(uni)+' funds you may get</span></div>'
+  +(nat?'<div><b>+'+nat+'</b><span>national &amp; charity grants worth checking</span></div>':'')+'</div>'
+  +'<a class="wbtn" href="/go/'+esc(go)+'/">See which fit you in the free app</a>'
+  +'<p class="small">Based on the main rules we have on file. Always check the official page.</p>'
+  +'<button type="button" class="again">Change answers</button>';
+ if(bar)bar.textContent=here+' '+uni+' funds'+(nat?' + '+nat+' national grants':'')+' to check';
+ if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'})}
+})();
+"""
+
+def write_check_js(rows_all):
+    nat = [list(check_attrs(r)) for r in rows_all
+           if clean(r.get("University", "")).lower().startswith("external")
+           and clean(r.get("Bursary Name", ""))]
+    os.makedirs("assets", exist_ok=True)
+    with open(os.path.join("assets", "check.js"), "w", encoding="utf-8") as f:
+        f.write(CHECK_JS.replace("__NAT__", json.dumps(nat, separators=(",", ":"))))
+    return len(nat)
+
 
 # ── Rollup page for single-entry universities ───────────────────────────────
 def render_rollup(singles):
@@ -1036,6 +1323,7 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         rows_html=rows_html,
         faq_html=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
         related_html=extra_html + related_links_html(rows_matched, exclude=(kind, slug)),
+        go="seo_tag",
     )
     schema = jsonld_script(faq_jsonld(noun_phrase, scope_phrase=noun_phrase)) + jsonld_script(
         breadcrumb_jsonld([
@@ -1045,7 +1333,8 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         ])
     )
     return render_shell(title=esc(title), description=esc(description),
-                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
+                        canonical=canonical, body=body, sticky=sticky_bar("seo_tag"), schema=schema,
+                        go="seo_tag")
 
 def render_circumstance_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
     return render_tag_page(
@@ -1322,10 +1611,12 @@ def deadline_text(row):
     """Plain-text deadline for the key-facts list."""
     raw = clean(row.get("Deadline", ""))
     if not raw:
-        return "Set annually — check the official page"
+        return "Set yearly"
+    if raw.lower().startswith("automatic"):
+        return "None — paid automatically"
     d = parse_deadline_date(raw)
     if d:
-        return format_deadline(raw) if d >= date.today() else "Set annually — check the official page"
+        return format_deadline(raw) if d >= date.today() else "Set yearly"
     if any(h in raw.lower() for h in _ROLLING_HINTS):
         return "Rolling — no fixed date"
     return raw
@@ -1415,11 +1706,13 @@ def fund_lede(row, uni_name, ftype):
         dl = " It runs on a rolling basis, so there's no fixed deadline."
     else:
         dl = ""
-    return (
-        f"The {name} is a {ftype.lower()}{amt}{aud_bit} at {uni_name}. Every detail "
-        f"here is taken from the official page — you apply directly with {uni_name}, "
-        f"not through us.{dl}"
-    )
+    return f"The {name} is a {ftype.lower()}{amt}{aud_bit} at {uni_name}.{dl}"
+
+def with_article(label):
+    """'care leaver' -> 'a care leaver'; adjectives ('estranged') stay bare."""
+    nouns = ("leaver", "carer", "seeker", "parent", "refugee", "veteran", "student")
+    first = label.split("/")[0].strip()
+    return f"a {label}" if first.split(" ")[-1].rstrip("s") in nouns else label
 
 def eligibility_lines(row):
     out = []
@@ -1428,8 +1721,11 @@ def eligibility_lines(row):
         out.append(f"Your household income is {hh}.")
     v = clean(row.get("Vulnerabilities (multi-select)", ""))
     if v:
-        parts = [p.strip() for p in v.split(",") if p.strip()]
-        out.append("Your circumstances include: " + ", ".join(parts).lower() + ".")
+        parts = [p.strip().lower() for p in v.split(",") if p.strip()]
+        if len(parts) == 1:
+            out.append(f"You are {with_article(parts[0])}.")
+        else:
+            out.append("You are any one of: " + ", ".join(parts[:-1]) + " or " + parts[-1] + ".")
     fs = clean(row.get("Fee status", ""))
     if fs and fs.lower() != "any":
         out.append(f"Your fee status is {fs}.")
@@ -1561,7 +1857,7 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
         + kv_html
         + '<h2>Who can apply</h2>'
         + crit_html
-        + app_cta(f"the {name}")
+        + app_cta(f"the {name}", go="seo_fund")
         + '<h2>How to apply</h2>'
         + f'<p>Apply directly to {esc(uni_name)} — BursaSearch doesn\'t process '
           'applications. The official page has the current form and closing date.</p>'
@@ -1591,7 +1887,8 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
         ]))
     )
     return render_shell(title=esc(title), description=esc(description),
-                        canonical=canonical, body=body, sticky=STICKY_BAR, schema=schema)
+                        canonical=canonical, body=body, sticky=sticky_bar("seo_fund"), schema=schema,
+                        go="seo_fund")
 
 def tiles_html(items):
     """items = list of (href, title, sub_or_None) → a .tiles grid."""
@@ -1729,6 +2026,8 @@ for uni, uslug, _ in uni_list:
             UNI_SUBJECT_PAGES.setdefault(uslug, []).append((sslug, sh1, len(m)))
             SUBJECT_UNI_PAGES.setdefault(sslug, []).append((uni, uslug, len(m)))
             uni_subject_specs.append((uni, uslug, sslug, m))
+
+n_nat = write_check_js(rows)
 
 # ── Phase 2: render every listing page. ─────────────────────────────────────
 for uni, slug, count in uni_list:
