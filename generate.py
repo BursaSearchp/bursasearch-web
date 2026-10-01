@@ -669,6 +669,31 @@ h1.page + .sub{font-size:14.5px; color:var(--soft); margin:-8px 0 16px;}
   font-size:14px; padding:8px 12px; white-space:nowrap;}
 .ctabar button{background:none; border:0; color:#fff; font-size:22px; line-height:1; padding:0 4px; cursor:pointer;}
 
+.finder{background:var(--panel); padding:14px 16px; margin:4px 0 16px; max-width:620px; position:relative;}
+.finder label{display:block; font-weight:800; font-size:17px; margin:0 0 8px;}
+.finder input{width:100%; font:inherit; font-size:17px; padding:10px 12px; border:2px solid var(--ink);
+  border-radius:0; background:#fff; color:var(--ink);}
+.finder input:focus{outline:3px solid #FFDD00; outline-offset:0;}
+.fres{list-style:none; margin:0; padding:0;}
+.fres li{padding:9px 2px; border-bottom:1px solid var(--line); font-size:16px;}
+.fres li a{font-weight:700;}
+.fres li span{display:block; font-size:13.5px; color:var(--soft);}
+.fres li.nil{color:var(--soft);}
+.tblw{overflow-x:auto; margin:6px 0 4px;}
+.tbl{width:100%; border-collapse:collapse; font-size:15px; max-width:720px;}
+.tbl th{text-align:left; font-size:13px; color:var(--soft); font-weight:700; padding:6px 8px 6px 0;
+  border-bottom:3px solid var(--ink);}
+.tbl td{padding:10px 8px 10px 0; border-bottom:1px solid var(--line); vertical-align:top;}
+.tbl .r{text-align:right; white-space:nowrap; font-weight:800; font-variant-numeric:tabular-nums; padding-right:0;}
+.tbl td.n{width:28px; font-weight:800; color:var(--soft); font-variant-numeric:tabular-nums;}
+.tbl td a{font-weight:700;}
+.tbl small{display:block; font-size:13px; color:var(--soft); margin-top:2px;}
+.tbl small a{font-weight:400; color:var(--soft);}
+.yn{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.yn .opt{text-align:center; margin:0 0 8px;}
+.fside{max-width:620px; margin:22px 0 0;}
+.res .big{font-size:24px; font-weight:800; margin:0 0 6px; line-height:1.15;}
+.res p{margin:0 0 12px;}
 .layout{display:block;}
 .layout > .side{margin:0 0 6px;}
 @media (max-width:760px){
@@ -730,6 +755,7 @@ def footer_html():
         '<div class="col"><b>BursaSearch</b>'
         f'<a href="{APP_STORE_URL}">iPhone app</a>'
         f'<a href="{PLAY_URL}">Android app</a>'
+        '<a href="/about/">How we check our data</a>'
         '<a href="https://bursasearchp.github.io/bursasearch-legal/support.html">Support</a></div>'
         '</div>'
         '<p class="fine">Details come from official university and provider pages and can change. '
@@ -788,7 +814,8 @@ def app_cta(lead=None, go="seo_site"):
         '</aside>'
     )
 
-def render_shell(*, title, description, canonical, body, hero="", sticky="", schema="", scripts="", go="seo_site"):
+def render_shell(*, title, description, canonical, body, hero="", sticky="", schema="", scripts="", go="seo_site",
+                 og_image=None):
     """The one page template for the whole site. `title`/`description` arrive
     already escaped by the caller (same as the old PAGE_TEMPLATE contract)."""
     return f"""<!doctype html>
@@ -807,11 +834,11 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
 <meta property="og:description" content="{description}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{OG_IMAGE}">
+<meta property="og:image" content="{og_image or OG_IMAGE}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{description}">
-<meta name="twitter:image" content="{OG_IMAGE}">
+<meta name="twitter:image" content="{og_image or OG_IMAGE}">
 {schema}
 <style>{SITE_CSS}</style>
 </head>
@@ -883,7 +910,8 @@ def crumb_html(trail):
 
 _ROW_RE = re.compile(r'<div class="row".*?</span></div>', re.S)
 
-def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html, related_html, go="seo_tag"):
+def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html, related_html, go="seo_tag",
+                 pre_html="", list_title="Funds"):
     """Shared body of the listing pages (rollup / circumstance / subject /
     region / closing-soon / highest-value / uni×subject)."""
     rows = _ROW_RE.findall(rows_html)
@@ -894,7 +922,8 @@ def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html,
         + f'<h1 class="page">{esc(h1)}</h1>'
         + f'<p class="lede">{esc(lede)}</p>'
         + stat_line()
-        + f'<h2>Funds <small>{len(rows)}</small></h2>'
+        + pre_html
+        + f'<h2>{esc(list_title)} <small>{len(rows)}</small></h2>'
         + f'<div class="list">{fold_rows(rows, show=8)}</div>'
         + app_cta(go=go)
         + '<h2>Questions</h2>'
@@ -1088,6 +1117,13 @@ def render_page(uni_name, entries, slug):
         stats.append((f"{len(pg)}", "postgrad funds"))
     stats_html = '<div class="stats">' + "".join(
         f"<div><b>{esc(v)}</b><span>{esc(l)}</span></div>" for v, l in stats) + "</div>"
+    og_url = None
+    if HAVE_PIL:
+        headline = f"Up to £{top_ug:,}" if top_ug >= 100 else f"{count} bursaries & scholarships"
+        sub = (f"{len(ug)} funds for undergraduates · {academic_year()}" if ug
+               else f"{count} funds · {academic_year()}")
+        OG_JOBS[slug] = (uni_name, headline, sub)
+        og_url = f"{SITE_URL}/og/{slug}.png"
 
     subj_pages = UNI_SUBJECT_PAGES.get(slug, [])
     subj_block = ""
@@ -1123,10 +1159,28 @@ def render_page(uni_name, entries, slug):
     ]))
     return render_shell(title=esc(title), description=esc(description), canonical=canonical,
                         body=body, sticky=sticky_bar("seo_uni"), schema=schema,
-                        scripts=CHECK_SCRIPT, go="seo_uni")
+                        scripts=CHECK_SCRIPT, go="seo_uni", og_image=og_url)
 
 CHECK_JS = r"""(function(){
 var NAT=__NAT__;
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var fb=document.getElementById('fchk');
+if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
+ var fask=function(){var q=FQ[fs],h='<div class="hd"><b>Am I eligible?</b><span>'+(fs+1)+' of '+FQ.length+'</span></div><div class="prog">';
+  for(var i=0;i<FQ.length;i++)h+='<i'+(i<=fs?' class="on"':'')+'></i>';
+  h+='</div><p class="qq">'+esc(q[0])+'</p><div class="yn"><button type="button" class="opt" data-v="y">Yes</button><button type="button" class="opt" data-v="n">No</button></div>';
+  if(q[1])h+='<button type="button" class="opt" data-v="u">Not sure</button>';
+  fb.className='chk';fb.innerHTML=h};
+ var fres=function(){var go=fb.getAttribute('data-go'),off=fb.getAttribute('data-off'),n=+fb.getAttribute('data-n'),u=fb.getAttribute('data-uni');fb.className='res';
+  fb.innerHTML=(fok?'<p class="big">You look eligible</p><p>Check the full rules on the official page, then apply there. People who fit this usually qualify for other funds too.</p>'
+    +'<a class="wbtn" href="/go/'+esc(go)+'/">Find my other funds in the free app</a>'
+   :'<p class="big">Probably not this one</p><p>'+(n?n+' other funds at '+esc(u)+', plus national grants, may still fit you.':'National and charity grants may still fit you.')+'</p>'
+    +'<a class="wbtn" href="/go/'+esc(go)+'/">See which fit in the free app</a>')
+   +'<button type="button" class="again">Change answers</button>'};
+ fb.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
+  if(t.classList.contains('opt')){if(t.getAttribute('data-v')==='n')fok=false;fs++;if(fs<FQ.length)fask();else fres()}
+  else if(t.classList.contains('again')){fs=0;fok=true;fask()}});
+}
 var box=document.getElementById('chk'); if(!box) return;
 var go=box.getAttribute('data-go')||'seo_site', uni=box.getAttribute('data-uni')||'University';
 var Q=[
@@ -1136,7 +1190,6 @@ var Q=[
 ];
 var A={},step=0,groups=[].slice.call(document.querySelectorAll('.grp[data-g]')),orig=groups.map(function(g){return g.innerHTML});
 var bar=document.getElementById('ctatext'),barOrig=bar?bar.textContent:'';
-function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function fits(l,cap,circ){if(l!=='a'&&l!==A.l)return false;var lo=+A.i;if(cap>0&&lo>=0&&lo>=cap)return false;if(circ&&circ.indexOf(A.c)<0)return false;return true}
 function ask(){var q=Q[step],h='<div class="hd"><b>Which could you get?</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
@@ -1277,6 +1330,295 @@ CIRCUMSTANCES = [
      "women", _is_women_scholarship),
 ]
 
+# ── Wave 2: shared pieces for tag / fund / hub / about pages ────────────────
+def _json_for_script(obj):
+    return json.dumps(obj, separators=(",", ":")).replace("</", "<\\/")
+
+FINDER_JS = (
+    "(function(){var d=JSON.parse(document.getElementById('uqd').textContent),"
+    "i=document.getElementById('uq'),o=document.getElementById('uqr');"
+    "function n(s){return s.toLowerCase().replace(/[^a-z0-9 ]/g,'')}"
+    "i.addEventListener('input',function(){var q=n(i.value).trim();o.innerHTML='';if(q.length<2)return;"
+    "var m=d.filter(function(x){return (' '+n(x[0]+' '+x[2])).indexOf(' '+q)>=0}).slice(0,6);"
+    "if(!m.length){o.innerHTML='<li class=\"nil\">No match. Try the full list below.</li>';return}"
+    "m.forEach(function(x){var li=document.createElement('li'),a=document.createElement('a');"
+    "a.href=x[1];a.textContent=x[0];li.appendChild(a);if(x[3]){var s=document.createElement('span');"
+    "s.textContent=x[3];li.appendChild(s)}o.appendChild(li)})});"
+    "i.addEventListener('keydown',function(e){if(e.key==='Enter'){var a=o.querySelector('a');"
+    "if(a){e.preventDefault();location.href=a.href}}})})();"
+)
+
+def uni_finder_html(items, label="Find your university", placeholder="Start typing, e.g. Leeds"):
+    """items = [(name, href, alias, note)] — a type-ahead that jumps to the page."""
+    return (
+        '<div class="finder">'
+        f'<label for="uq">{esc(label)}</label>'
+        f'<input id="uq" type="search" placeholder="{esc(placeholder)}" autocomplete="off">'
+        '<ul class="fres" id="uqr"></ul>'
+        f'<script type="application/json" id="uqd">{_json_for_script(items)}</script>'
+        f'<script>{FINDER_JS}</script>'
+        '</div>'
+    )
+
+_CIRC_NAME_HINT = {"c": ("care",), "e": ("estranged",), "r": ("carer",), "d": ("disab",),
+                   "f": ("sanctuary", "refugee", "asylum")}
+
+def dedicated_to(row, code):
+    """True when a fund is really aimed at this group: its name says so, or the
+    group is one of at most two it targets (not one of eight on a wide scheme)."""
+    name = clean(row.get("Bursary Name", "")).lower()
+    if any(h in name for h in _CIRC_NAME_HINT.get(code, ())):
+        return True
+    _, _, circ, _ = check_attrs(row)
+    return code in circ and len(_vuln_parts(row)) <= 2
+
+RANK_CODE = {"care-leavers": "c", "estranged-students": "e", "student-carers": "r", "young-carers": "r",
+             "disabled-students": "d", "refugees-and-asylum-seekers": "f"}
+
+def best_per_university(rows, canon_by_key, limit=10, keep=None):
+    """One row per university (its biggest qualifying award), biggest first —
+    the ranked table on tag pages."""
+    best = {}
+    for r in rows:
+        raw = clean(r.get("University", ""))
+        if not raw or raw.lower().startswith("external"):
+            continue
+        val = max_amount_value(r.get("Amount", ""))
+        if val < 100 or not counts_for_top_award(r) or level_code(r) == "p" or (keep and not keep(r)):
+            continue
+        key = norm_uni_key(raw)
+        if key not in best or val > best[key][0]:
+            best[key] = (val, r)
+    ranked = sorted(best.items(), key=lambda kv: -kv[1][0])[:limit]
+    out = []
+    for key, (val, r) in ranked:
+        resolved = canon_by_key.get(key)
+        uni = resolved[0] if resolved else clean(r.get("University", ""))
+        href = f"/bursaries/{resolved[1]}/" if resolved else None
+        out.append((uni, href, r, val))
+    return out
+
+def ranked_table_html(ranked, noun_title):
+    if len(ranked) < 3:
+        return "", ""
+    trs = []
+    for i, (uni, href, r, val) in enumerate(ranked, 1):
+        name = clean(r.get("Bursary Name", ""))
+        fh = fund_href_for(r)
+        uni_cell = f'<a href="{href}">{esc(uni)}</a>' if href else esc(uni)
+        fund_cell = f'<a href="{fh}">{esc(name)}</a>' if fh else esc(name)
+        trs.append(f'<tr><td class="n">{i}</td><td>{uni_cell}<small>{fund_cell}</small></td>'
+                   f'<td class="r">{esc(format_amount(r.get("Amount", "")) or f"£{val:,}")}</td></tr>')
+    html_ = (f'<h2>Biggest {esc(noun_title)} by university</h2>'
+             '<div class="tblw"><table class="tbl"><thead><tr><th></th><th>University</th>'
+             '<th class="r">Award</th></tr></thead><tbody>' + "".join(trs) + '</tbody></table></div>')
+    itemlist = json.dumps({
+        "@context": "https://schema.org", "@type": "ItemList",
+        "name": f"Biggest {noun_title} by university",
+        "itemListElement": [
+            {"@type": "ListItem", "position": i,
+             "name": f"{uni}: {clean(r.get('Bursary Name', ''))}",
+             **({"url": SITE_URL + href} if href else {})}
+            for i, (uni, href, r, val) in enumerate(ranked, 1)
+        ],
+    })
+    return html_, jsonld_script(itemlist)
+
+def list_faq_items(scope, rows, ranked=None, nat=None):
+    """Data-driven questions for a listing page (no sentences about us)."""
+    items = []
+    n_unis = len({norm_uni_key(clean(r.get("University", ""))) for r in rows
+                  if clean(r.get("University", "")) and not clean(r.get("University", "")).lower().startswith("external")})
+    items.append((f"How many bursaries are there for {scope}?",
+                  f"We list {len(rows)} for {scope}, across {n_unis} UK universities"
+                  + (" and national funders." if nat else ".")))
+    if ranked:
+        uni, href, r, val = ranked[0]
+        items.append((f"Which university gives the most to {scope}?",
+                      f"{uni}: the {clean(r.get('Bursary Name', ''))} is worth "
+                      f"{format_amount(r.get('Amount', '')) or f'£{val:,}'}."))
+    if nat:
+        names = [clean(r.get("Bursary Name", "")) for r in nat[:3]]
+        items.append((f"Are there grants for {scope} outside universities?",
+                      "Yes, including " + (names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]) + "."))
+    soon = sorted(((parse_deadline_date(r.get("Deadline", "")), r) for r in rows
+                   if parse_deadline_date(r.get("Deadline", "")) and parse_deadline_date(r.get("Deadline", "")) >= date.today()),
+                  key=lambda t: t[0])
+    if soon:
+        d, r = soon[0]
+        items.append(("Which deadline is next?",
+                      f"The {clean(r.get('Bursary Name', ''))} ({clean(r.get('University', ''))}) closes on {d.day} {d.strftime('%B %Y')}."))
+    return items
+
+# ── Fund page check ──────────────────────────────────────────────────────────
+_CIRC_Q = {"c": "care-experienced", "e": "estranged from your family", "r": "a carer",
+           "d": "disabled or living with a long-term condition", "f": "a refugee or asylum seeker"}
+
+def _join_or(parts):
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " or " + parts[-1]
+
+def fund_questions(row, uni_name):
+    """2–3 yes/no questions built from the fund's own criteria. Each is
+    (question, allows_not_sure)."""
+    l, cap, circ, _ = check_attrs(row)
+    where = "a UK university" if uni_name.lower().startswith("external") else uni_name
+    qs = []
+    if l == "u":
+        qs.append((f"Are you an undergraduate at {where}, or starting soon?", False))
+    elif l == "p":
+        qs.append((f"Are you a master's or PhD student at {where}, or starting soon?", False))
+    else:
+        qs.append((f"Are you studying at {where}, or starting soon?", False))
+    if cap and clean(row.get("Household income", "")):
+        qs.append((f"Is your household income under £{cap:,}?", True))
+    if circ:
+        qs.append((f"Are you {_join_or([_CIRC_Q[c] for c in circ])}?", False))
+    yr = clean(row.get("Course Year", ""))
+    if yr in ("1", "1st", "First", "Year 1") and len(qs) < 3:
+        qs.append(("Is this your first year?", False))
+    return qs[:3]
+
+def fund_check_html(qs, go, official, n_other, uni_short_name):
+    q, ns = qs[0]
+    prog = "".join(f'<i{" class=\"on\"" if i == 0 else ""}></i>' for i in range(len(qs)))
+    first = (f'<div class="hd"><b>Am I eligible?</b><span>1 of {len(qs)}</span></div>'
+             f'<div class="prog">{prog}</div><p class="qq">{esc(q)}</p>'
+             '<div class="yn"><button type="button" class="opt" data-v="y">Yes</button>'
+             '<button type="button" class="opt" data-v="n">No</button></div>'
+             + ('<button type="button" class="opt" data-v="u">Not sure</button>' if ns else ""))
+    data_q = esc(json.dumps([[a, 1 if b else 0] for a, b in qs]))
+    return (f'<div id="fchk" class="chk" data-q="{data_q}" data-go="{go}" data-off="{esc(official)}" '
+            f'data-n="{n_other}" data-uni="{esc(uni_short_name)}">{first}</div>')
+
+SIMILAR_BY_CIRC = {}   # circ code -> [(value, uni_name, row, href)] — filled in phase 1
+
+def similar_elsewhere(row, uni_name, n=3):
+    _, _, circ, _ = check_attrs(row)
+    if not circ:
+        return []
+    pool = SIMILAR_BY_CIRC.get(circ[0], [])
+    lvl = level_code(row)
+    out, seen = [], {norm_uni_key(uni_name)}
+    for val, u, r, href in pool:
+        if norm_uni_key(u) in seen or (lvl != "a" and level_code(r) not in (lvl, "a")):
+            continue
+        seen.add(norm_uni_key(u))
+        out.append((u, r, href))
+        if len(out) == n:
+            break
+    return out
+
+def short_deadline(row):
+    if is_automatic(row):
+        return ("None", "paid automatically")
+    raw = clean(row.get("Deadline", ""))
+    d = parse_deadline_date(raw)
+    if d and d >= date.today():
+        return (f"{d.day} {d.strftime('%b')}", f"deadline {d.year}")
+    if raw and any(h in raw.lower() for h in _ROLLING_HINTS):
+        return ("Rolling", "no fixed deadline")
+    return ("Yearly", "deadline varies")
+
+# ── Share images (1200×630) per university ──────────────────────────────────
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    HAVE_PIL = os.path.exists(os.path.join("fonts", "PublicSans.ttf"))
+except ImportError:
+    HAVE_PIL = False
+
+OG_JOBS = {}   # slug -> (uni_name, headline, subline)
+
+def _font(size, weight):
+    f = ImageFont.truetype(os.path.join("fonts", "PublicSans.ttf"), size)
+    f.set_variation_by_axes([weight])
+    return f
+
+def _fit(draw, text, weight, start, max_w):
+    size = start
+    while size > 30:
+        f = _font(size, weight)
+        if draw.textlength(text, font=f) <= max_w:
+            return f
+        size -= 4
+    return _font(30, weight)
+
+def make_og_image(slug, uni_name, headline, subline):
+    W, H, PAD = 1200, 630, 72
+    im = Image.new("RGB", (W, H), "white")
+    d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, W, 96], fill="#0B0C0C")
+    try:
+        icon = Image.open("app-icon.png").convert("RGBA").resize((56, 56), Image.LANCZOS)
+        im.paste(icon, (PAD, 20), icon)
+    except OSError:
+        pass
+    d.text((PAD + 74, 48), "BursaSearch", font=_font(34, 700), fill="white", anchor="lm")
+    d.text((W - PAD, 48), "bursasearch.com", font=_font(26, 500), fill="#C9CCCD", anchor="rm")
+    y = 140
+    lp = os.path.join("logos", f"{slug}.png")
+    if os.path.exists(lp):
+        lg = Image.open(lp).convert("RGBA")
+        h = 84
+        w = min(int(lg.size[0] * h / lg.size[1]), 420)
+        lg = lg.resize((w, int(lg.size[1] * w / lg.size[0])), Image.LANCZOS)
+        im.paste(lg, (PAD, y), lg)
+        y += lg.size[1] + 26
+    d.text((PAD, y), uni_name, font=_fit(d, uni_name, 700, 44, W - 2 * PAD), fill="#0B0C0C")
+    y += 70
+    d.rectangle([PAD, y, W - PAD, y + 6], fill="#0B0C0C")
+    y += 30
+    d.text((PAD, y), headline, font=_fit(d, headline, 800, 108, W - 2 * PAD), fill="#00766F")
+    d.text((PAD, H - 64), subline, font=_font(32, 500), fill="#505A5F", anchor="ls")
+    os.makedirs("og", exist_ok=True)
+    out = os.path.join("og", f"{slug}.png")
+    buf = __import__("io").BytesIO()
+    im.save(buf, "PNG", optimize=True)
+    data = buf.getvalue()
+    if not os.path.exists(out) or open(out, "rb").read() != data:
+        with open(out, "wb") as f:
+            f.write(data)
+
+# ── About / methodology page ────────────────────────────────────────────────
+def render_about(n_funds, n_unis, n_nat):
+    canonical = f"{SITE_URL}/about/"
+    body = (
+        crumb_html([("Home", "/"), ("How we check our data", None)])
+        + '<h1 class="page">How we check our data</h1>'
+        + '<div class="stats">'
+          f'<div><b>{n_funds:,}</b><span>funds tracked</span></div>'
+          f'<div><b>{n_unis}</b><span>universities</span></div>'
+          f'<div><b>{n_nat}</b><span>national funds</span></div></div>'
+        + '<h2>Where the information comes from</h2>'
+        '<p class="lede">Every fund comes from an official page: the university\'s own funding '
+        'pages, or the charity, trust or public body that runs it. Each listing links to that page.</p>'
+        + '<h2>How we keep it accurate</h2>'
+        '<ul class="crit">'
+        '<li>Details are taken from the official page and checked against it.</li>'
+        '<li>An automatic check revisits official pages and flags any change in name, amount or income limit, which we then review and correct.</li>'
+        '<li>This site rebuilds every day from that data.</li>'
+        '</ul>'
+        + '<h2>What we don\'t do</h2>'
+        '<ul class="crit">'
+        '<li>We don\'t take applications. You always apply directly with the university or funder.</li>'
+        '<li>We aren\'t paid by universities or funders to list them, and we aren\'t affiliated with any of them.</li>'
+        '</ul>'
+        + '<h2>Spotted something wrong?</h2>'
+        '<p>Amounts and rules change. If a detail here doesn\'t match the official page, the official '
+        'page is right. Tell us through <a href="https://bursasearchp.github.io/bursasearch-legal/support.html">'
+        'support</a> and we\'ll correct it.</p>'
+        + '<p class="fresh">Run by Bursa Group Ltd.</p>'
+    )
+    schema = jsonld_script(json.dumps({
+        "@context": "https://schema.org", "@type": "AboutPage", "url": canonical,
+        "name": "How BursaSearch checks its bursary data",
+        "publisher": {"@type": "Organization", "name": "BursaSearch", "legalName": "Bursa Group Ltd",
+                      "url": f"{SITE_URL}/", "logo": f"{SITE_URL}/app-icon.png"},
+    }))
+    return render_shell(title="How we check our data | BursaSearch",
+                        description=esc(f"Where BursaSearch's {n_funds:,} UK bursary listings come from, how they're reviewed and how often they're updated."),
+                        canonical=canonical, body=body, schema=schema)
+
+
 def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede_tail, canon_by_key,
                      sort_key=None, limit=None, extra_html=""):
     """Shared renderer for the cross-cutting tag pages (circumstance, region,
@@ -1314,6 +1656,35 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
     )
     path_suffix = f"{kind}/{slug}/" if slug else f"{kind}/"
     canonical = f"{SITE_URL}/bursaries/{path_suffix}"
+    pre, extra_schema, ranked, nat = "", "", None, None
+    if slug:
+        code_ = RANK_CODE.get(slug) if kind == "circumstance" else None
+        ranked = best_per_university(rows_matched, canon_by_key,
+                                     keep=(lambda r: dedicated_to(r, code_)) if code_ else None)
+        table, extra_schema = ranked_table_html(ranked, RANK_NOUN.get(slug, "bursaries"))
+        nat = [r for r in rows_matched if clean(r.get("University", "")).lower().startswith("external")]
+        by_u = {}
+        for r in rows_matched:
+            raw = clean(r.get("University", ""))
+            res_ = canon_by_key.get(norm_uni_key(raw)) if raw else None
+            if res_ and not raw.lower().startswith("external"):
+                v = by_u.setdefault(res_[1], [res_[0], 0, 0])
+                v[1] += 1
+                if counts_for_top_award(r):
+                    v[2] = max(v[2], max_amount_value(r.get("Amount", "")))
+        finder_items = [[n, f"/bursaries/{s}/", uni_alias(n),
+                         f"{c} fund{'s' if c != 1 else ''}" + (f", up to £{m:,}" if m >= 100 else "")]
+                        for s, (n, c, m) in sorted(by_u.items(), key=lambda kv: kv[1][0])]
+        pre = table
+        if finder_items:
+            pre += uni_finder_html(finder_items, label="Where are you studying?",
+                                   placeholder="Type your university")
+        if nat:
+            nat_rows = [bursary_row(r, fund_href=fund_href_for(r)) for r in
+                        sorted(nat, key=lambda r: -max_amount_value(r.get("Amount", "")))]
+            pre += (f'<h2>From outside your university <small>{len(nat)}</small></h2>'
+                    f'<div class="list">{fold_rows(nat_rows, show=3)}</div>')
+    faq_items = list_faq_items(noun_phrase, rows_matched, ranked, nat)
     body = content_body(
         trail=[("Home", "/"), (crumb_label, "/bursaries/"), (h1, None)],
         h1=h1,
@@ -1321,11 +1692,13 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
         context_phrase=f"these {count} funds",
         count=count,
         rows_html=rows_html,
-        faq_html=faq_block(noun_phrase, count, scope_phrase=noun_phrase),
+        faq_html=faq_html_from(faq_items),
         related_html=extra_html + related_links_html(rows_matched, exclude=(kind, slug)),
         go="seo_tag",
+        pre_html=pre,
+        list_title="All funds" if slug else "Funds",
     )
-    schema = jsonld_script(faq_jsonld(noun_phrase, scope_phrase=noun_phrase)) + jsonld_script(
+    schema = jsonld_script(faq_jsonld_from(faq_items)) + extra_schema + jsonld_script(
         breadcrumb_jsonld([
             ("BursaSearch", f"{SITE_URL}/"),
             (crumb_label, f"{SITE_URL}/bursaries/"),
@@ -1484,12 +1857,10 @@ def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
         context_phrase=f"these {count} {label.lower()} funds at {uni_name}",
         count=count,
         rows_html=rows_html,
-        faq_html=faq_block(f"{label.lower()} students at {uni_name}", count,
-                           scope_phrase=f"{label.lower()} students at {uni_name}"),
+        faq_html=faq_html_from(list_faq_items(f"{label.lower()} students at {uni_name}", matched)),
         related_html=f"<h2>Also see</h2>{also_tiles}",
     )
-    schema = jsonld_script(faq_jsonld(f"{label.lower()} students at {uni_name}",
-                                      scope_phrase=f"{label.lower()} students at {uni_name}")) + \
+    schema = jsonld_script(faq_jsonld_from(list_faq_items(f"{label.lower()} students at {uni_name}", matched))) + \
         jsonld_script(breadcrumb_jsonld([
             ("BursaSearch", f"{SITE_URL}/"),
             ("Bursaries by university", f"{SITE_URL}/bursaries/"),
@@ -1755,30 +2126,23 @@ def eligibility_lines(row):
 def fund_faq_items(row, uni_name):
     name = clean(row.get("Bursary Name", ""))
     amount = format_amount(row.get("Amount", ""))
-    a_amt = (
-        f"The {name} is worth {amount}."
-        if amount else
-        f"{uni_name} doesn't publish a single fixed figure for the {name} — check the "
-        "official page for the current amount and how it's paid."
-    )
+    a_amt = (f"The {name} is worth {amount}." if amount else
+             f"{uni_name} doesn't publish one fixed figure for the {name}. The official page has the current amount.")
     d = parse_deadline_date(row.get("Deadline", ""))
     raw = clean(row.get("Deadline", ""))
-    if d and d >= date.today():
+    if is_automatic(row):
+        a_dl = f"There's no deadline. The {name} is paid automatically."
+    elif d and d >= date.today():
         a_dl = f"Applications for the {name} close on {format_deadline(raw)}."
     elif raw and any(h in raw.lower() for h in _ROLLING_HINTS):
-        a_dl = f"The {name} has no fixed deadline — you can apply at any point during the year."
+        a_dl = f"The {name} has no fixed deadline, so you can apply at any point in the year."
     else:
-        a_dl = (
-            f"{uni_name} sets the deadline for the {name} each year. Check the official "
-            "page for the current closing date."
-        )
-    return [
-        (f"How much is the {name}?", a_amt),
-        (f"What is the deadline for the {name}?", a_dl),
-        ("Do I apply through BursaSearch?",
-         f"No. You apply directly with {uni_name} using the official link on this page — "
-         "BursaSearch is not part of the application."),
-    ]
+        a_dl = f"{uni_name} sets the deadline for the {name} each year. The official page has the current date."
+    items = [(f"How much is the {name}?", a_amt), (f"What is the deadline for the {name}?", a_dl)]
+    crit = eligibility_lines(row)
+    if crit:
+        items.append((f"Who can apply for the {name}?", " ".join(crit)))
+    return items
 
 def monetary_grant_jsonld(row, uni_name, canonical, description):
     obj = {
@@ -1805,80 +2169,67 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
     lede = fund_lede(row, uni_name, ftype)
     description = fund_description(row, name, uni_name, ftype)
     title = fund_title(row, name, uni_name)
+    national = uni_name.lower().startswith("external")
+    ushort = "National funders" if national else uni_short(uni_name)
 
-    kv = [("Amount", esc(format_amount(row.get("Amount", "")) or "See official page")),
-          ("Type", esc(ftype)),
-          ("Deadline", esc(deadline_text(row)))]
-    lvl = clean(row.get("Study level", ""))
-    if lvl:
-        kv.append(("Study level", esc(lvl)))
-    fs = clean(row.get("Fee status", ""))
-    if fs and fs.lower() != "any":
-        kv.append(("Fee status", esc(fs)))
-    subj = clean(row.get("Study subject", ""))
-    if subj:
-        kv.append(("Subject", esc(subj)))
-    kv.append(("Administered by", f'<a href="/bursaries/{uni_slug}/">{esc(uni_name)}</a>'))
-    kv_html = '<dl class="kv">' + "".join(
-        f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in kv
-    ) + "</dl>"
+    amt = format_amount(row.get("Amount", ""))
+    if not amt:
+        amt = "Income-based" if (clean(row.get("Household income", "")) or is_automatic(row)) else "Varies"
+    dl_v, dl_l = short_deadline(row)
+    stats_html = ('<div class="stats">'
+                  f'<div><b>{esc(amt if len(amt) <= 22 else amt[:21] + "…")}</b><span>amount</span></div>'
+                  f'<div><b>{esc(dl_v)}</b><span>{esc(dl_l)}</span></div>'
+                  f'<div><b>{esc(ftype.replace(" fund", ""))}</b><span>not repaid</span></div></div>')
 
     crit = eligibility_lines(row)
-    if crit:
-        crit_html = ('<ul class="crit">' + "".join(f"<li>{esc(c)}</li>" for c in crit)
-                     + '</ul><p class="note">This is a summary — always confirm the full '
-                       'eligibility rules on the official page before applying.</p>')
+    crit_html = ('<ul class="crit">' + "".join(f"<li>{esc(c)}</li>" for c in crit) + '</ul>') if crit else (
+        f'<p>The official page has the full rules for the {esc(name)}.</p>')
+
+    siblings = [s for s in sibling_specs if s[3] != fund_slug]
+    qs = fund_questions(row, uni_name)
+    if len(qs) >= 2:
+        check = fund_check_html(qs, "seo_fund", official, len(siblings), ushort)
     else:
-        crit_html = ('<p class="note">The official page has the full eligibility rules for '
-                     f'the {esc(name)}.</p>')
+        check = app_cta(f"the {name}", go="seo_fund")
+
+    apply_html = ""
+    if official:
+        who = "the funder" if national else uni_name
+        apply_html = (f'<p class="applybtn"><a class="btn" href="{esc(official)}" target="_blank" rel="noopener">'
+                      f'Apply on the official page ↗</a></p><p class="note">You apply directly with {esc(who)}.</p>')
+
+    sim = similar_elsewhere(row, uni_name)
+    sim_html = ""
+    if sim:
+        sim_html = ('<h2>Similar at other universities</h2><div class="list">'
+                    + "".join(bursary_row(r, uni=u, fund_href=h) for u, r, h in sim) + '</div>')
+
+    sib_links = "".join(f'<li><a href="/bursaries/{uni_slug}/{s[3]}/">{esc(short_fund_name(s[0], uni_name))}</a></li>'
+                        for s in siblings[:5])
+    sib_html = (f'<h2>More from {esc(ushort)}</h2><ul class="links">{sib_links}'
+                f'<li><a href="/bursaries/{uni_slug}/">All {esc(ushort)} funds</a></li></ul>')
 
     faq_items = fund_faq_items(row, uni_name)
-    faq_html = "".join(
-        f"<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>" for q, a in faq_items
-    )
-
-    sib = [s for s in sibling_specs if s[3] != fund_slug][:5]
-    sib_tiles = "".join(
-        f'<a href="/bursaries/{uni_slug}/{s[3]}/"><b>{esc(s[0])}</b></a>' for s in sib
-    )
-    sib_tiles += (f'<a href="/bursaries/{uni_slug}/"><b>See all {uni_name} bursaries →</b>'
-                  '</a>')
-
+    logo = uni_logo(uni_slug, uni_name)
     body = (
-        crumb_html([
-            ("Home", "/"),
-            ("Bursaries by university", "/bursaries/"),
-            (uni_name, f"/bursaries/{uni_slug}/"),
-            (name, None),
-        ])
+        crumb_html([("Home", "/"), ("Universities", "/bursaries/"),
+                    (ushort, f"/bursaries/{uni_slug}/"), (name, None)])
+        + f'<p class="yr">{logo}<span>{esc(uni_name)} · {academic_year()}</span></p>'
         + f'<h1 class="page">{esc(name)}</h1>'
-        + f'<p class="sub">{esc(uni_name)} &middot; {esc(ftype)}</p>'
+        + stats_html
         + f'<p class="lede">{esc(lede)}</p>'
-        + kv_html
-        + '<h2>Who can apply</h2>'
-        + crit_html
-        + app_cta(f"the {name}", go="seo_fund")
-        + '<h2>How to apply</h2>'
-        + f'<p>Apply directly to {esc(uni_name)} — BursaSearch doesn\'t process '
-          'applications. The official page has the current form and closing date.</p>'
-        + (f'<p class="applybtn"><a class="btn" href="{esc(official)}" target="_blank" '
-           'rel="noopener">Open the official page →</a></p>' if official else "")
-        + '<h2>Common questions</h2>'
-        + f'<div class="faq">{faq_html}</div>'
-        + f'<h2>Other funds at {esc(uni_name)}</h2>'
-        + f'<div class="tiles">{sib_tiles}</div>'
+        + '<h2>Who can apply</h2>' + crit_html
+        + f'<div class="fside">{check}</div>'
+        + apply_html
+        + sim_html
+        + sib_html
+        + '<h2>Questions</h2>'
+        + f'<div class="faq">{faq_html_from(faq_items)}</div>'
         + related_links_html([row])
     )
     schema = (
         jsonld_script(monetary_grant_jsonld(row, uni_name, canonical, description))
-        + jsonld_script(json.dumps({
-            "@context": "https://schema.org", "@type": "FAQPage",
-            "mainEntity": [
-                {"@type": "Question", "name": q,
-                 "acceptedAnswer": {"@type": "Answer", "text": a}}
-                for q, a in faq_items
-            ],
-        }))
+        + jsonld_script(faq_jsonld_from(faq_items))
         + jsonld_script(breadcrumb_jsonld([
             ("BursaSearch", f"{SITE_URL}/"),
             ("Bursaries by university", f"{SITE_URL}/bursaries/"),
@@ -1888,7 +2239,7 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
     )
     return render_shell(title=esc(title), description=esc(description),
                         canonical=canonical, body=body, sticky=sticky_bar("seo_fund"), schema=schema,
-                        go="seo_fund")
+                        scripts=CHECK_SCRIPT if len(qs) >= 2 else "", go="seo_fund")
 
 def tiles_html(items):
     """items = list of (href, title, sub_or_None) → a .tiles grid."""
@@ -1907,12 +2258,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
         f"Browse verified bursaries and scholarships at {n_unis} UK universities, "
         f"covering {n_total} funds in total. Free to search."
     )
-    lede = (
-        f"{n_total} verified bursaries and scholarships across {n_unis} UK universities — "
-        "each linking straight to the official source, no forms with us. Pick your "
-        "university below, or let the app match you to these plus national and "
-        "independent grants."
-    )
+    lede = f"{n_total:,} verified bursaries and scholarships across {n_unis} UK universities."
     uni_items = [(f"/bursaries/{slug}/", name,
                   f"{c} bursar{'y' if c == 1 else 'ies'}") for name, slug, c in uni_list]
     uni_items.append(("/bursaries/more-universities/", "More universities",
@@ -1920,6 +2266,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     body = (
         crumb_html([("Home", "/"), ("Bursaries", None)])
         + '<h1 class="page">UK University Bursaries &amp; Scholarships</h1>'
+        + uni_finder_html(HUB_FINDER_ITEMS)
         + stat_line()
         + f'<p class="lede">{esc(lede)}</p>'
         + '<h2>Quick links</h2>'
@@ -2028,6 +2375,31 @@ for uni, uslug, _ in uni_list:
             uni_subject_specs.append((uni, uslug, sslug, m))
 
 n_nat = write_check_js(rows)
+
+RANK_NOUN = {
+    "low-income-students": "low-income bursaries", "care-leavers": "care-leaver bursaries",
+    "international-students": "international scholarships", "estranged-students": "estranged-student bursaries",
+    "disabled-students": "bursaries for disabled students", "refugees-and-asylum-seekers": "sanctuary scholarships",
+    "student-carers": "bursaries for carers", "young-carers": "young-carer bursaries",
+    "low-participation-areas": "widening-participation bursaries", "part-time-students": "part-time bursaries",
+    "ethnic-minority-students": "scholarships for Black and minority ethnic students",
+    "women-scholarships": "scholarships for women",
+}
+RANK_NOUN.update({s: f"{SUBJECT_LABEL.get(s, s)} bursaries" for s, *_ in SUBJECTS})
+RANK_NOUN.update({s: f"bursaries ({h1.split(' in ')[-1]})" for s, h1, _ in REGIONS})
+
+HUB_FINDER_ITEMS = [[name, f"/bursaries/{slug}/", uni_alias(name), f"{c} funds"] for name, slug, c in uni_list]
+
+for uslug_, specs_ in fund_specs_by_uni.items():
+    for fname_, r_, uname_, fslug_ in specs_:
+        val_ = max_amount_value(r_.get("Amount", ""))
+        _, _, circ_, _ = check_attrs(r_)
+        if circ_ and val_ >= 100 and counts_for_top_award(r_) and not uname_.lower().startswith("external"):
+            for c_ in circ_:
+                if dedicated_to(r_, c_):
+                    SIMILAR_BY_CIRC.setdefault(c_, []).append((val_, uname_, r_, f"/bursaries/{uslug_}/{fslug_}/"))
+for v_ in SIMILAR_BY_CIRC.values():
+    v_.sort(key=lambda t: -t[0])
 
 # ── Phase 2: render every listing page. ─────────────────────────────────────
 for uni, slug, count in uni_list:
@@ -2161,6 +2533,17 @@ write_page(hub_url, os.path.join(OUT_DIR, "index.html"),
            render_hub(uni_list, len(singles), circumstance_counts, subject_counts, region_counts),
            lastmod_map, changed_urls)
 
+# /about/ — how the data is checked
+about_url = f"{SITE_URL}/about/"
+os.makedirs("about", exist_ok=True)
+write_page(about_url, os.path.join("about", "index.html"),
+           render_about(SITE_FUND_COUNT, len(uni_list), n_nat), lastmod_map, changed_urls)
+
+# share images for university pages (only rewritten when they change)
+if HAVE_PIL:
+    for s_, (n_, h_, sub_) in OG_JOBS.items():
+        make_og_image(s_, n_, h_, sub_)
+
 # home page (/) — hand-authored index.html at the repo root (the TikTok
 # onboarding splash: logo + tagline + direct App Store / Google Play links).
 # NOT generated here; it's in the sitemap, so give it a lastmod from its own
@@ -2183,7 +2566,7 @@ for channel, medium in GO_CHANNELS.items():
 
 # sitemap — every URL's lastmod comes from lastmod_map (only bumped above
 # when that page's content actually changed), not blindly stamped TODAY.
-urls = [home_url, hub_url, rollup_url]
+urls = [home_url, hub_url, rollup_url, about_url]
 urls += [f"{SITE_URL}/bursaries/{slug}/" for _, slug, _ in uni_list]
 urls += [f"{SITE_URL}/bursaries/circumstance/{slug}/" for slug, _, _ in circumstance_counts]
 urls += [f"{SITE_URL}/bursaries/subject/{slug}/" for slug, _, _ in subject_counts]
@@ -2201,8 +2584,17 @@ if os.path.exists("index.html"):
     with open("index.html", encoding="utf-8") as f:
         home = f.read()
     links = "".join(f'<a href="/bursaries/{slug}/">{html.escape(name)}</a>' for name, slug, _ in uni_list)
+    finder = (
+        '<style>.unis .finder{margin:0 0 12px}.unis .finder label{display:block;font-size:13px;font-weight:700;margin:0 0 6px}'
+        '.unis .finder input{width:100%;font:inherit;font-size:16px;padding:10px 12px;border-radius:10px;'
+        'border:1px solid var(--line);background:transparent;color:inherit}'
+        '.unis .fres{list-style:none;margin:6px 0 0;padding:0}.unis .fres li{padding:8px 2px;font-size:15px;'
+        'border-bottom:1px solid var(--line)}.unis .fres li a{color:inherit;font-weight:600}'
+        '.unis .fres li span{display:block;font-size:12px;opacity:.7}</style>'
+        + uni_finder_html(HUB_FINDER_ITEMS, label="Find your university", placeholder="Type your university")
+    )
     block = ('<!-- UNI-LINKS:START -->\n    <div class="unis"><h3>Bursaries at your university</h3>'
-             f'<p>{links}</p></div>\n    <!-- UNI-LINKS:END -->')
+             f'{finder}<p>{links}</p></div>\n    <!-- UNI-LINKS:END -->')
     new_home = re.sub(r"<!-- UNI-LINKS:START -->.*?<!-- UNI-LINKS:END -->", lambda m: block, home, flags=re.S)
     if new_home != home:
         with open("index.html", "w", encoding="utf-8") as f:

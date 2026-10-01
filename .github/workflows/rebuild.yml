@@ -21,6 +21,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Pillow (share images)
+        run: pip install pillow
+
       - name: Generate pages from the live dataset
         env:
           SEO_DATA_URL: ${{ secrets.SEO_DATA_URL }}

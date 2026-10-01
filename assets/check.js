@@ -1,5 +1,23 @@
 (function(){
 var NAT=[["u",0,"",1],["a",0,"",1],["a",25000,"",1],["a",0,"f",0],["p",25000,"",0],["a",25000,"",1],["a",0,"",1],["u",25000,"",1],["u",0,"",1],["u",25000,"c",0],["u",0,"",1],["a",25000,"",1],["p",0,"",0],["a",25000,"",1],["a",25000,"",1],["u",0,"",1],["a",25000,"",1],["a",0,"",1],["u",0,"",1],["p",0,"",1],["p",0,"",1],["p",0,"",1],["p",25000,"",1],["a",0,"",1],["a",25000,"",1],["a",25000,"",0],["p",25000,"",1],["a",0,"",1],["u",0,"",1],["u",25000,"",0],["a",0,"d",1],["a",0,"",1],["p",0,"",1],["u",25000,"",0],["p",0,"",1],["a",25000,"",1],["a",0,"",1],["u",0,"",1],["u",0,"",1],["u",25000,"",1],["u",0,"",1],["u",0,"",1],["u",0,"",1],["u",25000,"",1],["u",0,"",1],["u",0,"",1],["u",0,"",1],["u",0,"",1],["u",0,"",1],["u",25000,"",1],["u",0,"",1],["u",0,"",1],["p",0,"",1],["p",0,"",1],["u",25000,"",1],["u",0,"",1],["a",0,"",1],["a",0,"",1],["u",0,"",1],["a",0,"",1],["u",0,"",1],["a",25000,"",1],["a",25000,"",1],["a",25000,"",1],["u",25000,"",0],["p",0,"",1],["u",0,"c",0],["a",0,"",1],["p",0,"",1],["a",25000,"",0],["a",25000,"",1],["a",0,"",1],["u",25000,"",1],["a",25000,"",0],["u",25000,"",1],["u",0,"",1],["u",25000,"",1],["u",0,"",1],["p",0,"",1],["a",0,"",1],["u",25000,"",1],["a",0,"",1],["a",25000,"",1],["u",0,"",1],["u",0,"",1],["u",0,"f",0],["a",25000,"",1],["a",25000,"",1],["u",0,"",1],["u",0,"",1],["u",0,"",1],["u",0,"",1],["u",25000,"",1],["u",0,"",1],["a",25000,"",1],["u",0,"",1],["a",25000,"",1],["u",25000,"",1],["a",0,"f",0],["p",0,"",1],["p",25000,"",1],["a",0,"",1],["p",0,"",1],["u",0,"f",0],["u",25000,"",1],["u",25000,"",1],["u",25000,"",1],["u",0,"",1],["u",25000,"",0],["a",25000,"",1],["a",25000,"",1],["p",25000,"",1],["a",25000,"",1],["p",25000,"",1],["u",25000,"",0],["p",25000,"",1],["a",25000,"",1],["a",0,"",1],["u",25000,"",1],["a",25000,"",1],["a",25000,"",1],["u",25000,"",0],["a",0,"d",0],["a",0,"",1],["a",25000,"",0],["u",25000,"",0],["a",25000,"",1],["u",0,"",1],["a",0,"",1],["u",0,"",1],["a",0,"",1]];
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var fb=document.getElementById('fchk');
+if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
+ var fask=function(){var q=FQ[fs],h='<div class="hd"><b>Am I eligible?</b><span>'+(fs+1)+' of '+FQ.length+'</span></div><div class="prog">';
+  for(var i=0;i<FQ.length;i++)h+='<i'+(i<=fs?' class="on"':'')+'></i>';
+  h+='</div><p class="qq">'+esc(q[0])+'</p><div class="yn"><button type="button" class="opt" data-v="y">Yes</button><button type="button" class="opt" data-v="n">No</button></div>';
+  if(q[1])h+='<button type="button" class="opt" data-v="u">Not sure</button>';
+  fb.className='chk';fb.innerHTML=h};
+ var fres=function(){var go=fb.getAttribute('data-go'),off=fb.getAttribute('data-off'),n=+fb.getAttribute('data-n'),u=fb.getAttribute('data-uni');fb.className='res';
+  fb.innerHTML=(fok?'<p class="big">You look eligible</p><p>Check the full rules on the official page, then apply there. People who fit this usually qualify for other funds too.</p>'
+    +'<a class="wbtn" href="/go/'+esc(go)+'/">Find my other funds in the free app</a>'
+   :'<p class="big">Probably not this one</p><p>'+(n?n+' other funds at '+esc(u)+', plus national grants, may still fit you.':'National and charity grants may still fit you.')+'</p>'
+    +'<a class="wbtn" href="/go/'+esc(go)+'/">See which fit in the free app</a>')
+   +'<button type="button" class="again">Change answers</button>'};
+ fb.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
+  if(t.classList.contains('opt')){if(t.getAttribute('data-v')==='n')fok=false;fs++;if(fs<FQ.length)fask();else fres()}
+  else if(t.classList.contains('again')){fs=0;fok=true;fask()}});
+}
 var box=document.getElementById('chk'); if(!box) return;
 var go=box.getAttribute('data-go')||'seo_site', uni=box.getAttribute('data-uni')||'University';
 var Q=[
@@ -9,7 +27,6 @@ var Q=[
 ];
 var A={},step=0,groups=[].slice.call(document.querySelectorAll('.grp[data-g]')),orig=groups.map(function(g){return g.innerHTML});
 var bar=document.getElementById('ctatext'),barOrig=bar?bar.textContent:'';
-function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function fits(l,cap,circ){if(l!=='a'&&l!==A.l)return false;var lo=+A.i;if(cap>0&&lo>=0&&lo>=cap)return false;if(circ&&circ.indexOf(A.c)<0)return false;return true}
 function ask(){var q=Q[step],h='<div class="hd"><b>Which could you get?</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
