@@ -990,10 +990,12 @@ def related_links_html(entries, exclude=None):
 
 # ── University page ─────────────────────────────────────────────────────────
 HARDSHIP_RE = re.compile(r"hardship|emergency|crisis|cost of living|access to learning|"
-                         r"support fund|financial assistance", re.I)
+                         r"support fund|financial assistance|success fund|discretionary fund", re.I)
+_NHS_LSF_RE = re.compile(r"learning support fund", re.I)   # NHS course grant, not a hardship fund
 
 def is_hardship(row):
-    return bool(HARDSHIP_RE.search(clean(row.get("Bursary Name", ""))))
+    name = clean(row.get("Bursary Name", ""))
+    return bool(HARDSHIP_RE.search(name)) and not _NHS_LSF_RE.search(name)
 
 def uni_short(uni_name):
     """'University of Manchester' -> 'Manchester'; alias wins when we have one."""
@@ -1098,17 +1100,38 @@ def uni_faq_items(uni_name, flag, ug, hard, pg, entries):
         items = faq_items_generic(uni_name)[2:]
     return items
 
+def uni_title(uni_name, alias_bit, flag, ug, top_ug, count):
+    """Searchers name the main bursary ('uon core bursary'), so lead with it when
+    we can identify it. The 'up to' figure is the biggest undergraduate award -
+    a PhD studentship figure misleads someone searching '<uni> bursary'. Long
+    names fall back to the short form so the £ figure is never the part cut."""
+    yr = academic_year()
+    short = re.sub(r"^(the\s+)?university\s+of\s+(the\s+)?", "", uni_name, flags=re.I).strip()
+    bases = [f"{uni_name}{alias_bit} Bursaries {yr}", f"{uni_name} Bursaries {yr}", f"{short}{alias_bit} Bursaries {yr}",
+             f"{short} Bursaries {yr}"]
+    upto = f" up to £{top_ug:,}" if top_ug >= 100 else ""
+    tails = []
+    if flag is not None:
+        fname = short_fund_name(clean(flag.get("Bursary Name", "")), uni_name)
+        famt = format_amount(flag.get("Amount", ""))
+        more = f" + {count - 1} more" if count > 1 else ""
+        if famt and "£" in famt and len(famt) <= 14:
+            tails.append(f": {fname} {famt}{more}")
+        elif upto:
+            tails.append(f": {fname} +{count - 1} more,{upto}")
+    tails.append(f": {count} grant{'s' if count != 1 else ''}{upto}")
+    for tail in tails:
+        for base in bases:
+            if len(base + tail) <= 75:
+                return base + tail
+    return bases[-1] + tails[-1]
+
 def render_page(uni_name, entries, slug):
     count = len(entries)
     amt_range = amount_range_text(entries)
     amt_bit = f" worth {amt_range}" if amt_range else ""
     alias = uni_alias(uni_name)
-    alias_bit = f" ({alias})" if alias else ""
-    top = max_amount_text(entries)
-    # Titles + descriptions unchanged from the 30 Sep version (frozen while
-    # that change is measured in Search Console).
-    title = (f"{uni_name}{alias_bit} Bursaries {academic_year()}: {count} grants"
-             + (f" up to {top}" if top else ""))
+    alias_bit = f" ({alias})" if alias and alias.lower() != uni_name.lower() else ""
     description = (
         f"{count} bursaries and scholarships for {uni_name}{alias_bit} students in "
         f"{academic_year()}{amt_bit}. See who qualifies, deadlines and how to apply."
@@ -1135,6 +1158,7 @@ def render_page(uni_name, entries, slug):
 
     # Three numbers instead of a paragraph.
     top_ug = max((max_amount_value(r.get("Amount", "")) for r in ug if counts_for_top_award(r)), default=0)
+    title = uni_title(uni_name, alias_bit, flag, ug, top_ug, count)
     stats = []
     stats.append((f"£{top_ug:,}", "top award") if top_ug >= 100 else (f"{count}", "funds listed"))
     stats.append((f"{len(ug)}", "for undergrads") if ug else (f"{len(pg)}", "postgrad funds"))
@@ -1172,6 +1196,8 @@ def render_page(uni_name, entries, slug):
     body_html = (
         group("ug", "For undergraduates", ug, 4)
         + group("h", "Hardship funds", hard, 2)
+        + (f'<p class="hlink"><a href="/bursaries/{slug}/hardship-funds/">Hardship funds at '
+           f'{esc(uni_short(uni_name))}: who can apply and how →</a></p>' if slug in HARDSHIP_PAGES else "")
         + group("pg", "Master's and PhD funding", pg, 2)
         + '<h2>Questions</h2>'
         + f'<div class="faq">{faq_html_from(faq_items)}</div>'
@@ -1976,6 +2002,137 @@ def render_subject_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
 # ── University × subject pages — "engineering bursaries at Bath". Only where
 #    a named university genuinely has >=2 funds for that subject (~124 pairs
 #    in the data); the rest would be thin. Nested under the university. ──────
+# ── Hardship funds: a page per university with 2+ (a university with one
+#    already has that fund's own page, so a second page would compete with it)
+#    plus one national page. Hardship searches peak Oct-Jan. ────────────────
+HARDSHIP_MIN = 2
+HARDSHIP_PAGES = {}   # uni slug -> hardship rows (filled before university pages render)
+
+def _alias_bit(uni_name):
+    a = uni_alias(uni_name)
+    return f" ({a})" if a and a.lower() != uni_name.lower() else ""
+
+def hardship_faq_items(hard, where):
+    items = [
+        ("What is a university hardship fund?",
+         "Money a university sets aside for students who run into money problems during their course, "
+         "for example with rent, bills or an unexpected cost. Most give grants you don't pay back; a few "
+         "also offer short-term loans, so check the official page."),
+        ("Who can apply?",
+         "Usually students who are already enrolled and have taken up their full student finance but still "
+         "can't cover essential costs. Each fund sets its own rules, so check the official page before applying."),
+    ]
+    valued = sorted(((max_amount_value(r.get("Amount", "")), r) for r in hard), key=lambda t: -t[0])
+    if valued and valued[0][0] >= 100:
+        v, r = valued[0]
+        items.append((f"How much can you get {where}?",
+                      f"The largest listed {where} is the {clean(r.get('Bursary Name', ''))}"
+                      + (f" ({clean(r.get('University', ''))})" if where.startswith("across") else "")
+                      + f", worth {format_amount(r.get('Amount', '')) or f'£{v:,}'}. Most awards depend on your situation."))
+    soon = sorted(((d, r) for d, r in ((parse_deadline_date(r.get("Deadline", "")), r) for r in hard)
+                   if d and d >= date.today()), key=lambda t: t[0])
+    if soon:
+        d, r = soon[0]
+        items.append(("When can I apply?",
+                      f"The next fixed deadline is the {clean(r.get('Bursary Name', ''))} on {d.day} {d.strftime('%B %Y')}. "
+                      "Hardship money can run out before the end of the year, so apply as soon as you need it."))
+    else:
+        items.append(("When can I apply?",
+                      f"None of the hardship funds we list {where} has a fixed closing date in our data. "
+                      "Hardship money can run out before the end of the year, so apply as soon as you need it."))
+    return items
+
+def render_uni_hardship_page(uni_name, uni_slug, hard, entries):
+    yr = academic_year()
+    ab = _alias_bit(uni_name)
+    n = len(hard)
+    top = max_amount_text(hard)
+    canonical = f"{SITE_URL}/bursaries/{uni_slug}/hardship-funds/"
+    h1 = f"Hardship Funds at {uni_name}"
+    title = next((t for t in (f"{uni_name}{ab} Hardship Funds {yr}: How to Apply",
+                              f"{uni_short(uni_name)} Hardship Funds {yr}: How to Apply")
+                  if len(t) <= 70), f"{uni_short(uni_name)} Hardship Funds {yr}")
+    description = (f"{n} hardship and emergency funds at {uni_name}{ab}" + (f", up to {top}" if top else "")
+                   + f". Who can apply, how much you can get and where to apply in {yr}.")
+    lede = (f"{n} hardship and emergency funds at {uni_name} for students who hit money problems "
+            f"during the year" + (f", worth up to {top}" if top else "") + ".")
+    rows_html = "".join(bursary_row(r, fund_href=fund_href_for(r, uni_name))
+                        for r in sorted(hard, key=lambda r: (-max_amount_value(r.get("Amount", "")),
+                                                             clean(r.get("Bursary Name", "")))))
+    named = [r for r in entries if clean(r.get("Bursary Name", ""))]
+    flag = flagship_fund(named, uni_name)
+    tiles = [(f"/bursaries/{uni_slug}/", f"All {len(named)} {uni_short(uni_name)} bursaries", None)]
+    if flag is not None and fund_href_for(flag, uni_name):
+        tiles.append((fund_href_for(flag, uni_name), short_fund_name(clean(flag.get("Bursary Name", "")), uni_name),
+                      format_amount(flag.get("Amount", "")) or None))
+    tiles.append(("/bursaries/hardship-funds/", "Hardship funds at every UK university", None))
+    faq_items = hardship_faq_items(hard, f"at {uni_short(uni_name)}")
+    body = content_body(
+        trail=[("Home", "/"), ("Universities", "/bursaries/"), (uni_name, f"/bursaries/{uni_slug}/"),
+               ("Hardship funds", None)],
+        h1=h1, lede=lede, context_phrase=f"these {n} hardship funds", count=n, rows_html=rows_html,
+        faq_html=faq_html_from(faq_items),
+        related_html="<h2>Also see</h2>" + tiles_html(tiles),
+        list_title="Hardship and emergency funds",
+    )
+    schema = jsonld_script(faq_jsonld_from(faq_items)) + jsonld_script(breadcrumb_jsonld([
+        ("BursaSearch", f"{SITE_URL}/"),
+        ("Bursaries by university", f"{SITE_URL}/bursaries/"),
+        (uni_name, f"{SITE_URL}/bursaries/{uni_slug}/"),
+        (h1, canonical),
+    ]))
+    return render_shell(title=esc(title), description=esc(description), canonical=canonical,
+                        body=body, sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
+
+def render_hardship_hub(all_rows, canon_by_key):
+    yr = academic_year()
+    named = [r for r in all_rows if clean(r.get("Bursary Name", "")) and is_hardship(r)]
+    nat = [r for r in named if clean(r.get("University", "")).lower().startswith("external")]
+    hard = [r for r in named if clean(r.get("University", "")) and r not in nat]
+    by_u = {}
+    for r in hard:
+        raw = clean(r.get("University", ""))
+        res = canon_by_key.get(norm_uni_key(raw))
+        key = res[1] if res else raw
+        by_u.setdefault(key, [res[0] if res else raw, res[1] if res else None, 0])[2] += 1
+    n_unis = len(by_u)
+    finder_items = [[name, (f"/bursaries/{slug}/hardship-funds/" if slug in HARDSHIP_PAGES else f"/bursaries/{slug}/"),
+                     uni_alias(name), f"{c} hardship fund{'s' if c != 1 else ''}"]
+                    for name, slug, c in sorted(by_u.values(), key=lambda v: v[0]) if slug]
+    ranked = best_per_university(hard, canon_by_key)
+    table, extra_schema = ranked_table_html(ranked, "hardship funds")
+    pre = uni_finder_html(finder_items, label="Where are you studying?", placeholder="Type your university") + table
+    if nat:
+        nat_rows = [bursary_row(r, fund_href=fund_href_for(r)) for r in
+                    sorted(nat, key=lambda r: -max_amount_value(r.get("Amount", "")))]
+        pre += (f'<h2>From outside your university <small>{len(nat)}</small></h2>'
+                f'<div class="list">{fold_rows(nat_rows, show=3)}</div>')
+    row_parts = []
+    for r in sorted(hard, key=lambda r: (clean(r.get("University", "")), clean(r.get("Bursary Name", "")))):
+        raw = clean(r.get("University", ""))
+        res = canon_by_key.get(norm_uni_key(raw))
+        row_parts.append(bursary_row(r, uni=raw, uni_href=f"/bursaries/{res[1]}/" if res else None,
+                                     fund_href=fund_href_for(r)))
+    canonical = f"{SITE_URL}/bursaries/hardship-funds/"
+    title = f"University Hardship Funds {yr}: {n_unis} UK Universities Compared"
+    description = (f"{len(hard)} hardship and emergency funds at {n_unis} UK universities. "
+                   f"Who can apply, how much you can get and where to apply in {yr}.")
+    lede = (f"{len(hard)} hardship and emergency funds at {n_unis} UK universities, for students who run "
+            f"into money problems during their course.")
+    faq_items = hardship_faq_items(hard, f"across {n_unis} universities")
+    body = content_body(
+        trail=[("Home", "/"), ("Bursaries", "/bursaries/"), ("Hardship funds", None)],
+        h1="University Hardship Funds", lede=lede, context_phrase=f"these {len(hard)} funds",
+        count=len(hard), rows_html="".join(row_parts), faq_html=faq_html_from(faq_items),
+        related_html="", pre_html=pre, list_title="All hardship funds",
+    )
+    schema = jsonld_script(faq_jsonld_from(faq_items)) + extra_schema + jsonld_script(breadcrumb_jsonld([
+        ("BursaSearch", f"{SITE_URL}/"), ("Bursaries", f"{SITE_URL}/bursaries/"),
+        ("University Hardship Funds", canonical),
+    ]))
+    return render_shell(title=esc(title), description=esc(description), canonical=canonical,
+                        body=body, sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
+
 UNI_SUBJECT_MIN = 2
 
 def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
@@ -2201,6 +2358,14 @@ def fund_title(row, name, uni_name):
     alias = uni_alias(uni_name)
     who = alias or uni_name
     t = name if who.lower() in name.lower() else f"{name} – {who}"
+    if is_hardship(row):   # 'mmu success fund' searchers are students asking how to apply
+        short_who = alias or uni_short(uni_name)
+        t2 = name if short_who.lower() in name.lower() else f"{name} – {short_who}"
+        for cand in (f"{t}: How to Apply {academic_year()}", f"{t}: How to Apply",
+                     f"{t2}: How to Apply {academic_year()}", f"{t2}: How to Apply"):
+            if len(cand) <= 72:
+                return cand
+        return f"{t2}: How to Apply"
     amount = format_amount(row.get("Amount", ""))
     if amount and len(amount) <= 18 and "£" in amount:
         t += f": {amount}"
@@ -2211,6 +2376,13 @@ def fund_title(row, name, uni_name):
 
 def fund_description(row, name, uni_name, ftype):
     amount = format_amount(row.get("Amount", ""))
+    if is_hardship(row):
+        alias = uni_alias(uni_name)
+        at = f"{uni_name} ({alias})" if alias and alias.lower() not in name.lower() and alias.lower() != uni_name.lower() else uni_name
+        amt = f" (up to {amount})" if amount and "£" in amount and len(amount) <= 24 else ""
+        bits = (f"How to apply for the {name} at {at}: who can apply, how much you can get{amt} "
+                f"and where to apply in {academic_year()}.")
+        return bits if len(bits) <= 160 else bits[:157].rsplit(" ", 1)[0] + "…"
     aud = eligibility_audience_phrase(row)
     bits = f"{name}: " + (f"{amount} " if amount and len(amount) <= 24 else "")
     aud = aud.replace("income of Under ", "income under ").replace("income of Over ", "income over ")
@@ -2430,6 +2602,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
         + '<h2>Quick links</h2>'
         + tiles_html([
             ("/bursaries/closing-soon/", "Bursaries closing soon", None),
+            ("/bursaries/hardship-funds/", "University hardship funds", None),
             ("/bursaries/highest-value/", "Highest-value bursaries", None),
         ])
         + '<h2 id="circumstance">Browse by circumstance</h2>'
@@ -2533,6 +2706,13 @@ for uni, uslug, _ in uni_list:
             SUBJECT_UNI_PAGES.setdefault(sslug, []).append((uni, uslug, len(m)))
             uni_subject_specs.append((uni, uslug, sslug, m))
 
+# hardship pages: only where a university has 2+ hardship funds and the URL is free
+for uni, uslug, _ in uni_list:
+    h_ = [r for r in multi[uni] if clean(r.get("Bursary Name", "")) and is_hardship(r)]
+    if (len(h_) >= HARDSHIP_MIN and not uni.lower().startswith("external")
+            and f"/bursaries/{uslug}/hardship-funds/" not in FUND_URLS.values()):
+        HARDSHIP_PAGES[uslug] = h_
+
 n_nat = write_check_js(rows)
 write_match_assets(uni_list, multi, rows)
 
@@ -2577,6 +2757,23 @@ for uni_name, uslug, sslug, m in uni_subject_specs:
     write_page(url, os.path.join(sd, "index.html"),
                render_uni_subject_page(uni_name, uslug, sslug, m), lastmod_map, changed_urls)
     uni_subject_urls.append(url)
+
+# hardship pages (per university + national)
+hardship_urls = []
+_uni_by_slug = {s: u for u, s, _ in uni_list}
+for uslug, h_ in HARDSHIP_PAGES.items():
+    hd = os.path.join(OUT_DIR, uslug, "hardship-funds")
+    os.makedirs(hd, exist_ok=True)
+    url = f"{SITE_URL}/bursaries/{uslug}/hardship-funds/"
+    write_page(url, os.path.join(hd, "index.html"),
+               render_uni_hardship_page(_uni_by_slug[uslug], uslug, h_, multi[_uni_by_slug[uslug]]),
+               lastmod_map, changed_urls)
+    hardship_urls.append(url)
+hd = os.path.join(OUT_DIR, "hardship-funds")
+os.makedirs(hd, exist_ok=True)
+url = f"{SITE_URL}/bursaries/hardship-funds/"
+write_page(url, os.path.join(hd, "index.html"), render_hardship_hub(rows, canon_by_key), lastmod_map, changed_urls)
+hardship_urls.insert(0, url)
 
 # rollup
 d = os.path.join(OUT_DIR, "more-universities")
@@ -2735,6 +2932,7 @@ urls += [f"{SITE_URL}/bursaries/region/{slug}/" for slug, _, _ in region_counts]
 urls += [f"{SITE_URL}/bursaries/closing-soon/" for _ in closing_soon_counts]
 urls += [f"{SITE_URL}/bursaries/highest-value/" for _ in highest_value_counts]
 urls += uni_subject_urls
+urls += hardship_urls
 core_urls = list(urls)
 urls += fund_urls
 
