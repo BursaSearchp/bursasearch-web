@@ -1,0 +1,216 @@
+{
+ "checked": "2026-10-10",
+ "source": "each university's official bursary page, 2026 entry",
+ "bursaries": [
+  {
+   "uni": "University of Oxford",
+   "short": "Oxford",
+   "amount": 6270,
+   "what": "Crankstart Bursary, household <=£7,500 (Oxford Bursary £4,320 if not Crankstart)",
+   "source": "ox.ac.uk fees & funding 2026"
+  },
+  {
+   "uni": "Imperial College London",
+   "short": "Imperial",
+   "amount": 5000,
+   "what": "Imperial Bursary, household £0-16k",
+   "source": "imperial.ac.uk/.../imperial-bursary"
+  },
+  {
+   "uni": "London School of Economics and Political Science",
+   "short": "LSE",
+   "amount": 4250,
+   "what": "LSE Bursary, household £0-30k",
+   "source": "lse.ac.uk LSE-Bursaries"
+  },
+  {
+   "uni": "University of Cambridge",
+   "short": "Cambridge",
+   "amount": 3500,
+   "what": "Cambridge Bursary, household <=£25k",
+   "source": "undergraduate.study.cam.ac.uk"
+  },
+  {
+   "uni": "University College London",
+   "short": "UCL",
+   "amount": 3000,
+   "what": "UCL Undergraduate Bursary, household <=£16k",
+   "source": "ucl.ac.uk/scholarships/ucl-undergraduate-bursary"
+  },
+  {
+   "uni": "University of Bath",
+   "short": "Bath",
+   "amount": 2750,
+   "what": "Bath Bursary yr1 (£1k cash+£1k campus credit+£750 accom), household <=£30k",
+   "source": "bath.ac.uk/guides/the-bath-bursary"
+  },
+  {
+   "uni": "Durham University",
+   "short": "Durham",
+   "amount": 2721,
+   "what": "Durham Undergraduate Bursary, household <£30k",
+   "source": "dur.ac.uk durham-undergraduate-bursary-scheme"
+  },
+  {
+   "uni": "University of Manchester",
+   "short": "Manchester",
+   "amount": 2600,
+   "what": "Manchester Bursary, household <=£31k",
+   "source": "studentsupport.manchester.ac.uk bursaries2026-27"
+  },
+  {
+   "uni": "University of Warwick",
+   "short": "Warwick",
+   "amount": 2500,
+   "what": "Warwick Bursary, household £0-25k",
+   "source": "warwick.ac.uk funding 2026-27"
+  },
+  {
+   "uni": "University of Bristol",
+   "short": "Bristol",
+   "amount": 2500,
+   "what": "University of Bristol Bursary, household <=£10k",
+   "source": "bristol.ac.uk uob-bursary faqs"
+  },
+  {
+   "uni": "University of Exeter",
+   "short": "Exeter",
+   "amount": 2300,
+   "what": "Access to Exeter Bursary, household <=£16k",
+   "source": "exeter.ac.uk"
+  },
+  {
+   "uni": "University of Leeds",
+   "short": "Leeds",
+   "amount": 2000,
+   "what": "Leeds Bursary, household <=£25k",
+   "source": "students.leeds.ac.uk leeds-bursary"
+  },
+  {
+   "uni": "University of Birmingham",
+   "short": "Birmingham",
+   "amount": 2000,
+   "what": "Chamberlain Award, household <=£25k",
+   "source": "birmingham.ac.uk"
+  },
+  {
+   "uni": "King's College London",
+   "short": "King's",
+   "amount": 2000,
+   "what": "King's Living Bursary, household <=£25k",
+   "source": "kcl.ac.uk kings-living-bursary"
+  },
+  {
+   "uni": "University of Southampton",
+   "short": "Southampton",
+   "amount": 2000,
+   "what": "Southampton Undergraduate Bursary, household <=£23,200",
+   "source": "southampton.ac.uk"
+  },
+  {
+   "uni": "University of Liverpool",
+   "short": "Liverpool",
+   "amount": 2000,
+   "what": "Liverpool Bursary, household <=£25k",
+   "source": "liverpool.ac.uk liverpool-bursary"
+  },
+  {
+   "uni": "Newcastle University",
+   "short": "Newcastle",
+   "amount": 2000,
+   "what": "Opportunity Scholarship, household <=£25k",
+   "source": "ncl.ac.uk opportunity-scholarships"
+  },
+  {
+   "uni": "University of Reading",
+   "short": "Reading",
+   "amount": 1700,
+   "what": "Reading Bursary, household <=£27k",
+   "source": "reading.ac.uk Reading-Bursary"
+  },
+  {
+   "uni": "Queen Mary University of London",
+   "short": "Queen Mary",
+   "amount": 1700,
+   "what": "Queen Mary Bursary, household <£20k",
+   "source": "qmul.ac.uk"
+  },
+  {
+   "uni": "University of East Anglia",
+   "short": "UEA",
+   "amount": 1600,
+   "what": "UEA Bursary, household <=£20k",
+   "source": "uea.ac.uk bursaries"
+  },
+  {
+   "uni": "University of Nottingham",
+   "short": "Nottingham",
+   "amount": 1400,
+   "what": "Core Bursary, household £0-35k",
+   "source": "nottingham.ac.uk core-bursary"
+  },
+  {
+   "uni": "Royal Holloway, University of London",
+   "short": "Royal Holloway",
+   "amount": 1300,
+   "what": "Royal Holloway Bursary, household <£25k",
+   "source": "royalholloway.ac.uk bursaries"
+  },
+  {
+   "uni": "University of Sheffield",
+   "short": "Sheffield",
+   "amount": 1000,
+   "what": "Sheffield bursary, household <=£25k (+£250 in some areas)",
+   "source": "sheffield.ac.uk"
+  },
+  {
+   "uni": "University of York",
+   "short": "York",
+   "amount": 1000,
+   "what": "York Bursary, household £0-35k",
+   "source": "york.ac.uk york-bursary"
+  },
+  {
+   "uni": "Lancaster University",
+   "short": "Lancaster",
+   "amount": 1000,
+   "what": "Lancaster Bursary",
+   "source": "lancaster.ac.uk lancaster-bursary"
+  },
+  {
+   "uni": "Loughborough University",
+   "short": "Loughborough",
+   "amount": 1000,
+   "what": "Loughborough University Bursary, household <=£30k",
+   "source": "lboro.ac.uk"
+  },
+  {
+   "uni": "University of Sussex",
+   "short": "Sussex",
+   "amount": 1000,
+   "what": "Sussex Bursary yr1 (£500 later years), household <£35k",
+   "source": "sussex.ac.uk"
+  },
+  {
+   "uni": "University of Kent",
+   "short": "Kent",
+   "amount": 1000,
+   "what": "KFSP £1,000 cash per year, household <£35k",
+   "source": "kent.ac.uk kfsp"
+  },
+  {
+   "uni": "Bournemouth University",
+   "short": "Bournemouth",
+   "amount": 800,
+   "what": "BU Maintenance Bursary, household <=£25k",
+   "source": "bournemouth.ac.uk"
+  },
+  {
+   "uni": "Nottingham Trent University",
+   "short": "NTU",
+   "amount": 750,
+   "what": "NTU Bursary, household <=£27,500",
+   "source": "ntu.ac.uk"
+  }
+ ]
+}

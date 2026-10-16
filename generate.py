@@ -2604,7 +2604,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
             ("/bursaries/closing-soon/", "Bursaries closing soon", None),
             ("/bursaries/hardship-funds/", "University hardship funds", None),
             ("/bursaries/highest-value/", "Highest-value bursaries", None),
-        ])
+        ] + [(f"/bursaries/{s_}/", label, None) for s_, label in ANSWER_PAGES])
         + '<h2 id="circumstance">Browse by circumstance</h2>'
         + tiles_html([(f"/bursaries/circumstance/{s}/", h1, f"{c} funds")
                       for s, h1, c in circumstance_counts])
@@ -2624,6 +2624,209 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     return render_shell(title=esc(title), description=esc(description),
                         canonical=canonical, body=body, schema=schema,
                         sticky=sticky_bar("seo_site"), scripts=MATCH_SCRIPT)
+
+# ── Answer pages (2026-10-16) ───────────────────────────────────────────────
+# Cross-university questions no single university page answers. GSC 16 Oct: our cross-uni pages get 3.9–5.5% CTR
+# vs 0.7–1.2% on uni/fund pages (where the uni's own site holds #1–7). Data = verified, committed JSON in data/
+# (same datasets as the BursaSearch TikTok charts), never the raw sheet.
+ANSWER_PAGES = [  # slug, short label for cross-links
+    ("biggest-bursaries", "Which universities give the biggest bursaries"),
+    ("household-income-under-25k", "Family earns under £25k: what each uni pays"),
+    ("cost-of-living", "What uni costs a month, by university"),
+]
+
+def _load_json(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+def _cap_from_what(what):
+    """'Leeds Bursary, household <=£25k' -> (25000, 'up to £25,000'); unknown -> (None, '')."""
+    m = re.search(r"household\s*(<=|<|£0-)?\s*£?\s?([\d,.]+)\s*(k)?", what or "")
+    if not m:
+        return None, ""
+    v = float(m.group(2).replace(",", ""))
+    v = int(v * 1000) if m.group(3) else int(v)
+    word = "under" if m.group(1) == "<" else "up to"
+    return v, f"{word} £{v:,}"
+
+def _bursary_name(what):
+    name = re.split(r",\s*household|\s*\(", what or "")[0].strip()
+    return re.sub(r"\s+yr1$", " (year 1)", name)
+
+_ANSWER_UNI_ALIAS = {"london school of economics and political science": "lse", "university college london": "ucl",
+                     "royal holloway, university of london": "royal holloway university of london"}
+
+def _uni_href(uni, canon_by_key):
+    k = norm_uni_key(uni)
+    res = canon_by_key.get(k) or canon_by_key.get(_ANSWER_UNI_ALIAS.get(k, ""))
+    return (res[0], f"/bursaries/{res[1]}/") if res else (uni, None)
+
+def _answer_related(exclude):
+    tiles = [(f"/bursaries/{s_}/", label, None) for s_, label in ANSWER_PAGES if s_ != exclude]
+    tiles += [("/bursaries/circumstance/low-income/", "Bursaries for low-income students", None),
+              ("/bursaries/hardship-funds/", "University hardship funds", None)]
+    return '<h2>Also see</h2>' + tiles_html(tiles)
+
+def _answer_page(*, slug, title, description, h1, lede, stats, table, note, faq_items, itemlist):
+    canonical = f"{SITE_URL}/bursaries/{slug}/"
+    stats_html = '<div class="stats">' + "".join(f'<div><b>{esc(b)}</b><span>{esc(t)}</span></div>' for b, t in stats) + '</div>'
+    body = (crumb_html([("Home", "/"), ("Bursaries", "/bursaries/"), (h1, None)])
+            + f'<p class="yr">{academic_year()}</p>'
+            + f'<h1 class="page">{esc(h1)}</h1>'
+            + f'<p class="lede">{esc(lede)}</p>'
+            + stats_html + table
+            + f'<p class="fresh">{note}</p>'
+            + app_cta(go="seo_tag")
+            + '<h2>Questions</h2>' + f'<div class="faq">{faq_html_from(faq_items)}</div>'
+            + _answer_related(slug))
+    schema = (jsonld_script(faq_jsonld_from(faq_items)) + jsonld_script(json.dumps(itemlist))
+              + jsonld_script(breadcrumb_jsonld([("BursaSearch", f"{SITE_URL}/"), ("Bursaries", f"{SITE_URL}/bursaries/"),
+                                                 (h1, canonical)])))
+    return canonical, render_shell(title=esc(title), description=esc(description), canonical=canonical, body=body,
+                                   sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
+
+def _itemlist(name, items):
+    return {"@context": "https://schema.org", "@type": "ItemList", "name": name,
+            "itemListElement": [{"@type": "ListItem", "position": i, "name": n, **({"url": SITE_URL + h} if h else {})}
+                                for i, (n, h) in enumerate(items, 1)]}
+
+def _money_rows(rows, canon_by_key):
+    trs, items = [], []
+    for i, d in enumerate(rows, 1):
+        name, href = _uni_href(d["uni"], canon_by_key)
+        cap = _cap_from_what(d["what"])[1]
+        cell = f'<a href="{href}">{esc(name)}</a>' if href else esc(name)
+        trs.append(f'<tr><td class="n">{i}</td><td>{cell}<small>{esc(_bursary_name(d["what"]))}</small></td>'
+                   f'<td>{esc(cap.capitalize() if cap else "Means-tested")}</td>'
+                   f'<td class="r">£{d["amount"]:,}</td></tr>')
+        items.append((f'{name}: £{d["amount"]:,} a year', href))
+    table = ('<div class="tblw"><table class="tbl"><thead><tr><th></th><th>University</th><th>Household income</th>'
+             '<th class="r">Up to, a year</th></tr></thead><tbody>' + "".join(trs) + '</tbody></table></div>')
+    return table, items
+
+def render_biggest_bursaries(canon_by_key):
+    data = _load_json("data/free_money_2026.json")
+    rows = sorted(data["bursaries"], key=lambda d: -d["amount"])
+    yr = academic_year()
+    a, b, c = rows[0], rows[1], rows[2]
+    an = _uni_href(a["uni"], canon_by_key)[0]
+    table, items = _money_rows(rows, canon_by_key)
+    amounts = sorted(d["amount"] for d in rows)
+    median = amounts[len(amounts) // 2]
+    lede = (f"{an} gives the biggest: up to £{a['amount']:,} a year ({_bursary_name(a['what'])}, household income "
+            f"{_cap_from_what(a['what'])[1]}), then {_uni_href(b['uni'], canon_by_key)[0]} (£{b['amount']:,}) and "
+            f"{_uni_href(c['uni'], canon_by_key)[0]} (£{c['amount']:,}). These are each university's main income-based "
+            f"bursary for {yr}: money you don't pay back.")
+    faq = [
+        ("Which UK university gives the biggest bursary?",
+         f"Of the {len(rows)} universities here, {an} gives the most: up to £{a['amount']:,} a year through the "
+         f"{_bursary_name(a['what'])} for household incomes {_cap_from_what(a['what'])[1]}."),
+        ("Do you have to pay a bursary back?",
+         "No. A university bursary is money you don't repay, unlike the student loan."),
+        ("What household income do I need?",
+         "Each university sets its own limit. Here they range from £10,000 to £35,000 a year, and many pay a smaller "
+         "amount as income rises. The table shows each limit."),
+        ("How do I get one?",
+         "Most of these bursaries use the household income that Student Finance assesses, so you usually need to apply "
+         "for student finance and agree to share your income details with your university. Check each university's "
+         "page for its exact rules."),
+    ]
+    note = (f"Amounts are the most each bursary pays, for {yr} entry, taken from each university's official bursary page "
+            f"(checked {data['checked']}). Bath's figure includes campus credit and accommodation support; Sussex's "
+            f"is year one. Amounts and limits can change, so check the university's page before you apply.")
+    return _answer_page(
+        slug="biggest-bursaries",
+        title=f"Which UK Universities Give the Biggest Bursaries? {yr} Ranking",
+        description=(f"{len(rows)} UK universities ranked by bursary size for {yr}: {an} up to £{a['amount']:,} a year. "
+                     f"Income limits and where to apply."),
+        h1="Which UK universities give the biggest bursaries?", lede=lede,
+        stats=[(f"£{a['amount']:,}", f"biggest ({an})"), (f"£{median:,}", "middle of the table"), (str(len(rows)), "universities")],
+        table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Biggest university bursaries {yr}", items))
+
+def render_under_25k(canon_by_key):
+    data = _load_json("data/free_money_2026.json")
+    yr = academic_year()
+    rows = sorted(data["bursaries"], key=lambda d: -d["amount"])
+    ok = [d for d in rows if (_cap_from_what(d["what"])[0] or 0) >= 25000]
+    lower = [d for d in rows if 0 < (_cap_from_what(d["what"])[0] or 0) < 25000]
+    t1, items = _money_rows(ok, canon_by_key)
+    t2, _ = _money_rows(lower, canon_by_key)
+    top = ok[0]
+    tn = _uni_href(top["uni"], canon_by_key)[0]
+    table = t1 + (f'<h2>Only if your family earns less <small>{len(lower)}</small></h2>'
+                  '<p class="lede">These have a lower income limit, so check it against your household income.</p>' + t2 if lower else "")
+    lede = (f"{len(ok)} of the {len(rows)} universities here pay a bursary if your household earns under £25,000. "
+            f"The biggest is {tn}: up to £{top['amount']:,} a year. It's money you don't pay back, usually paid on top "
+            f"of your student loan.")
+    faq = [
+        ("Can I get a bursary if my family earns under £25,000?",
+         f"At most universities, yes. {len(ok)} of the {len(rows)} universities on this page pay their main bursary "
+         f"to students from households earning under £25,000."),
+        ("How much could I get?",
+         f"Up to £{top['amount']:,} a year at {tn}. Most pay £1,000 to £3,500 a year."),
+        ("Is household income before or after tax?",
+         "Student Finance looks at your household's income before tax, with some allowances such as pension "
+         "contributions, and universities usually use that same figure. Check the university's page for its exact rules."),
+        ("Do I need to apply separately?",
+         "Often not: many universities pay their bursary automatically using your Student Finance income assessment, "
+         "as long as you agree to share it. Some need a separate form, so check each page."),
+    ]
+    note = (f"Main income-based bursaries for {yr} entry, from each university's official page (checked {data['checked']}). "
+            f"Amounts shown are the most each pays; some pay less as income rises.")
+    return _answer_page(
+        slug="household-income-under-25k",
+        title=f"Bursaries If Your Family Earns Under £25k: What Each Uni Pays ({yr})",
+        description=(f"Household income under £25,000? {len(ok)} UK universities pay you a bursary for {yr}, up to "
+                     f"£{top['amount']:,} a year at {tn}. Free money you don't pay back."),
+        h1="Family earns under £25k? What each uni pays", lede=lede,
+        stats=[(str(len(ok)), "universities that pay you"), (f"£{top['amount']:,}", f"most ({tn})"), ("£0", "to pay back")],
+        table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Bursaries for household income under £25,000 {yr}", items))
+
+def render_cost_of_living(canon_by_key):
+    data = _load_json("data/uni_costs_2025.json")
+    other, loan = data["everyday_spend"], data["avg_loan_month"]
+    rows = sorted(({**u, "total": u["rent_bills"] + other} for u in data["unis"]), key=lambda u: -u["total"])
+    trs, items = [], []
+    for i, u in enumerate(rows, 1):
+        name, href = _uni_href(u["uni"], canon_by_key)
+        cell = f'<a href="{href}">{esc(name)}</a>' if href else esc(name)
+        gap = u["total"] - loan
+        trs.append(f'<tr><td class="n">{i}</td><td>{cell}<small>£{u["rent_bills"]:,} rent + bills</small></td>'
+                   f'<td>£{gap:,} more than the loan</td><td class="r">£{u["total"]:,}</td></tr>')
+        items.append((f'{name}: £{u["total"]:,} a month', href))
+    table = ('<div class="tblw"><table class="tbl"><thead><tr><th></th><th>University</th><th>Gap</th>'
+             '<th class="r">A month</th></tr></thead><tbody>' + "".join(trs) + '</tbody></table></div>')
+    hi, lo = rows[0], rows[-1]
+    hin, lon = _uni_href(hi["uni"], canon_by_key)[0], _uni_href(lo["uni"], canon_by_key)[0]
+    ties = [_uni_href(u["uni"], canon_by_key)[0] for u in rows if u["total"] == hi["total"]]
+    lede = (f"{' and '.join(ties)} {'are' if len(ties) > 1 else 'is'} the most expensive at £{hi['total']:,} a month "
+            f"(£{hi['rent_bills']:,} rent and bills plus £{other} everyday spending). The cheapest here is {lon} at "
+            f"£{lo['total']:,}. The average maintenance loan is £{loan} a month, so every one of these costs more than "
+            f"the loan covers.")
+    faq = [
+        ("How much does it cost to live at university a month?",
+         f"The average student spends £1,142 a month ({data['spend_source']}). By university it ranges from "
+         f"£{lo['total']:,} at {lon} to £{hi['total']:,} at {hin}, using local rent and bills."),
+        ("Does the student loan cover living costs?",
+         f"Usually not on its own. The average maintenance loan is £{loan} a month, which is less than the monthly cost "
+         f"at every university here. Bursaries, grants and part-time work fill the gap."),
+        ("What's included in these figures?",
+         f"Average rent and bills for a student room near each university ({data['rent_source']}) plus £{other} a month "
+         f"for food, travel, going out and everything else ({data['spend_source']})."),
+        ("How can I cover the gap?",
+         "Check the bursaries and grants your university and others offer: many are paid automatically if your household "
+         "income is below a limit, and you don't pay them back."),
+    ]
+    note = (f"Rent + bills: {esc(data['rent_source'])}. Everyday spending £{other}/month and the £{loan}/month average loan: "
+            f"{esc(data['spend_source'])}. Real costs depend on where you live and how you spend.")
+    return _answer_page(
+        slug="cost-of-living",
+        title="How Much Does Uni Cost a Month? Every UK Uni Compared (2026)",
+        description=(f"What a month at uni costs at {len(rows)} UK universities: £{lo['total']:,} at {lon} to "
+                     f"£{hi['total']:,} at {hin}, against a £{loan} average loan."),
+        h1="How much does uni cost a month?", lede=lede,
+        stats=[(f"£{hi['total']:,}", f"most ({hin})"), (f"£{lo['total']:,}", f"least ({lon})"), (f"£{loan}", "average loan a month")],
+        table=table, note=note, faq_items=faq, itemlist=_itemlist("Monthly cost of living by UK university", items))
 
 def submit_indexnow(urls):
     """Tells Bing/Yandex/Seznam about changed URLs immediately instead of
@@ -2774,6 +2977,16 @@ os.makedirs(hd, exist_ok=True)
 url = f"{SITE_URL}/bursaries/hardship-funds/"
 write_page(url, os.path.join(hd, "index.html"), render_hardship_hub(rows, canon_by_key), lastmod_map, changed_urls)
 hardship_urls.insert(0, url)
+
+# answer pages (cross-university questions)
+answer_urls = []
+for _slug, _render in (("biggest-bursaries", render_biggest_bursaries),
+                       ("household-income-under-25k", render_under_25k),
+                       ("cost-of-living", render_cost_of_living)):
+    _url, _html = _render(canon_by_key)
+    os.makedirs(os.path.join(OUT_DIR, _slug), exist_ok=True)
+    write_page(_url, os.path.join(OUT_DIR, _slug, "index.html"), _html, lastmod_map, changed_urls)
+    answer_urls.append(_url)
 
 # rollup
 d = os.path.join(OUT_DIR, "more-universities")
@@ -2933,6 +3146,7 @@ urls += [f"{SITE_URL}/bursaries/closing-soon/" for _ in closing_soon_counts]
 urls += [f"{SITE_URL}/bursaries/highest-value/" for _ in highest_value_counts]
 urls += uni_subject_urls
 urls += hardship_urls
+urls += answer_urls
 core_urls = list(urls)
 urls += fund_urls
 

@@ -1,0 +1,178 @@
+{
+ "rent_source": "SpareRoom university rent index, Q2 2025 (rent incl. bills, asking prices)",
+ "spend_source": "Save the Student National Student Money Survey 2025",
+ "everyday_spend": 527,
+ "avg_loan_month": 640,
+ "unis": [
+  {
+   "uni": "University of Edinburgh",
+   "short": "Edinburgh",
+   "rent_bills": 823
+  },
+  {
+   "uni": "Heriot-Watt University",
+   "short": "Heriot-Watt",
+   "rent_bills": 823
+  },
+  {
+   "uni": "University of Oxford",
+   "short": "Oxford",
+   "rent_bills": 813
+  },
+  {
+   "uni": "University of Bath",
+   "short": "Bath",
+   "rent_bills": 799
+  },
+  {
+   "uni": "University of Cambridge",
+   "short": "Cambridge",
+   "rent_bills": 795
+  },
+  {
+   "uni": "University of Surrey",
+   "short": "Surrey",
+   "rent_bills": 786
+  },
+  {
+   "uni": "University of York",
+   "short": "York",
+   "rent_bills": 751
+  },
+  {
+   "uni": "University of Sussex",
+   "short": "Sussex",
+   "rent_bills": 743
+  },
+  {
+   "uni": "University of Bristol",
+   "short": "Bristol",
+   "rent_bills": 732
+  },
+  {
+   "uni": "University of Reading",
+   "short": "Reading",
+   "rent_bills": 716
+  },
+  {
+   "uni": "University of Warwick",
+   "short": "Warwick",
+   "rent_bills": 691
+  },
+  {
+   "uni": "University of Manchester",
+   "short": "Manchester",
+   "rent_bills": 689
+  },
+  {
+   "uni": "University of Glasgow",
+   "short": "Glasgow",
+   "rent_bills": 687
+  },
+  {
+   "uni": "University of Portsmouth",
+   "short": "Portsmouth",
+   "rent_bills": 664
+  },
+  {
+   "uni": "Bournemouth University",
+   "short": "Bournemouth",
+   "rent_bills": 663
+  },
+  {
+   "uni": "University of Southampton",
+   "short": "Southampton",
+   "rent_bills": 659
+  },
+  {
+   "uni": "Cardiff University",
+   "short": "Cardiff",
+   "rent_bills": 651
+  },
+  {
+   "uni": "University of Exeter",
+   "short": "Exeter",
+   "rent_bills": 641
+  },
+  {
+   "uni": "University of Stirling",
+   "short": "Stirling",
+   "rent_bills": 625
+  },
+  {
+   "uni": "University of Essex",
+   "short": "Essex",
+   "rent_bills": 621
+  },
+  {
+   "uni": "Aston University",
+   "short": "Aston",
+   "rent_bills": 613
+  },
+  {
+   "uni": "University of Birmingham",
+   "short": "Birmingham",
+   "rent_bills": 613
+  },
+  {
+   "uni": "Newcastle University",
+   "short": "Newcastle",
+   "rent_bills": 604
+  },
+  {
+   "uni": "Northumbria University",
+   "short": "Northumbria",
+   "rent_bills": 604
+  },
+  {
+   "uni": "University of East Anglia",
+   "short": "UEA",
+   "rent_bills": 590
+  },
+  {
+   "uni": "Durham University",
+   "short": "Durham",
+   "rent_bills": 589
+  },
+  {
+   "uni": "University of Nottingham",
+   "short": "Nottingham",
+   "rent_bills": 587
+  },
+  {
+   "uni": "University of Leeds",
+   "short": "Leeds",
+   "rent_bills": 581
+  },
+  {
+   "uni": "Queen's University Belfast",
+   "short": "Queen's Belfast",
+   "rent_bills": 579
+  },
+  {
+   "uni": "University of Leicester",
+   "short": "Leicester",
+   "rent_bills": 572
+  },
+  {
+   "uni": "University of Dundee",
+   "short": "Dundee",
+   "rent_bills": 569
+  },
+  {
+   "uni": "Loughborough University",
+   "short": "Loughborough",
+   "rent_bills": 563
+  },
+  {
+   "uni": "Lancaster University",
+   "short": "Lancaster",
+   "rent_bills": 561
+  },
+  {
+   "uni": "Swansea University",
+   "short": "Swansea",
+   "rent_bills": 552
+  }
+ ]
+}
