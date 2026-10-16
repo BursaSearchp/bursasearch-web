@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://bursasearch.com/</loc><lastmod>2026-10-06</lastmod></url>
-  <url><loc>https://bursasearch.com/bursaries/</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>https://bursasearch.com/bursaries/</loc><lastmod>2026-10-16</lastmod></url>
   <url><loc>https://bursasearch.com/bursaries/more-universities/</loc><lastmod>2026-10-06</lastmod></url>
   <url><loc>https://bursasearch.com/about/</loc><lastmod>2026-10-06</lastmod></url>
   <url><loc>https://bursasearch.com/bursaries/abertay-university/</loc><lastmod>2026-10-11</lastmod></url>
@@ -409,4 +409,7 @@
   <url><loc>https://bursasearch.com/bursaries/university-of-wolverhampton/hardship-funds/</loc><lastmod>2026-10-11</lastmod></url>
   <url><loc>https://bursasearch.com/bursaries/university-of-the-highlands-and-islands/hardship-funds/</loc><lastmod>2026-10-11</lastmod></url>
   <url><loc>https://bursasearch.com/bursaries/university-of-the-west-of-england/hardship-funds/</loc><lastmod>2026-10-11</lastmod></url>
+  <url><loc>https://bursasearch.com/bursaries/biggest-bursaries/</loc><lastmod>2026-10-16</lastmod></url>
+  <url><loc>https://bursasearch.com/bursaries/household-income-under-25k/</loc><lastmod>2026-10-16</lastmod></url>
+  <url><loc>https://bursasearch.com/bursaries/cost-of-living/</loc><lastmod>2026-10-16</lastmod></url>
 </urlset>
