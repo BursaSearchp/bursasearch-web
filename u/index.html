@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Free through your university · BursaSearch</title>
+<link rel="icon" href="/favicon-48.png">
+<!-- A uni's invite link (bursasearch.com/u/?s=<uni>&t=<secret>), posted where only its students
+     can see it. "Open BursaSearch" hands the link to the app (bursasearch://open/u?...), which
+     confirms the student on their own account. Made with UniLicensing/set_licence.py link. -->
+<style>
+  :root { --bg: #091723; --card: #0F2135; --text: #FFFFFF; --sec: #9FB3C8; --teal: #4FC3C3; --green: #4ADE80; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+         min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  main { width: 100%; max-width: 420px; background: var(--card); border-radius: 28px; padding: 28px 22px; }
+  img.logo { width: 56px; height: 56px; border-radius: 14px; }
+  h1 { font-size: 24px; line-height: 1.25; margin: 18px 0 8px; }
+  p { color: var(--sec); font-size: 15px; line-height: 1.5; margin: 0 0 14px; }
+  .free { color: var(--green); font-weight: 600; font-size: 14px; }
+  a.btn { display: block; text-align: center; text-decoration: none; font-weight: 600; font-size: 16px;
+          border-radius: 99px; padding: 15px 18px; margin-top: 12px; }
+  a.main { background: var(--teal); color: #032621; }
+  a.alt { background: rgba(0,0,0,.3); color: var(--text); }
+  ol { color: var(--sec); font-size: 14px; line-height: 1.6; padding-left: 20px; margin: 18px 0 0; }
+  .bad { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/app-icon.png" alt="BursaSearch">
+  <div id="ok">
+    <h1>Your university covers BursaSearch</h1>
+    <p class="free">Every grant you qualify for, free</p>
+    <p>Find the bursaries and grants you can get, see why you qualify, and track your applications.</p>
+    <a class="btn main" id="open" href="#">Open BursaSearch</a>
+    <a class="btn alt" id="store" href="#">Get the app</a>
+    <ol>
+      <li>Get the app, and sign in.</li>
+      <li>Come back to this page and tap <b>Open BursaSearch</b>.</li>
+      <li>That's it: it's free for you.</li>
+    </ol>
+  </div>
+  <div id="bad" class="bad">
+    <h1>This link isn't complete</h1>
+    <p>Open the link your university sent you again, or ask them for it.</p>
+  </div>
+</main>
+<script>
+  var q = new URLSearchParams(location.search), s = q.get('s'), t = q.get('t');
+  var ios = 'https://apps.apple.com/app/apple-store/id6795890396?pt=129237255&ct=uni_link&mt=8';
+  var play = 'https://play.google.com/store/apps/details?id=fresherforgev2.com&referrer=utm_source%3Duni_link%26utm_medium%3Duni%26utm_campaign%3D' + encodeURIComponent(s || '');
+  var android = /android/i.test(navigator.userAgent || '');
+  if (!s || !t) {
+    document.getElementById('ok').style.display = 'none';
+    document.getElementById('bad').style.display = 'block';
+  } else {
+    var path = 'open/u?s=' + encodeURIComponent(s) + '&t=' + encodeURIComponent(t);
+    // Android: opens the app, or the Play Store when it isn't installed
+    document.getElementById('open').href = android
+      ? 'intent://' + path + '#Intent;scheme=bursasearch;package=fresherforgev2.com;S.browser_fallback_url=' + encodeURIComponent(play) + ';end'
+      : 'bursasearch://' + path;
+    document.getElementById('store').href = android ? play : ios;
+  }
+</script>
+</body>
+</html>
