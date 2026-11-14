@@ -41,6 +41,70 @@ def play_url(source, medium="referral", campaign=None):
 APP_STORE_URL = app_store_url("seo_site")
 PLAY_URL = play_url("bursasearch_web", "referral", "seo_site")
 
+# -- 15 A/B tests (14 Nov 2026, Isaac: "the main goal is getting them to the app") --------------------------
+# Every visitor gets an independent coin flip per test (html class t1..t15, kept in localStorage), so all 15
+# run at once and each compares half the traffic against the other half. Content Google ranks (headings, fund
+# lists, FAQs) is identical in every arm: tests only change the blocks that push to the app. Arms are set by a
+# tiny inline script in <head> before first paint (no layout shift). Every /go/ link carries ?a=<4 hex> so the
+# store tag becomes e.g. ct=seo_uni-7fa3: Apple/Play downloads by campaign decode back to each test's arm.
+# Events (view / check / tap / leave) go to Firestore preAuthEvents with platform=web (no rules change).
+# Read with tools/ab_report.py. Variant "b" = the new idea; "a" = how the site was.
+AB_TESTS = [
+    ("hero", "money answer card at the top of uni pages"),
+    ("dark", "app-style dark cards for the answer card and check result"),
+    ("qtitle", "check title 'How much could you get?'"),
+    ("money", "check result leads with a money total"),
+    ("lock", "check result shows 2 matches, the rest locked behind the app"),
+    ("ctacopy", "result button 'See my N matches free'"),
+    ("barcopy", "sticky bar copy about grants you could get"),
+    ("nobar", "no sticky bar"),
+    ("rowcta", "'Check if I qualify' link on every fund row"),
+    ("foldapp", "'See all N in the free app' under folded lists"),
+    ("shot", "real app screenshot under the check"),
+    ("proof", "'Free app, N UK funds, 2-minute quiz' line"),
+    ("dline", "next closing deadline line with days left"),
+    ("incfirst", "check asks household income first"),
+    ("hdrbtn", "header button 'See my grants'"),
+]
+AB_N = len(AB_TESTS)
+AB_HEAD = ("<script>(function(){var T=%d,k='bs_ab1',a='',i,id;try{a=localStorage.getItem(k)||''}catch(e){}"
+           "if(!/^[01]+$/.test(a)||a.length!==T){a='';for(i=0;i<T;i++)a+=Math.random()<.5?'1':'0';"
+           "try{localStorage.setItem(k,a)}catch(e){}}var c=document.documentElement;for(i=0;i<T;i++)"
+           "if(a.charAt(i)==='1')c.className+=' t'+(i+1);try{id=localStorage.getItem('bs_wid')}catch(e){}"
+           "if(!id){id='w'+Math.random().toString(36).slice(2,12);try{localStorage.setItem('bs_wid',id)}catch(e){}}"
+           "var h=parseInt(a,2).toString(16);while(h.length<4)h='0'+h;window.BSAB={a:a,id:id,hex:h}})();</script>") % AB_N
+AB_CSS = "".join(f"html:not(.t{i}) .v{i}b{{display:none!important}}html.t{i} .v{i}a{{display:none!important}}"
+                 for i in range(1, AB_N + 1)) + """
+html.t8 .ctabar{display:none!important}
+.ans{background:#E8F5F3; border-left:4px solid #0E7C7B; padding:14px 16px; margin:14px 0 6px;}
+.ans .al{margin:0; font-size:14px; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.04em;}
+.ans .av{margin:2px 0 2px; font-size:36px; font-weight:800; letter-spacing:-.03em; line-height:1.1;}
+.ans .as{margin:0 0 12px; font-size:15px; color:var(--soft);}
+.abtn{display:inline-block; background:#0B0C0C; color:#fff !important; text-decoration:none !important; font-weight:800;
+  padding:11px 16px; font-size:16px;}
+html.t2 .ans{background:#0F2135; border:0; border-radius:16px; color:#fff;}
+html.t2 .ans .al, html.t2 .ans .as{color:#A9BCCB;}
+html.t2 .ans .abtn, html.t2 .res .wbtn{background:#4CC9C0; color:#06221E !important; border-radius:999px; border:0;}
+html.t2 .res{background:#0F2135; border-radius:16px;}
+.res .mbig{font-size:44px; font-weight:800; letter-spacing:-.03em; line-height:1; margin:0;}
+.res .mlab{margin:4px 0 12px; font-size:15px;}
+.res .lk{margin:0 0 12px; padding:0; list-style:none;}
+.res .lk li{display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid rgba(255,255,255,.25);
+  font-size:15px; font-weight:700;}
+.res .lk li.z span{filter:blur(5px); user-select:none;}
+.res .lk .more{display:block; text-align:center; font-weight:700; padding-top:10px; color:#fff !important;}
+.side .pf{font-size:14px; color:var(--soft); margin:10px 0 0;}
+.side .dl{font-size:14.5px; margin:10px 0 0; padding:8px 10px; background:#FFF4D6; border-left:4px solid #E0A100;}
+.side .dl .dd{font-weight:700;}
+.shot{display:block; margin:14px 0 0; text-decoration:none !important; color:var(--ink) !important;}
+.shot img{display:block; width:100%; max-width:320px; height:auto; border-radius:18px; border:1px solid var(--hair);}
+.shot span{display:block; font-weight:700; font-size:15px; margin-top:6px; text-decoration:underline;}
+.row .rq{grid-column:1/-1; font-size:14px; font-weight:700; color:#0E7C7B !important;}
+.fapp{display:block; margin:10px 0 4px; font-weight:800; color:#0E7C7B !important;}
+.ftr .abo{font-size:12.5px; color:var(--soft); margin:8px 0 0;}
+"""
+AB_SCRIPT = '<script src="/assets/ab.js" defer></script>'
+
 # /go/<channel> - one tagged smart link per marketing channel (bio links,
 # emails to schools, etc.). Each sends phones to the right store with that
 # channel's tag. Add a channel here and it exists after the next rebuild.
@@ -472,9 +536,12 @@ def bursary_row(row, uni=None, uni_href=None, fund_href=None, own_uni=None, chec
     attrs = ""
     if check:
         l, cap, circ, maybe = check_attrs(row)
-        attrs = f' data-l="{l}" data-i="{cap}" data-c="{circ}" data-x="{maybe}"'
+        attrs = (f' data-l="{l}" data-i="{cap}" data-c="{circ}" data-x="{maybe}"'
+                 f' data-a="{max_amount_value(row.get("Amount", ""))}"')
+    rq = ('<a class="rq v9b" href="/go/seo_uni/" rel="nofollow" data-p="row">Check if I qualify &rarr;</a>'
+          if check else "")
     return (f'<div class="row"{attrs}>{name_html}{display_amount(row)}'
-            f'<span class="m">{deadline_tag(row)}{prov}{esc(who_line(row))}</span></div>')
+            f'<span class="m">{deadline_tag(row)}{prov}{esc(who_line(row))}</span>{rq}</div>')
 
 def fold_rows(rows_html, show=4, more_label="Show {n} more"):
     """First `show` rows visible, the rest inside a native <details> (still in
@@ -482,8 +549,11 @@ def fold_rows(rows_html, show=4, more_label="Show {n} more"):
     head, tail = rows_html[:show], rows_html[show:]
     out = "".join(head)
     if tail:
-        out += (f'<details class="more"><summary><span>{esc(more_label.format(n=len(tail)))}</span>'
-                f'</summary>{"".join(tail)}</details>')
+        lab = esc(more_label.format(n=len(tail)))
+        out += (f'<details class="more"><summary><span><span class="v10a">{lab}</span><span class="v10b">{lab} here</span></span>'
+                f'</summary>{"".join(tail)}</details>'
+                f'<a class="fapp v10b" href="/go/seo_site/" data-p="fold" rel="nofollow">See all {len(rows_html)} in the free app, '
+                f'matched to you &rarr;</a>')
     return out
 
 
@@ -763,7 +833,7 @@ def header_html(go="seo_site"):
         '<span>BursaSearch</span></a>'
         f'<nav class="nav">{nav}</nav>'
         '<span class="grow"></span>'
-        f'<a class="get" href="/go/{go}/">Get the app</a>'
+        f'<a class="get" href="/go/{go}/" data-p="hdr"><span class="v15a">Get the app</span><span class="v15b">See my grants</span></a>'
         '</div></header>'
     )
 
@@ -789,14 +859,16 @@ def footer_html():
         '<p class="fine">Details come from official university and provider pages and can change. '
         'Always check the official page before applying. BursaSearch is not affiliated with any '
         'university; university names and logos belong to their owners. &copy; Bursa Group Ltd.</p>'
+        '<p class="abo">We count anonymous page actions (no cookies, no names) to make this site more useful. '
+        '<a href="#" id="abopt">Turn this off</a></p>'
         '</div></footer>'
     )
 
-def sticky_bar(go="seo_site", text="Find every bursary you qualify for"):
+def sticky_bar(go="seo_site", text="Find every bursary you qualify for", alt="See the grants you could get, free"):
     return (
         '<div class="ctabar" id="ctabar">'
-        f'<p id="ctatext">{esc(text)}</p>'
-        f'<a href="/go/{go}/">Open app</a>'
+        f'<p id="ctatext"><span class="v7a">{esc(text)}</span><span class="v7b">{esc(alt)}</span></p>'
+        f'<a href="/go/{go}/" data-p="bar">Open app</a>'
         '<button type="button" aria-label="Close" onclick="try{localStorage.setItem(\'bs_cta_x\',\'1\')}catch(e){}'
         'document.getElementById(\'ctabar\').style.display=\'none\';document.body.classList.remove(\'has-bar\')">&times;</button>'
         '<script>try{if(localStorage.getItem(\'bs_cta_x\')){document.getElementById(\'ctabar\').style.display=\'none\';'
@@ -811,7 +883,10 @@ def redirect_html(ios_url, android_url):
         '<!doctype html><html lang="en"><head><meta charset="UTF-8">'
         '<meta name="robots" content="noindex"><title>Get the BursaSearch app</title>'
         f'<meta http-equiv="refresh" content="0;url={ios_url}">'
-        f'<script>var a={json.dumps(ios_url)},p={json.dumps(android_url)};'
+        f'<script>var a={json.dumps(ios_url)},p={json.dumps(android_url)},'
+        'q=(location.search.match(/[?&]a=([0-9a-f]{1,4})(&|$)/)||[])[1];'
+        'if(q){a=a.replace(/ct=([^&]+)/,function(m,c){return "ct="+c+"-"+q});'
+        'p=p.replace(/utm_campaign%3D([^&%]+)/,function(m,c){return "utm_campaign%3D"+c+"-"+q})}'
         'location.replace(/android/i.test(navigator.userAgent||"")?p:a);</script>'
         f'</head><body>Opening the app&hellip; <a href="{ios_url}">App Store</a> '
         f'&middot; <a href="{android_url}">Google Play</a></body></html>'
@@ -847,9 +922,10 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
     """The one page template for the whole site. `title`/`description` arrive
     already escaped by the caller (same as the old PAGE_TEMPLATE contract)."""
     return f"""<!doctype html>
-<html lang="en">
+<html lang="en" data-go="{go}">
 <head>
 <meta charset="UTF-8">
+{AB_HEAD}
 <title>{title}</title>
 <meta name="description" content="{description}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -868,7 +944,7 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
 <meta name="twitter:description" content="{description}">
 <meta name="twitter:image" content="{og_image or OG_IMAGE}">
 {schema}
-<style>{SITE_CSS}</style>
+<style>{SITE_CSS}{AB_CSS}</style>
 </head>
 <body class="{'has-bar' if sticky else ''}">
 {header_html(go)}
@@ -879,6 +955,7 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
 {footer_html()}
 {sticky}
 {scripts}
+{AB_SCRIPT}
 {analytics_html()}
 </body>
 </html>
@@ -1050,11 +1127,17 @@ def uni_logo(slug, uni_name):
     return ""
 
 CHECK_Q1 = (
-    '<div class="hd"><b>Which could you get?</b><span>1 of 3</span></div>'
+    '<div class="hd"><b><span class="v3a">Which could you get?</span><span class="v3b">How much could you get?</span></b>'
+    '<span>1 of 3</span></div>'
     '<div class="prog"><i class="on"></i><i></i><i></i></div>'
-    '<p class="qq">What will you study?</p>'
+    '<div class="v14a"><p class="qq">What will you study?</p>'
     '<button type="button" class="opt" data-v="u">Undergraduate degree</button>'
-    '<button type="button" class="opt" data-v="p">Master&#x27;s or PhD</button>'
+    '<button type="button" class="opt" data-v="p">Master&#x27;s or PhD</button></div>'
+    '<div class="v14b"><p class="qq">What is your household income?</p>'
+    '<button type="button" class="opt" data-v="0">Under £25,000</button>'
+    '<button type="button" class="opt" data-v="25000">£25,000 to £43,000</button>'
+    '<button type="button" class="opt" data-v="43000">Over £43,000</button>'
+    '<button type="button" class="opt" data-v="-1">Not sure</button></div>'
     '<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>'
 )
 
@@ -1120,6 +1203,22 @@ def uni_title(uni_name, alias_bit, flag, ug, top_ug, count):
         elif upto:
             tails.append(f": {fname} +{count - 1} more,{upto}")
     tails.append(f": {count} grant{'s' if count != 1 else ''}{upto}")
+    # 14 Nov: CTR 1.2% at position ~9. Searches are singular and short ('ucl bursary', 'ljmu bursary') and the
+    # uni's own page is #1, so the title has to say what it can't: the other funds, and a check of what YOU'd get.
+    sh = (uni_alias(uni_name) or short) if len(short) > 14 else short
+    lead = [f"{sh} Bursary {yr}", f"{sh} Bursaries {yr}"]
+    if flag is not None:
+        famt = format_amount(flag.get("Amount", ""))
+        if famt and "£" in famt and len(famt) <= 14 and count > 1:
+            for b in lead:
+                for t in (f"{b}: {famt} + {count - 1} More You Could Get", f"{b}: {famt} + {count - 1} More"):
+                    if len(t) <= 66:
+                        return t
+    if count > 1 and upto:
+        for b in lead:
+            t = f"{b}: {count} Grants{upto}, Check Yours"
+            if len(t) <= 66:
+                return t
     for tail in tails:
         for base in bases:
             if len(base + tail) <= 75:
@@ -1132,11 +1231,14 @@ def render_page(uni_name, entries, slug):
     amt_bit = f" worth {amt_range}" if amt_range else ""
     alias = uni_alias(uni_name)
     alias_bit = f" ({alias})" if alias and alias.lower() != uni_name.lower() else ""
-    description = (
-        f"{count} bursaries and scholarships for {uni_name}{alias_bit} students in "
-        f"{academic_year()}{amt_bit}. See who qualifies, deadlines and how to apply."
-    )
     canonical = f"{SITE_URL}/bursaries/{slug}/"
+    _flag0 = flagship_fund([r for r in entries if clean(r.get("Bursary Name", ""))], uni_name)
+    _fn = short_fund_name(clean(_flag0.get("Bursary Name", "")), uni_name) if _flag0 is not None else ""
+    description = (
+        (f"The {_fn} plus {count - 1} other {uni_short(uni_name)} grants most students never claim. "
+         if _fn and count > 1 else f"All {count} {uni_name}{alias_bit} bursaries and scholarships{amt_bit}. ")
+        + f"Check which you'd get in 30 seconds, free. {academic_year()}."
+    )
 
     named = [r for r in entries if clean(r.get("Bursary Name", ""))]
     flag = flagship_fund(named, uni_name)
@@ -1187,10 +1289,46 @@ def render_page(uni_name, entries, slug):
         ])
 
     faq_items = uni_faq_items(uni_name, flag, ug, hard, pg, named)
+    sh = uni_short(uni_name)
+    # t1: answer the search in money first, like the TikTok winners ("how much does YOUR uni give you")
+    hero = ""
+    famt = format_amount(flag.get("Amount", "")) if flag is not None else ""
+    if flag is not None and famt and "\u00a3" in famt:
+        fname = short_fund_name(clean(flag.get("Bursary Name", "")), uni_name)
+        bits = [fname]
+        if is_automatic(flag):
+            bits.append("paid automatically")
+        cap = income_cap(flag)
+        if cap:
+            bits.append(f"household income up to \u00a3{cap:,}")
+        more = f", plus {len(ug) - 1} more {esc(sh)} funds" if len(ug) > 1 else ""
+        hero = f'<p class="av">{esc(famt)}</p><p class="as">{esc(" · ".join(bits))}{more}</p>'
+    elif top_ug >= 100:
+        hero = (f'<p class="av">Up to \u00a3{top_ug:,}</p><p class="as">{len(ug)} {esc(sh)} funds for undergraduates, '
+                f'plus national grants</p>')
+    hero_html = (f'<div class="ans v1b"><p class="al">What {esc(sh)} could pay you</p>{hero}'
+                 f'<a class="abtn" href="/go/seo_uni/" data-p="hero">See what you could get &rarr;</a></div>'
+                 if hero else "")
+    nxt = []
+    for r in ug + hard:
+        d = parse_deadline_date(r.get("Deadline", ""))
+        if d and d >= date.today():
+            nxt.append((d, r))
+    nxt.sort(key=lambda t: t[0])
+    dline = ""
+    if nxt:
+        d, r = nxt[0]
+        dline = (f'<p class="dl v13b" data-d="{d.isoformat()}">Next {esc(sh)} deadline: '
+                 f'<b>{esc(short_fund_name(clean(r.get("Bursary Name", "")), uni_name))}</b>, {d.day} {d.strftime("%b %Y")}</p>')
+    side_extra = (f'<p class="pf v12b">Free app &middot; {SITE_FUND_COUNT:,} UK funds &middot; 2-minute quiz</p>' + dline
+                  + '<a class="shot v11b" href="/go/seo_uni/" data-p="shot"><img src="/assets/app-grants.webp" '
+                    'width="320" height="440" loading="lazy" alt="The BursaSearch app: your matched grants with amounts">'
+                    '<span>Your matches look like this in the app &rarr;</span></a>')
     head = (
         crumb_html([("Home", "/"), ("Universities", "/bursaries/"), (uni_name, None)])
         + f'<p class="yr">{uni_logo(slug, uni_name)}<span>{academic_year()}</span></p>'
         + f'<h1 class="page">{esc(uni_name)} Bursaries &amp; Scholarships</h1>'
+        + hero_html
         + stats_html
     )
     body_html = (
@@ -1205,7 +1343,7 @@ def render_page(uni_name, entries, slug):
         + stat_line()
     )
     body = (f'<div class="layout"><div class="head">{head}</div>'
-            f'<div class="side">{check_box("seo_uni", uni_short(uni_name))}</div>'
+            f'<div class="side">{check_box("seo_uni", uni_short(uni_name))}{side_extra}</div>'
             f'<div class="body">{body_html}</div></div>')
     schema = jsonld_script(faq_jsonld_from(faq_items)) + jsonld_script(breadcrumb_jsonld([
         ("BursaSearch", f"{SITE_URL}/"),
@@ -1213,8 +1351,8 @@ def render_page(uni_name, entries, slug):
         (uni_name, canonical),
     ]))
     return render_shell(title=esc(title), description=esc(description), canonical=canonical,
-                        body=body, sticky=sticky_bar("seo_uni"), schema=schema,
-                        scripts=CHECK_SCRIPT, go="seo_uni", og_image=og_url)
+                        body=body, sticky=sticky_bar("seo_uni", alt=f"See which {sh} grants you could get, free"),
+                        schema=schema, scripts=CHECK_SCRIPT, go="seo_uni", og_image=og_url)
 
 CHECK_JS = r"""(function(){
 var NAT=__NAT__;
@@ -1243,24 +1381,29 @@ var Q=[
  {k:'i',q:'What is your household income?',o:[['0','Under £25,000'],['25000','£25,000 to £43,000'],['43000','Over £43,000'],['-1','Not sure']]},
  {k:'c',q:'Do any of these apply to you?',o:[['c','Care-experienced'],['e','Estranged from my family'],['r',"I'm a carer"],['d','Disabled or long-term condition'],['f','Refugee or asylum seeker'],['n','None of these']]}
 ];
+function T(n){return document.documentElement.classList.contains('t'+n)}
+if(T(14))Q=[Q[1],Q[0],Q[2]];
+var started=false;function L(e,x){try{window.bsLog&&window.bsLog(e,x)}catch(_){}}
 var A={},step=0,groups=[].slice.call(document.querySelectorAll('.grp[data-g]')),orig=groups.map(function(g){return g.innerHTML});
 var bar=document.getElementById('ctatext'),barOrig=bar?bar.textContent:'';
 function fits(l,cap,circ){if(l!=='a'&&l!==A.l)return false;var lo=+A.i;if(cap>0&&lo>=0&&lo>=cap)return false;if(circ&&circ.indexOf(A.c)<0)return false;return true}
-function ask(){var q=Q[step],h='<div class="hd"><b>Which could you get?</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
+function ask(){var q=Q[step],h='<div class="hd"><b>'+(T(3)?'How much could you get?':'Which could you get?')+'</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
  h+='</div><p class="qq">'+esc(q.q)+'</p>';
  q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
  h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
  box.className='chk';box.innerHTML=h}
 box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
- if(t.classList.contains('opt')){A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
+ if(t.classList.contains('opt')){if(!started){started=true;L('web_check_start')}A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
  else if(t.classList.contains('back')){step=Math.max(0,step-1);ask()}
- else if(t.classList.contains('again')){A={};step=0;groups.forEach(function(g,i){g.innerHTML=orig[i]});if(bar)bar.textContent=barOrig;ask()}});
-function result(){var here=0;
+ else if(t.classList.contains('again')){A={};step=0;started=false;groups.forEach(function(g,i){g.innerHTML=orig[i]});if(bar)bar.textContent=barOrig;ask()}});
+function result(){var here=0,money=0,names=[];
  groups.forEach(function(g,gi){if(g.getAttribute('data-g')==='h')return;g.innerHTML=orig[gi];
   var rows=[].slice.call(g.querySelectorAll('.row[data-l]')),yes=[],no=[];
   rows.forEach(function(r){var ok=fits(r.getAttribute('data-l'),+r.getAttribute('data-i'),r.getAttribute('data-c'));
-   if(ok&&r.getAttribute('data-x')!=='1')here++;(ok?yes:no).push(r)});
+   if(ok&&r.getAttribute('data-x')!=='1'){here++;money+=+(r.getAttribute('data-a')||0);
+    var nm=r.querySelector('.nm'),am=r.querySelector('.amt');names.push([nm?nm.textContent:'',am?am.textContent:''])}
+   (ok?yes:no).push(r)});
   var list=g.querySelector('.list');list.innerHTML='';
   yes.forEach(function(r){list.appendChild(r)});
   if(!yes.length){var p=document.createElement('p');p.className='none';p.textContent='None of these match your answers.';list.appendChild(p)}
@@ -1268,24 +1411,71 @@ function result(){var here=0;
    no.forEach(function(r){r.classList.add('no');d.appendChild(r)});list.appendChild(d)}
   var sm=g.querySelector('h2 small');if(sm)sm.textContent=yes.length+' of '+rows.length});
  var nat=0;NAT.forEach(function(n){if(fits(n[0],n[1],n[2]))nat++});
- box.className='res';
- box.innerHTML='<div class="nums"><div><b>'+here+'</b><span>'+esc(uni)+' funds you may get</span></div>'
-  +(nat?'<div><b>+'+nat+'</b><span>national &amp; charity grants worth checking</span></div>':'')+'</div>'
-  +'<a class="wbtn" href="/go/'+esc(go)+'/">Get accurate matches in the app</a>'
+ // the new arms count only this uni's funds: the web data can't narrow national charity funds the way the app's
+ // matcher does, so a national number here would overpromise ("80k total is scammy", Isaac on the app)
+ var tot=here,ms=money>=10000?'£10,000+':'£'+money.toLocaleString('en-GB');
+ var h='';
+ if(T(4)&&money>=100)h+='<p class="mbig">'+ms+'</p><p class="mlab">in '+esc(uni)+' grants you could apply for ('+here+' fund'+(here===1?'':'s')+'), plus national grants the app checks</p>';
+ else h+='<div class="nums"><div><b>'+here+'</b><span>'+esc(uni)+' funds you may get</span></div>'
+  +(nat?'<div><b>+'+nat+'</b><span>national &amp; charity grants worth checking</span></div>':'')+'</div>';
+ if(T(5)&&tot>=2){h+='<ul class="lk">';names.slice(0,2).forEach(function(x){h+='<li><b>'+esc(x[0])+'</b><b>'+esc(x[1])+'</b></li>'});
+  var lockN=tot-Math.min(2,names.length);for(var i=0;i<Math.min(3,lockN);i++)h+='<li class="z"><span>Locked grant name here</span><span>£X,XXX</span></li>';
+  h+='<li style="border:0"><a class="more" href="/go/'+esc(go)+'/" data-p="lock">+'+lockN+' more '+esc(uni)+' match'+(lockN===1?'':'es')+' and your national grants: free in the app</a></li></ul>'}
+ h+='<a class="wbtn" href="/go/'+esc(go)+'/" data-p="res">'+(T(6)?(tot?'See my '+tot+' '+esc(uni)+' match'+(tot===1?'':'es')+' + national grants free':'See my national grants free'):'Get accurate matches in the app')+'</a>'
   +'<p class="small">A quick estimate only. The app checks your course, region, fee status and more, so its matches are far more accurate.</p>'
   +'<button type="button" class="again">Change answers</button>';
- if(bar)bar.textContent=here+' '+uni+' funds'+(nat?' + '+nat+' national grants':'')+' to check';
+ box.className='res';box.innerHTML=h;
+ [].forEach.call(box.querySelectorAll('a[href^="/go/"]'),function(a){if(window.BSAB)a.setAttribute('href',a.getAttribute('href')+'?a='+window.BSAB.hex)});
+ L('web_check_done',{n:here,nat:nat,m:money});
+ if(bar)bar.textContent=T(7)?(tot?'Your '+tot+' '+uni+' match'+(tot===1?' is':'es are')+' waiting in the app':'Your national grant matches are in the app'):(here+' '+uni+' funds'+(nat?' + '+nat+' national grants':'')+' to check');
  if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'})}
 })();
 """
 
+AB_JS = r"""(function(){
+var B=window.BSAB||{a:'',id:'w0',hex:'0000'},go=document.documentElement.getAttribute('data-go')||'seo_site';
+var off=false;try{off=localStorage.getItem('bs_noab')==='1'}catch(e){}
+if(navigator.globalPrivacyControl||navigator.doNotTrack==='1')off=true;
+if(/bot|crawl|spider|slurp|lighthouse|headless|preview|facebookexternalhit/i.test(navigator.userAgent||''))off=true;
+var t0=Date.now(),maxs=0,r=document.referrer||'';
+var ref=!r?'direct':/google\./.test(r)?'google':/bing\.|duckduckgo|yahoo|ecosia/.test(r)?'search':/bursasearch\.com/.test(r)?'site':'other';
+var U='https://firestore.googleapis.com/v1/projects/fresher-forge-v2-cmw4ev/databases/(default)/documents/preAuthEvents';
+function log(ev,x){if(off)return;var f={event:{stringValue:ev},device:{stringValue:B.id},platform:{stringValue:'web'},
+ ts:{timestampValue:new Date().toISOString()},ab:{stringValue:B.a},pg:{stringValue:go},path:{stringValue:location.pathname.slice(0,120)},ref:{stringValue:ref}};
+ if(x)for(var k in x){var v=x[k];f[k]=typeof v==='number'?{integerValue:String(Math.round(v))}:{stringValue:String(v).slice(0,80)}}
+ try{fetch(U,{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})})}catch(e){}}
+window.bsLog=log;
+function tag(a){var h=a.getAttribute('href')||'';if(h.indexOf('/go/')!==0||h.indexOf('?a=')>0)return;
+ var m=h.match(/^\/go\/([^\/?#]+)/),ch=m?m[1]:go;if(ch==='seo_site'&&a.hasAttribute('data-p'))ch=go;a.setAttribute('href','/go/'+ch+'/?a='+B.hex)}
+[].forEach.call(document.querySelectorAll('a[href^="/go/"]'),tag);
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a');if(!a)return;var h=a.getAttribute('href')||'';
+ if(h.indexOf('/go/')===0){tag(a);log('web_tap',{place:a.getAttribute('data-p')||'link',ms:Date.now()-t0})}
+ else if(/apps\.apple|play\.google/.test(a.href))log('web_tap',{place:'store_direct',ms:Date.now()-t0})},true);
+[].forEach.call(document.querySelectorAll('[data-d]'),function(el){var n=Math.ceil((new Date(el.getAttribute('data-d')+'T23:59:00')-Date.now())/864e5);
+ if(n>=0){var s=document.createElement('span');s.className='dd';s.textContent=' · '+n+' day'+(n===1?'':'s')+' left';el.appendChild(s)}});
+addEventListener('scroll',function(){var h=document.documentElement,p=(h.scrollTop+innerHeight)/h.scrollHeight;if(p>maxs)maxs=p},{passive:true});
+log('web_view');
+var gone=false;function bye(){if(gone)return;gone=true;log('web_leave',{ms:Date.now()-t0,scroll:Math.round(Math.min(maxs,1)*100)})}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')bye()});addEventListener('pagehide',bye);
+var o=document.getElementById('abopt');if(o)o.addEventListener('click',function(e){e.preventDefault();try{localStorage.setItem('bs_noab','1')}catch(x){}off=true;o.textContent='Turned off'});
+})();
+"""
+
+
+def write_ab_assets():
+    os.makedirs("assets", exist_ok=True)
+    with open(os.path.join("assets", "ab.js"), "w", encoding="utf-8") as f:
+        f.write(AB_JS)
+
+
 def write_check_js(rows_all):
-    nat = [list(check_attrs(r)) for r in rows_all
+    nat = [list(check_attrs(r)) + [max_amount_value(r.get("Amount", ""))] for r in rows_all
            if clean(r.get("University", "")).lower().startswith("external")
            and clean(r.get("Bursary Name", ""))]
     os.makedirs("assets", exist_ok=True)
     with open(os.path.join("assets", "check.js"), "w", encoding="utf-8") as f:
         f.write(CHECK_JS.replace("__NAT__", json.dumps(nat, separators=(",", ":"))))
+    write_ab_assets()
     return len(nat)
 
 # ── "Pick your uni" check (homepage, hub, circumstance pages) ───────────────
@@ -2049,11 +2239,29 @@ def render_uni_hardship_page(uni_name, uni_slug, hard, entries):
     top = max_amount_text(hard)
     canonical = f"{SITE_URL}/bursaries/{uni_slug}/hardship-funds/"
     h1 = f"Hardship Funds at {uni_name}"
-    title = next((t for t in (f"{uni_name}{ab} Hardship Funds {yr}: How to Apply",
+    niche = re.compile(r"international|childcare|nursing|digital|medic|dental|postgrad|phd|care leaver|sport|"
+                       r"laptop|travel|placement|parent|disab", re.I)
+    general = [r for r in hard if not niche.search(clean(r.get("Bursary Name", "")))]
+    main_h = sorted(general or hard, key=lambda r: ("hardship" in clean(r.get("Bursary Name", "")).lower(),  # a named
+                                                    -max_amount_value(r.get("Amount", ""))))[0]       # fund is searched
+    mname = short_fund_name(clean(main_h.get("Bursary Name", "")), uni_name).replace("&", "and")
+    sh = uni_alias(uni_name) or uni_short(uni_name)
+    stop = {"university", "college", "the", "school", "institute", "of", "and"}
+    if any(w.lower() in mname.lower() for w in re.findall(r"[A-Za-z]{4,}", f"{sh} {uni_short(uni_name)} {uni_name}")
+           if w.lower() not in stop) or sh.lower() in mname.lower():
+        sh = ""                                       # 'Manchester Met Success Fund' already says whose it is
+    pre = f"{sh} " if sh else ""
+    if re.search(r"20\d\d", mname):
+        yr_t = ""
+    else:
+        yr_t = f" {yr}"
+    named_title = None if not general else next((t for t in (f"{pre}{mname}{yr_t}: How Much + How to Apply", f"{pre}{mname}: How Much + How to Apply") if len(t) <= 68
+                        and "hardship" not in mname.lower()), None)
+    title = named_title or next((t for t in (f"{uni_name}{ab} Hardship Funds {yr}: How to Apply",
                               f"{uni_short(uni_name)} Hardship Funds {yr}: How to Apply")
                   if len(t) <= 70), f"{uni_short(uni_name)} Hardship Funds {yr}")
     description = (f"{n} hardship and emergency funds at {uni_name}{ab}" + (f", up to {top}" if top else "")
-                   + f". Who can apply, how much you can get and where to apply in {yr}.")
+                   + f". Who can apply, how much you get, and other {uni_short(uni_name)} money you could claim on top. {yr}.")
     lede = (f"{n} hardship and emergency funds at {uni_name} for students who hit money problems "
             f"during the year" + (f", worth up to {top}" if top else "") + ".")
     rows_html = "".join(bursary_row(r, fund_href=fund_href_for(r, uni_name))
@@ -2390,7 +2598,7 @@ def fund_description(row, name, uni_name, ftype):
     alias = uni_alias(uni_name)
     if alias and alias.lower() not in name.lower():
         bits += f" ({alias})"
-    bits += f". Who qualifies, the {academic_year()} deadline and how to apply."
+    bits += f". Who qualifies, plus other {uni_short(uni_name)} grants you could get on top. {academic_year()}."
     return bits if len(bits) <= 160 else bits[:157].rsplit(" ", 1)[0] + "…"
 
 def fund_lede(row, uni_name, ftype):
