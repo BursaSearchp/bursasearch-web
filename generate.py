@@ -271,6 +271,9 @@ def _strip_checked(html_text):
 _CHROME_RE = re.compile(r'<style>.*?</style>|<script src="/assets/[a-z]+\.js" defer></script>'
                         r'|<script defer src="https://static\.cloudflareinsights\.com/[^>]*></script>', re.S)
 
+WRITTEN = set()   # every page path written this run: anything else under bursaries/ is a leftover (see sweep below)
+
+
 def write_page(url, path, content, lastmod_map, changed_urls):
     """Writes a page, records its sitemap lastmod — bumped to TODAY only when
     the content actually changed from the last run, not on every
@@ -278,6 +281,7 @@ def write_page(url, path, content, lastmod_map, changed_urls):
     regardless of real changes is a known anti-pattern Google's own guidance
     warns can get the whole sitemap's lastmod signal discounted) — and
     appends to changed_urls when it did, for the IndexNow submission below."""
+    WRITTEN.add(os.path.normpath(path))
     existing = None
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
@@ -2760,7 +2764,7 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
     if len(qs) >= 2:
         check = fund_check_html(qs, "seo_fund", official, len(siblings), ushort)
     else:
-        check = app_cta(f"the {name}", go="seo_fund")
+        check = check_box("seo_fund", ushort)   # 14 Nov: every fund page has the quick check (gated), not a bare button
 
     apply_html = ""
     if official:
@@ -3473,6 +3477,40 @@ for channel, medium in GO_CHANNELS.items():
     os.makedirs(os.path.join("go", channel), exist_ok=True)
     with open(os.path.join("go", channel, "index.html"), "w", encoding="utf-8") as f:
         f.write(redirect_html(app_store_url(channel), play_url(channel, medium)))
+
+# Leftover pages (14 Nov): a fund that drops out of the data used to leave its old page live forever (322 of them,
+# old look, stale facts, ~1,150 Google impressions a month). Each becomes an instant redirect to the university's
+# current page (national funds -> /bursaries/grants/), which Google treats as a permanent move. Not in the sitemap.
+def _stub(target):
+    return ('<!doctype html><html lang="en"><head><meta charset="UTF-8"><title>Moved | BursaSearch</title>'
+            f'<link rel="canonical" href="{SITE_URL}{target}"><meta http-equiv="refresh" content="0;url={target}">'
+            f'<script>location.replace({json.dumps(target)})</script></head><body><a href="{target}">This page has moved</a>'
+            '</body></html>')
+_stubbed = 0
+for _root, _dirs, _files in os.walk(OUT_DIR):
+    if "index.html" not in _files:
+        continue
+    _p = os.path.normpath(os.path.join(_root, "index.html"))
+    if _p in WRITTEN:
+        continue
+    _rel = os.path.relpath(_root, OUT_DIR).replace(os.sep, "/").split("/")
+    if _rel == ["."]:
+        continue
+    _uni = _rel[0]
+    _live = lambda d: os.path.normpath(os.path.join(OUT_DIR, d, "index.html")) in WRITTEN
+    if len(_rel) > 1:                                   # an old fund or uni x subject page -> that uni's page
+        _target = f"/bursaries/{_uni}/" if _live(_uni) else "/bursaries/grants/"
+    else:                                               # an old university page: renamed slug, else the rollup
+        _new = next((d for d in os.listdir(OUT_DIR) if _uni.endswith("-" + d) and _live(d)), None)
+        _target = f"/bursaries/{_new}/" if _new else "/bursaries/more-universities/"
+    with open(_p, encoding="utf-8", errors="ignore") as _f:
+        _old = _f.read()
+    if 'http-equiv="refresh"' in _old and _target in _old:
+        continue
+    with open(_p, "w", encoding="utf-8") as _f:
+        _f.write(_stub(_target))
+    _stubbed += 1
+print(f"leftover pages redirected this run: {_stubbed}")
 
 # sitemap — every URL's lastmod comes from lastmod_map (only bumped above
 # when that page's content actually changed), not blindly stamped TODAY.
