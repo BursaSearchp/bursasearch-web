@@ -97,6 +97,22 @@ a.nm:hover{color:var(--teal); text-decoration:none;}
 .t.g{background:rgba(74,222,128,.14); color:var(--green);} .t.y{background:rgba(232,160,32,.16); color:var(--amber);}
 .t.k{background:var(--raise); color:var(--white);}
 details.more{border-bottom:1px solid var(--line);}
+.cmps{margin:30px 0 10px;}
+.cmps > h2{margin:0 0 6px;}
+.cmps > .ci{margin:0 0 12px; color:var(--sec); font-size:14px;}
+details.cmp{background:var(--card); border:1px solid var(--line); border-radius:16px; margin:0 0 10px;}
+details.cmp > summary{list-style:none; cursor:pointer; padding:14px 16px; display:flex; align-items:center; gap:10px;}
+details.cmp > summary::-webkit-details-marker{display:none;}
+details.cmp > summary h3{margin:0; flex:1; font-size:15.5px; font-weight:600; line-height:1.35; color:var(--white);}
+details.cmp > summary small{color:var(--sec); font-size:13px; font-weight:500;}
+details.cmp > summary::after{content:"+"; font-size:20px; line-height:.9; color:var(--teal);}
+details.cmp[open] > summary::after{content:"\2212";}
+details.cmp .cb{padding:0 16px 14px; font-size:14.5px; line-height:1.55;}
+details.cmp .cb p{margin:0 0 10px;}
+details.cmp .cb ul{margin:0 0 10px; padding-left:18px;}
+details.cmp .cb li{margin:0 0 6px;}
+details.cmp .cb li span{color:var(--sec);}
+details.cmp .cb .go{display:inline-block; margin-top:2px; font-weight:600;}
 details.more > summary{list-style:none; cursor:pointer; padding:14px 0; display:flex; justify-content:space-between;
   gap:10px; font-weight:600; color:var(--teal);}
 details.more > summary::-webkit-details-marker{display:none;}

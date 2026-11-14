@@ -685,6 +685,22 @@ a.nm:hover{color:var(--teal); text-decoration:none;}
 .t.g{background:rgba(74,222,128,.14); color:var(--green);} .t.y{background:rgba(232,160,32,.16); color:var(--amber);}
 .t.k{background:var(--raise); color:var(--white);}
 details.more{border-bottom:1px solid var(--line);}
+.cmps{margin:30px 0 10px;}
+.cmps > h2{margin:0 0 6px;}
+.cmps > .ci{margin:0 0 12px; color:var(--sec); font-size:14px;}
+details.cmp{background:var(--card); border:1px solid var(--line); border-radius:16px; margin:0 0 10px;}
+details.cmp > summary{list-style:none; cursor:pointer; padding:14px 16px; display:flex; align-items:center; gap:10px;}
+details.cmp > summary::-webkit-details-marker{display:none;}
+details.cmp > summary h3{margin:0; flex:1; font-size:15.5px; font-weight:600; line-height:1.35; color:var(--white);}
+details.cmp > summary small{color:var(--sec); font-size:13px; font-weight:500;}
+details.cmp > summary::after{content:"+"; font-size:20px; line-height:.9; color:var(--teal);}
+details.cmp[open] > summary::after{content:"\\2212";}
+details.cmp .cb{padding:0 16px 14px; font-size:14.5px; line-height:1.55;}
+details.cmp .cb p{margin:0 0 10px;}
+details.cmp .cb ul{margin:0 0 10px; padding-left:18px;}
+details.cmp .cb li{margin:0 0 6px;}
+details.cmp .cb li span{color:var(--sec);}
+details.cmp .cb .go{display:inline-block; margin-top:2px; font-weight:600;}
 details.more > summary{list-style:none; cursor:pointer; padding:14px 0; display:flex; justify-content:space-between;
   gap:10px; font-weight:600; color:var(--teal);}
 details.more > summary::-webkit-details-marker{display:none;}
@@ -1236,6 +1252,332 @@ def uni_title(uni_name, alias_bit, flag, ug, top_ug, count):
                 return base + tail
     return bases[-1] + tails[-1]
 
+
+# ── Folded info sections (14 Nov 2026, Isaac: "add the large amount of info in compartments to get position and
+#    range, and keep it out of the way"). Native <details>: closed by default, fully in the HTML, so Google reads
+#    and counts it. Every section is built from that page's own data (or checked official facts), never the same
+#    paragraph pasted across pages. Headings carry the search combinations: '<uni> scholarships',
+#    '<uni> hardship fund', '<uni> grants for care leavers', 'scholarships for disabled students'...
+def cmp_block(heading, inner, count=None):
+    c = f"<small>{count}</small>" if count is not None else ""
+    return (f'<details class="cmp"><summary><h3>{esc(heading)}</h3>{c}</summary>'
+            f'<div class="cb">{inner}</div></details>')
+
+
+def cmp_section(title, blocks, intro=""):
+    blocks = [b for b in blocks if b]
+    if not blocks:
+        return ""
+    return (f'<section class="cmps"><h2>{esc(title)}</h2>'
+            + (f'<p class="ci">{esc(intro)}</p>' if intro else "") + "".join(blocks) + "</section>")
+
+
+def by_amount(rs):
+    return sorted(rs, key=lambda r: (-max_amount_value(r.get("Amount", "")), clean(r.get("Bursary Name", ""))))
+
+
+def fund_li(r, own_uni=None, canon_by_key=None):
+    name = clean(r.get("Bursary Name", "")) or "Bursary"
+    shown = short_fund_name(name, own_uni)
+    href = fund_href_for(r, own_uni)
+    link = clean(r.get("Application URL", "")) or clean(r.get("Link", ""))
+    if href:
+        a = f'<a href="{esc(href)}">{esc(shown)}</a>'
+    elif link:
+        a = f'<a href="{esc(link)}" rel="noopener" target="_blank">{esc(shown)}</a>'
+    else:
+        a = esc(shown)
+    bits = []
+    amt = format_amount(r.get("Amount", ""))
+    if amt and len(amt) <= 26:
+        bits.append(amt)
+    if canon_by_key is not None:
+        res_ = canon_by_key.get(norm_uni_key(clean(r.get("University", ""))))
+        if res_:
+            bits.append(res_[0])
+    w = who_line(r)
+    if w:
+        bits.append(w)
+    return f'<li>{a}' + (f' <span>&middot; {esc(" · ".join(bits))}</span>' if bits else "") + "</li>"
+
+
+def fund_ul(rs, own_uni=None, canon_by_key=None, limit=10):
+    rs = list(rs)
+    if canon_by_key is not None:      # cross-university lists: one row per fund ('X (UCL)' = 'X (City)')
+        seen, keep = set(), []
+        for r in rs:
+            k = re.sub(r"\s*\([^)]*\)\s*$", "", clean(r.get("Bursary Name", ""))).lower()
+            if k not in seen:
+                seen.add(k)
+                keep.append(r)
+        rs = keep
+    out = "<ul>" + "".join(fund_li(r, own_uni, canon_by_key) for r in rs[:limit]) + "</ul>"
+    if len(rs) > limit:
+        out += f"<p>Plus {len(rs) - limit} more.</p>"
+    return out
+
+
+def _plural(n, one, many):
+    return f"{n} {one if n == 1 else many}"
+
+
+_SPORT_RE = re.compile(r"sport|athlet", re.I)
+_ARTS_RE = re.compile(r"music|choral|choir|organ|drama|dance|art\b|arts\b|perform|theatre|creative", re.I)
+_EXCEL_RE = re.compile(r"excellence|merit|academic|achiev|vice[- ]chancellor|chancellor's|principal's|high[- ]flyer|"
+                       r"outstanding|elite|talent", re.I)
+_STEM_RE = re.compile(r"engineer|science|scientist|math|physic|chemi|computing|computer|stem\b|technolog|data", re.I)
+
+# short labels for 'grants for X' headings (CIRCUMSTANCES slug -> phrase)
+CIRC_SHORT = {
+    "low-income-students": "low-income students", "care-leavers": "care leavers",
+    "international-students": "international students", "estranged-students": "estranged students",
+    "disabled-students": "disabled students", "refugees-and-asylum-seekers": "refugees and asylum seekers",
+    "student-carers": "student carers", "young-carers": "young carers",
+    "low-participation-areas": "students from low-participation areas", "part-time-students": "part-time students",
+    "ethnic-minority-students": "Black and minority ethnic students", "women-scholarships": "women",
+}
+
+# Official help, checked against GOV.UK / NHSBSA / SAAS / SFW / SFNI on 14 Nov 2026. No amounts: they change every
+# year and depend on income. key -> (name, where, who, what + how, url)
+GOV_INFO = {
+    "childcare": ("Childcare Grant", "England",
+                  "Full-time higher education students with children under 15, or under 17 with special educational "
+                  "needs, in registered or approved childcare.",
+                  "Pays up to 85% of your childcare costs, up to a weekly cap that depends on household income and how "
+                  "many children you have. Paid on top of your student finance and never paid back. Apply through "
+                  "Student Finance England.", "https://www.gov.uk/childcare-grant"),
+    "pla": ("Parents' Learning Allowance", "England", "Full-time students with dependent children.",
+            "Helps with course costs like books and travel. The amount depends on household income. It isn't paid "
+            "back, comes on top of your student finance and doesn't affect your benefits. Apply through Student "
+            "Finance England.", "https://www.gov.uk/parents-learning-allowance"),
+    "adg": ("Adult Dependants' Grant", "England",
+            "Full-time students with an adult, usually a partner, who depends on them financially.",
+            "Not paid back and paid on top of your student finance, though it can affect income-related benefits. "
+            "Apply through Student Finance England.", "https://www.gov.uk/adult-dependants-grant"),
+    "dsa": ("Disabled Students' Allowance", "UK",
+            "Undergraduates and postgraduates with a disability, long-term illness, mental health condition or a "
+            "specific learning difficulty such as dyslexia.",
+            "Pays the study costs your condition causes: specialist equipment, non-medical helpers like note takers, "
+            "and taxis if you can't use public transport. Based on your needs, not household income, and never paid "
+            "back. Apply through your student finance body; a needs assessment decides what you get.",
+            "https://www.gov.uk/disabled-students-allowance-dsa"),
+    "nhs": ("NHS Learning Support Fund", "England",
+            "Students on eligible nursing, midwifery and allied health courses, such as physiotherapy, radiography "
+            "and paramedic science.",
+            "A yearly training grant you don't pay back, extra money if you have children, help with placement "
+            "travel and accommodation, and an exceptional support fund if you hit hardship. Apply through the NHS "
+            "Business Services Authority.", "https://www.nhsbsa.nhs.uk/nhs-learning-support-fund-lsf"),
+    "swb": ("Social Work Bursary", "England", "Social work students in England, undergraduate and postgraduate.",
+            "A bursary you don't pay back. Undergraduate places are limited and your university nominates who gets "
+            "one. Run by the NHS Business Services Authority.", "https://www.nhsbsa.nhs.uk/social-work-bursary-swb"),
+    "teach": ("Teacher training bursaries and scholarships", "England",
+              "Trainee teachers on postgraduate teacher training in shortage subjects such as maths, physics, "
+              "chemistry and computing.",
+              "Tax-free money you don't pay back, set each year by subject. The current subject list is on Get Into "
+              "Teaching.", "https://getintoteaching.education.gov.uk/funding-and-support/bursaries"),
+    "wales": ("Welsh Government Learning Grant", "Wales",
+              "Students from Wales on full-time or part-time undergraduate courses.",
+              "A grant towards living costs that you don't pay back. The amount depends on household income. Apply "
+              "through Student Finance Wales.", "https://www.studentfinancewales.co.uk/"),
+    "scot": ("Young Students' Bursary", "Scotland",
+             "Scottish students under 25 when their course starts, from lower-income households.",
+             "Not paid back; the amount depends on household income. Students 25 or over, or who support themselves, "
+             "can get the Independent Students' Bursary instead. Apply through SAAS.",
+             "https://www.saas.gov.uk/full-time/support-for-scottish-students"),
+    "scotcare": ("Care Experienced Students' Bursary", "Scotland", "Care-experienced Scottish students.",
+                 "A bursary for living costs in place of a student loan, so you don't build up debt for them. Apply "
+                 "through SAAS.", "https://www.saas.gov.uk/full-time/care-experienced-students"),
+    "ni": ("Maintenance Grant", "Northern Ireland", "Students from Northern Ireland from lower-income households.",
+           "Not paid back; the amount depends on household income. Apply through Student Finance NI.",
+           "https://www.studentfinanceni.co.uk/"),
+    "careleaver": ("Higher education bursary for care leavers", "England", "Care leavers in England starting a degree.",
+                   "Your local council pays a £2,000 bursary on top of anything your university gives. Ask your "
+                   "personal adviser. Propel lists what every university offers care leavers.",
+                   "https://becomecharity.org.uk/get-support/propel/"),
+    "estranged": ("Independent student status", "UK",
+                  "Students estranged from their parents.",
+                  "Student finance can assess you as independent, so your parents' income isn't counted. That usually "
+                  "means the biggest loan and the biggest income-based bursaries. Stand Alone explains the evidence "
+                  "you need.", "https://www.standalone.org.uk/"),
+}
+GOV_FOR_CIRC = {
+    "low-income-students": ["wales", "scot", "ni"],
+    "care-leavers": ["careleaver", "scotcare"],
+    "estranged-students": ["estranged"],
+    "disabled-students": ["dsa"],
+    "part-time-students": ["wales", "dsa"],
+}
+
+
+def gov_block(key):
+    n, where, who, what, url = GOV_INFO[key]
+    return cmp_block(f"{n} ({where})", f"<p><b>Who:</b> {esc(who)}</p><p>{esc(what)}</p>"
+                     f'<p><a class="go" href="{esc(url)}" rel="noopener" target="_blank">Official page &rarr;</a></p>')
+
+
+def uni_compartments(uni_name, slug, named, hard, pg):
+    """Folded sections for a university page, all from that uni's own funds."""
+    sh = uni_short(uni_name)
+    yr = academic_year()
+    nonh = [r for r in named if not is_hardship(r)]
+    sch = by_amount([r for r in nonh if infer_fund_type(r) == "Scholarship" and level_code(r) != "p"])
+    grants = by_amount([r for r in nonh if infer_fund_type(r) != "Scholarship" and level_code(r) != "p"])
+    blocks = []
+    if grants:
+        auto = [r for r in grants if is_automatic(r)]
+        caps = [income_cap(r) for r in grants if income_cap(r)]
+        t = f"{uni_name} has {_plural(len(grants), 'grant or bursary', 'grants and bursaries')} for undergraduates in {yr}."
+        if auto:
+            t += (f" {_plural(len(auto), 'is', 'are')} paid automatically, with no form to fill in: "
+                  + ", ".join(short_fund_name(clean(r.get('Bursary Name', '')), uni_name) for r in auto[:3]) + ".")
+            t = t.replace(f" {len(auto)} is ", f" {len(auto)} is ", 1)
+        if caps:
+            t += f" {_plural(len(caps), 'depends', 'depend')} on household income, for families earning up to £{max(caps):,}."
+        blocks.append(cmp_block(f"{sh} grants and bursaries {yr}", f"<p>{esc(t)}</p>" + fund_ul(grants, uni_name),
+                                len(grants)))
+    if sch:
+        sport = [r for r in sch if _SPORT_RE.search(_blob(r, "Bursary Name", "Extra Requirement"))]
+        arts = [r for r in sch if _ARTS_RE.search(clean(r.get("Bursary Name", "")))]
+        extra = []
+        if sport:
+            extra.append(f"{len(sport)} for sport")
+        if arts:
+            extra.append(f"{len(arts)} for music or the arts")
+        t = (f"{uni_name} offers {_plural(len(sch), 'scholarship', 'scholarships')} for undergraduates"
+             + (f", including {' and '.join(extra)}" if extra else "") + ".")
+        blocks.append(cmp_block(f"{sh} scholarships", f"<p>{esc(t)}</p>" + fund_ul(sch, uni_name), len(sch)))
+    if hard:
+        t = (f"{uni_name} has {_plural(len(hard), 'hardship fund', 'hardship funds')} for students who run short of "
+             f"money during their course. You apply to the university's student support or money advice team, and "
+             f"they decide based on your circumstances.")
+        more = (f'<p><a class="go" href="/bursaries/{slug}/hardship-funds/">{esc(sh)} hardship funds: who can apply '
+                f'and how &rarr;</a></p>' if slug in HARDSHIP_PAGES else "")
+        blocks.append(cmp_block(f"{sh} hardship fund", f"<p>{esc(t)}</p>" + fund_ul(by_amount(hard), uni_name) + more,
+                                len(hard)))
+    for cslug, _h1, _noun, fn in CIRCUMSTANCES:
+        m = by_amount([r for r in named if fn(r)])
+        if not m:
+            continue
+        lab = CIRC_SHORT.get(cslug, _noun)
+        noun = "scholarships" if cslug == "women-scholarships" else "grants and scholarships"
+        t = f"{_plural(len(m), 'fund', 'funds')} at {uni_name} {'is' if len(m) == 1 else 'are'} open to {lab}."
+        blocks.append(cmp_block(f"{sh} {noun} for {lab}",
+                                f"<p>{esc(t)}</p>" + fund_ul(m, uni_name, limit=8)
+                                + f'<p><a class="go" href="/bursaries/circumstance/{cslug}/">{esc(noun.capitalize())} for '
+                                  f'{esc(lab)} at every UK university &rarr;</a></p>', len(m)))
+    dated = sorted([(d, r) for r in named for d in [parse_deadline_date(r.get("Deadline", ""))]
+                    if d and d >= date.today()], key=lambda t: t[0])
+    if dated:
+        lis = "".join(f'<li><b>{d.day} {d.strftime("%b %Y")}</b> <span>&middot; </span>'
+                      f'{esc(short_fund_name(clean(r.get("Bursary Name", "")), uni_name))}</li>' for d, r in dated[:12])
+        blocks.append(cmp_block(f"{sh} bursary and scholarship deadlines {yr}",
+                                f"<p>The next {sh} closing dates, soonest first. The free BursaSearch app reminds you "
+                                f"before each one.</p><ul>{lis}</ul>", len(dated)))
+    if pg:
+        blocks.append(cmp_block(f"{sh} postgraduate scholarships and funding",
+                                f"<p>{esc(_plural(len(pg), 'fund', 'funds'))} at {esc(uni_name)} for master's and PhD "
+                                f"students.</p>" + fund_ul(by_amount(pg), uni_name), len(pg)))
+    return cmp_section(f"{sh} grants, scholarships and hardship funds, by type", blocks,
+                       "Tap a section to open it.")
+
+
+def circ_compartments(cslug, rows_matched, canon_by_key):
+    lab = CIRC_SHORT.get(cslug, cslug.replace("-", " "))
+    own = [r for r in rows_matched if not clean(r.get("University", "")).lower().startswith("external")]
+    nonh = [r for r in own if not is_hardship(r)]
+    sch = by_amount([r for r in nonh if infer_fund_type(r) == "Scholarship" and level_code(r) != "p"])
+    gr = by_amount([r for r in nonh if infer_fund_type(r) != "Scholarship" and level_code(r) != "p"])
+    hard = by_amount([r for r in own if is_hardship(r)])
+    pg = by_amount([r for r in nonh if level_code(r) == "p"])
+    blocks = [gov_block(k) for k in GOV_FOR_CIRC.get(cslug, [])]
+    for heading, rs in ((f"University grants and bursaries for {lab}", gr), (f"Scholarships for {lab}", sch),
+                        (f"Hardship funds for {lab}", hard), (f"Postgraduate funding for {lab}", pg)):
+        if rs:
+            n_u = len({clean(r.get("University", "")) for r in rs})
+            blocks.append(cmp_block(heading, f"<p>{esc(_plural(len(rs), 'fund', 'funds'))} at "
+                                             f"{esc(_plural(n_u, 'university', 'universities'))}, biggest first.</p>"
+                                    + fund_ul(rs, canon_by_key=canon_by_key, limit=10), len(rs)))
+    return cmp_section(f"Grants, scholarships and hardship funds for {lab}", blocks,
+                       "Government help and university money, by type. Tap a section to open it.")
+
+
+def scholarship_groups(rs):
+    ug = [r for r in rs if level_code(r) != "p" and not _is_international(r)]
+    return [
+        ("Biggest undergraduate scholarships", ug),
+        ("Sports scholarships", [r for r in rs if _SPORT_RE.search(_blob(r, "Bursary Name", "Extra Requirement"))]),
+        ("Music, art and drama scholarships", [r for r in rs if _ARTS_RE.search(clean(r.get("Bursary Name", "")))]),
+        ("Academic excellence scholarships", [r for r in rs if _EXCEL_RE.search(clean(r.get("Bursary Name", "")))]),
+        ("STEM scholarships: science, engineering, maths and computing",
+         [r for r in rs if _STEM_RE.search(_blob(r, "Bursary Name", "Study subject"))]),
+        ("Scholarships for women", [r for r in rs if _is_women_scholarship(r)]),
+        ("Scholarships for care leavers and estranged students",
+         [r for r in rs if vuln_has(r, "care leaver", "care experienced", "care-experienced", "estranged")]),
+        ("Scholarships for disabled students", [r for r in rs if vuln_has(r, "disab")]),
+        ("Scholarships for international students", [r for r in rs if _is_international(r)]),
+        ("Master's and PhD scholarships", [r for r in rs if level_code(r) == "p"]),
+    ]
+
+
+def render_scholarships(canon_by_key):
+    """'university scholarships uk', 'sports scholarships uk', 'scholarships for care leavers'...: every scholarship
+    in the data, folded by kind, with the quick check on top."""
+    yr = academic_year()
+    own = [r for r in rows if clean(r.get("Bursary Name", "")) and not is_hardship(r)
+           and not clean(r.get("University", "")).lower().startswith("external")
+           and infer_fund_type(r) == "Scholarship"]
+    own = by_amount(own)
+    n_unis = len({clean(r.get("University", "")) for r in own})
+    blocks = []
+    for heading, rs in scholarship_groups(own):
+        if rs:
+            n_u = len({clean(r.get("University", "")) for r in rs})
+            blocks.append(cmp_block(heading, f"<p>{esc(_plural(len(rs), 'scholarship', 'scholarships'))} at "
+                                             f"{esc(_plural(n_u, 'university', 'universities'))}, biggest first.</p>"
+                                    + fund_ul(rs, canon_by_key=canon_by_key, limit=12), len(rs)))
+    lede = (f"{len(own):,} scholarships at {n_unis} UK universities for {yr}, money you never pay back. Scholarships "
+            f"usually reward grades, a talent like sport or music, or a subject. Most need an application, so the ones "
+            f"you don't apply for, you don't get.")
+    faq = [
+        ("What's the difference between a scholarship and a bursary?",
+         "A bursary is usually based on need, like household income, and is often paid automatically. A scholarship "
+         "usually rewards grades, a talent or a subject and you normally apply for it. Neither is paid back."),
+        ("Do you have to pay a scholarship back?", "No. Scholarships are not loans."),
+        ("Can you get a scholarship and a bursary at the same time?",
+         "Often yes. Many universities let you hold an income-based bursary and a scholarship together. Each fund's "
+         "own rules say whether it can be combined."),
+        ("How do I find which scholarships I can get?",
+         "Answer the quick check on this page, then the free BursaSearch app matches you to the scholarships and "
+         "grants you qualify for and reminds you before they close."),
+    ]
+    h1 = f"University scholarships UK {yr}"
+    body = (crumb_html([("Home", "/"), ("Bursaries", "/bursaries/"), ("Scholarships", None)])
+            + f'<p class="yr">{yr}</p>'
+            + f'<h1 class="page">{esc(h1)}</h1>'
+            + f'<p class="lede">{esc(lede)}</p>'
+            + match_box("seo_tag", title="Which scholarships could you get?")
+            + cmp_section("Scholarships by type", blocks, "Tap a section to open it.")
+            + '<h2>More ways to get money for uni</h2>'
+            + tiles_html([("/bursaries/grants/", "University grants: every kind, and who gets them", None),
+                          ("/bursaries/biggest-bursaries/", "Which universities give the biggest bursaries", None),
+                          ("/bursaries/hardship-funds/", "Hardship funds at every university", None),
+                          ("/bursaries/", "Grants and scholarships at every university", None)])
+            + '<h2>Questions</h2>' + f'<div class="faq">{faq_html_from(faq)}</div>')
+    canonical = f"{SITE_URL}/bursaries/scholarships/"
+    schema = (jsonld_script(faq_jsonld_from(faq)) + jsonld_script(breadcrumb_jsonld(
+        [("BursaSearch", f"{SITE_URL}/"), ("Bursaries", f"{SITE_URL}/bursaries/"), ("Scholarships", canonical)])))
+    top = max_amount_value(own[0].get("Amount", "")) if own else 0
+    title = f"University Scholarships UK {yr}: {len(own):,} You Can Apply For"
+    description = clip_desc(f"{len(own):,} UK university scholarships for {yr}" + (f", up to £{top:,}" if top >= 1000 else "")
+                            + ": sport, music, grades, STEM and more. See which you qualify for in 30 seconds, free.")
+    return canonical, render_shell(title=esc(title), description=esc(description), canonical=canonical, body=body,
+                                   sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
+
+
+def clip_desc(t, n=158):
+    return t if len(t) <= n else t[:n - 1].rsplit(" ", 1)[0].rstrip(",.:;") + "…"
+
+
 def render_page(uni_name, entries, slug):
     count = len(entries)
     amt_range = amount_range_text(entries)
@@ -1245,10 +1587,15 @@ def render_page(uni_name, entries, slug):
     canonical = f"{SITE_URL}/bursaries/{slug}/"
     _flag0 = flagship_fund([r for r in entries if clean(r.get("Bursary Name", ""))], uni_name)
     _fn = short_fund_name(clean(_flag0.get("Bursary Name", "")), uni_name) if _flag0 is not None else ""
-    description = (
-        (f"The {_fn} plus {count - 1} other {uni_short(uni_name)} grants most students never claim. "
-         if _fn and count > 1 else f"All {count} {uni_name}{alias_bit} bursaries and scholarships{amt_bit}. ")
-        + f"Check which you'd get in 30 seconds, free. {academic_year()}."
+    _famt0 = format_amount(_flag0.get("Amount", "")) if _flag0 is not None else ""
+    _famt0 = _famt0 if "\u00a3" in _famt0 and len(_famt0) <= 18 else ""
+    _famt0 = re.sub(r"^Up to ", "up to ", _famt0)
+    description = clip_desc(
+        (f"The {_fn} pays {_famt0}, plus {count - 1} more {uni_short(uni_name)} grants most students never claim. "
+         if _fn and _famt0 and count > 1 else
+         f"The {_fn} plus {count - 1} more {uni_short(uni_name)} grants most students never claim. "
+         if _fn and count > 1 else f"{count} {uni_short(uni_name)} grants and scholarships{amt_bit}, never paid back. ")
+        + "See which you qualify for in 30 seconds, free."
     )
 
     named = [r for r in entries if clean(r.get("Bursary Name", ""))]
@@ -1350,6 +1697,7 @@ def render_page(uni_name, entries, slug):
         + (f'<p class="hlink"><a href="/bursaries/{slug}/hardship-funds/">Hardship funds at '
            f'{esc(uni_short(uni_name))}: who can apply and how →</a></p>' if slug in HARDSHIP_PAGES else "")
         + group("pg", "Master's and PhD funding", pg, 2)
+        + uni_compartments(uni_name, slug, named, hard, pg)
         + '<h2>Questions</h2>'
         + f'<div class="faq">{faq_html_from(faq_items)}</div>'
         + subj_block + related_links_html(entries)
@@ -1625,7 +1973,7 @@ def render_rollup(singles):
     rows_html = "".join(bursary_row(r, uni=uni) for uni, r in all_rows)
     count = len(all_rows)
     title = f"More UK University Bursaries ({academic_year()}) | BursaSearch"
-    description = f"{count} additional verified UK university bursaries and scholarships, one per institution."
+    description = f"{count} more UK university bursaries, one per university, money you never pay back. See which you qualify for in 30 seconds, free."
     canonical = f"{SITE_URL}/bursaries/more-universities/"
     lede = (
         f"{count} more verified bursaries, one each from smaller listings across UK universities — "
@@ -2060,9 +2408,9 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
     if h1.startswith("Bursaries for "):
         h1 = "Bursaries & Grants for " + h1[len("Bursaries for "):]
     title = f"{h1} {academic_year()}"
-    description = (
-        f"{count} verified bursaries, grants and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}. "
-        f"See eligibility, deadlines and official application links."
+    description = clip_desc(
+        f"{count} grants and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}, never paid back. "
+        f"See which you qualify for in 30 seconds, free."
     )
     path_suffix = f"{kind}/{slug}/" if slug else f"{kind}/"
     canonical = f"{SITE_URL}/bursaries/{path_suffix}"
@@ -2125,6 +2473,7 @@ def render_circumstance_page(slug, h1, noun_phrase, rows_matched, canon_by_key):
     return render_tag_page(
         "circumstance", slug, h1, noun_phrase, rows_matched,
         "Bursaries by circumstance", "your full circumstances", canon_by_key,
+        extra_html=circ_compartments(slug, [r for r in rows_matched if clean(r.get("Bursary Name", ""))], canon_by_key),
     )
 
 # ── Subject-based pages — the subjects with enough real cross-university
@@ -2299,8 +2648,8 @@ def render_uni_hardship_page(uni_name, uni_slug, hard, entries):
                                              f"{uni_short(uni_name)} Hardship Funds & Grants {yr}: How to Apply",
                               f"{uni_short(uni_name)} Hardship Funds {yr}: How to Apply")
                   if len(t) <= 70), f"{uni_short(uni_name)} Hardship Funds {yr}")
-    description = (f"{n} hardship and emergency funds at {uni_name}{ab}" + (f", up to {top}" if top else "")
-                   + f". Who can apply, how much you get, and other {uni_short(uni_name)} money you could claim on top. {yr}.")
+    description = clip_desc(f"Short of money at {uni_short(uni_name)}? {n} hardship and emergency funds"
+                            + (f", up to {top}" if top else "") + ". See which you could get in 30 seconds, free.")
     lede = (f"{n} hardship and emergency funds at {uni_name} for students who hit money problems "
             f"during the year" + (f", worth up to {top}" if top else "") + ".")
     rows_html = "".join(bursary_row(r, fund_href=fund_href_for(r, uni_name))
@@ -2362,8 +2711,8 @@ def render_hardship_hub(all_rows, canon_by_key):
                                      fund_href=fund_href_for(r)))
     canonical = f"{SITE_URL}/bursaries/hardship-funds/"
     title = f"University Hardship Funds & Grants {yr}: {n_unis} UK Unis Compared"
-    description = (f"{len(hard)} hardship and emergency funds at {n_unis} UK universities. "
-                   f"Who can apply, how much you can get and where to apply in {yr}.")
+    description = (f"Run out of money at uni? {len(hard)} hardship and emergency funds at {n_unis} UK universities. "
+                   f"See which you could get in 30 seconds, free.")
     lede = (f"{len(hard)} hardship and emergency funds at {n_unis} UK universities, for students who run "
             f"into money problems during their course.")
     faq_items = hardship_faq_items(hard, f"across {n_unis} universities")
@@ -2395,9 +2744,9 @@ def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
         f"{uni_name} students — each linking straight to the official page. Our app also "
         f"matches you to funds beyond this list, based on your subject and circumstances."
     )
-    description = (
-        f"{count} verified {label.lower()} bursaries and scholarships for {uni_name} "
-        f"students{amt_bit}. See eligibility, deadlines and official application links."
+    description = clip_desc(
+        f"{count} {label.lower()} grants and scholarships for {uni_name} students{amt_bit}. "
+        f"See which you qualify for in 30 seconds, free."
     )
     rows_html = "".join(
         bursary_row(r, fund_href=fund_href_for(r, uni_name))
@@ -2627,8 +2976,8 @@ def fund_description(row, name, uni_name, ftype):
         alias = uni_alias(uni_name)
         at = f"{uni_name} ({alias})" if alias and alias.lower() not in name.lower() and alias.lower() != uni_name.lower() else uni_name
         amt = f" (up to {amount})" if amount and "£" in amount and len(amount) <= 24 else ""
-        bits = (f"How to apply for the {name} at {at}: who can apply, how much you can get{amt} "
-                f"and where to apply in {academic_year()}.")
+        bits = (f"Short of money at {uni_short(uni_name)}? The {name}{amt} can help, and it isn't a student loan. "
+                f"See if you qualify in 30 seconds, free.")
         return bits if len(bits) <= 160 else bits[:157].rsplit(" ", 1)[0] + "…"
     aud = eligibility_audience_phrase(row)
     bits = f"{name}: " + (f"{amount} " if amount and len(amount) <= 24 else "")
@@ -2637,7 +2986,7 @@ def fund_description(row, name, uni_name, ftype):
     alias = uni_alias(uni_name)
     if alias and alias.lower() not in name.lower():
         bits += f" ({alias})"
-    bits += f". Who qualifies, plus other {uni_short(uni_name)} grants you could get on top. {academic_year()}."
+    bits += ". See if you qualify in 30 seconds, free."
     return bits if len(bits) <= 160 else bits[:157].rsplit(" ", 1)[0] + "…"
 
 def fund_lede(row, uni_name, ftype):
@@ -2846,8 +3195,8 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     canonical = f"{SITE_URL}/bursaries/"
     title = f"UK University Bursaries & Grants {academic_year()}: Browse by University"
     description = (
-        f"Browse verified bursaries and scholarships at {n_unis} UK universities, "
-        f"covering {n_total} funds in total. Free to search."
+        f"{n_total:,} grants, bursaries and scholarships at {n_unis} UK universities, money you never pay back. "
+        f"Find yours in 30 seconds, free."
     )
     lede = f"{n_total:,} verified bursaries and scholarships across {n_unis} UK universities."
     uni_items = [(f"/bursaries/{slug}/", name,
@@ -2894,6 +3243,8 @@ ANSWER_PAGES = [  # slug, short label for cross-links
     ("biggest-bursaries", "Which universities give the biggest bursaries"),
     ("household-income-under-25k", "Family earns under £25k: what each uni pays"),
     ("cost-of-living", "What uni costs a month, by university"),
+    ("grants", "University grants: every kind, and who gets them"),
+    ("scholarships", "University scholarships, by type"),
 ]
 
 def _load_json(path):
@@ -2999,7 +3350,7 @@ def render_biggest_bursaries(canon_by_key):
         slug="biggest-bursaries",
         title=f"Which UK Universities Give the Biggest Bursaries? {yr} Ranking",
         description=(f"{len(rows)} UK universities ranked by bursary size for {yr}: {an} up to £{a['amount']:,} a year. "
-                     f"Income limits and where to apply."),
+                     f"See what you'd get in 30 seconds."),
         h1="Which UK universities give the biggest bursaries?", lede=lede,
         stats=[(f"£{a['amount']:,}", f"biggest ({an})"), (f"£{median:,}", "middle of the table"), (str(len(rows)), "universities")],
         table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Biggest university bursaries {yr}", items))
@@ -3014,7 +3365,7 @@ GOV_GRANTS = [   # names only, linked to the official page: amounts change yearl
     ("Disabled Students' Allowance", "UK, students with a disability, long-term health or mental health condition, "
      "or a specific learning difficulty", "https://www.gov.uk/disabled-students-allowance-dsa"),
     ("NHS Learning Support Fund", "England, nursing, midwifery and many allied health students",
-     "https://www.nhsbsa.nhs.uk/learning-support-fund-lsf"),
+     "https://www.nhsbsa.nhs.uk/nhs-learning-support-fund-lsf"),
     ("Welsh Government Learning Grant", "Wales, students from lower-income households",
      "https://www.studentfinancewales.co.uk/"),
     ("Young Students' Bursary", "Scotland, students from lower-income households (SAAS)", "https://www.saas.gov.uk/"),
@@ -3082,11 +3433,20 @@ def render_grants(canon_by_key):
             + '<h2>Biggest university grants for undergraduates</h2>'
             + f'<div class="list">{rows_html}</div>'
             + '<p class="hlink"><a href="/bursaries/biggest-bursaries/">Every university\u2019s main bursary, ranked &rarr;</a></p>'
-            + '<h2>Government grants</h2>'
-            + f'<div class="list">{gov}</div>'
+            + cmp_section("Government grants and allowances", [gov_block(k) for k in GOV_INFO],
+                          "Official help on top of your student loan. Tap one to see who gets it and how to apply.")
+            + cmp_section("Grants by situation", [
+                cmp_block(f"Grants for {CIRC_SHORT[cs]}",
+                          f"<p>{esc(_plural(len(m_), 'university fund', 'university funds'))}, biggest first.</p>"
+                          + fund_ul(m_, canon_by_key=canon_by_key, limit=8)
+                          + f'<p><a class="go" href="/bursaries/circumstance/{cs}/">All grants for {esc(CIRC_SHORT[cs])} '
+                            f'&rarr;</a></p>', len(m_))
+                for cs, _h, _n, fn_ in CIRCUMSTANCES
+                for m_ in [by_amount([r for r in own if fn_(r) and not is_hardship(r)])] if m_])
             + '<h2>More grants by situation</h2>'
             + tiles_html([("/bursaries/household-income-under-25k/", "Grants if your family earns under £25k", None),
                           ("/bursaries/hardship-funds/", "Hardship funds and grants at every university", None),
+                          ("/bursaries/scholarships/", "Scholarships at every university, by type", None),
                           ("/bursaries/circumstance/care-leavers/", "Grants for care leavers", None),
                           ("/bursaries/circumstance/estranged-students/", "Grants for estranged students", None),
                           ("/bursaries/circumstance/disabled-students/", "Grants for disabled students", None),
@@ -3096,8 +3456,8 @@ def render_grants(canon_by_key):
     schema = (jsonld_script(faq_jsonld_from(faq)) + jsonld_script(breadcrumb_jsonld(
         [("BursaSearch", f"{SITE_URL}/"), ("Bursaries", f"{SITE_URL}/bursaries/"), ("University grants", canonical)])))
     title = f"University Grants UK {yr}: Every Grant You Don't Pay Back"
-    description = (f"{len(own) + len(nat):,} grants, bursaries and scholarships for UK students in {yr}: university "
-                   f"grants, hardship funds, charity and government grants. Check which you could get in 30 seconds.")
+    description = clip_desc(f"{len(own) + len(nat):,} grants for UK students in {yr} from universities, charities and "
+                            f"the government, none paid back. See which you qualify for in 30 seconds, free.")
     return canonical, render_shell(title=esc(title), description=esc(description), canonical=canonical, body=body,
                                    sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
 
@@ -3136,7 +3496,7 @@ def render_under_25k(canon_by_key):
         slug="household-income-under-25k",
         title=f"Grants & Bursaries If Your Family Earns Under £25k ({yr})",
         description=(f"Household income under £25,000? {len(ok)} UK universities pay you a bursary for {yr}, up to "
-                     f"£{top['amount']:,} a year at {tn}. Free money you don't pay back."),
+                     f"£{top['amount']:,} a year at {tn}. See yours in 30 seconds, free."),
         h1="Family earns under £25k? The grants each uni pays you", lede=lede,
         stats=[(str(len(ok)), "universities that pay you"), (f"£{top['amount']:,}", f"most ({tn})"), ("£0", "to pay back")],
         table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Bursaries for household income under £25,000 {yr}", items))
@@ -3342,7 +3702,8 @@ answer_urls = []
 for _slug, _render in (("biggest-bursaries", render_biggest_bursaries),
                        ("household-income-under-25k", render_under_25k),
                        ("cost-of-living", render_cost_of_living),
-                       ("grants", render_grants)):
+                       ("grants", render_grants),
+                       ("scholarships", render_scholarships)):
     _url, _html = _render(canon_by_key)
     os.makedirs(os.path.join(OUT_DIR, _slug), exist_ok=True)
     write_page(_url, os.path.join(OUT_DIR, _slug, "index.html"), _html, lastmod_map, changed_urls)
