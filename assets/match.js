@@ -1,6 +1,6 @@
 (function(){
 var box=document.getElementById('mchk');if(!box)return;
-var go=box.getAttribute('data-go')||'seo_site',pre=box.getAttribute('data-c')||'',title=box.getAttribute('data-t')||'Which could you get?';
+var go=box.getAttribute('data-go')||'seo_site',pre=box.getAttribute('data-c')||'',title=box.getAttribute('data-t')||'Which grants could you get?';
 var D=null,wait=[],busy=0;
 function load(cb){if(D){cb();return}wait.push(cb);if(busy)return;busy=1;
  fetch('/assets/match.json').then(function(r){return r.json()}).then(function(j){D=j;var w=wait;wait=[];w.forEach(function(f){f()})})
@@ -17,7 +17,7 @@ function head(){var h='<div class="hd"><b>'+esc(title)+'</b><span>'+(step+1)+' o
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';return h+'</div>'}
 function ask(){var q=Q[step],h=head();
  if(q.k==='u')h+='<label class="qq" for="mq">Where are you studying, or hoping to?</label><input id="mq" type="search" autocomplete="off" placeholder="Type your university"><ul class="fres" id="mr"></ul>'
-  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
+  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">3 quick questions. Your matches open in the free app.</p>';
  else{h+='<p class="qq">'+esc(q.q)+'</p>';q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
   h+='<button type="button" class="back">Back</button>'}
  box.className='chk mchk';box.innerHTML=h;if(q.k==='u')bind()}

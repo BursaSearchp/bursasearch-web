@@ -50,15 +50,15 @@ PLAY_URL = play_url("bursasearch_web", "referral", "seo_site")
 # ab=v1..v5). Read with tools/ab_report.py.
 # Earlier the same day: 15 independent coin-flip tests (bs_ab1). Their weak parts are gone everywhere (per-row
 # 'Check if I qualify', no sticky bar, header copy test); the better bar copy and 'See all N in the app' stay on.
+# 14 Nov evening, Isaac: "iterate, make it good, optimize, maybe drop down from 5". ~130 search visitors a week can't
+# split five ways (26 each a week), so the five merge into three clear ideas, on university AND fund pages:
 AB_VARIANTS = [
-    ("quiz", "title, quick stats, then the quiz. Nothing else"),
-    ("money", "'What <uni> could pay you' money card first, then the quiz"),
-    ("preview", "the quiz, then a real screenshot of the app's matches"),
-    ("deadline", "next closing deadline with days left + 'the app reminds you' first, then the quiz"),
-    ("income", "'How much could you get?' opening on household income, with a free-app proof line"),
+    ("quiz", "the quiz straight under the heading, nothing else"),
+    ("money", "'What <uni> could pay you' card, then 'How much could you get?' opening on household income"),
+    ("preview", "the quiz, then a real screenshot of the app + the deadline reminder it gives you"),
 ]
 AB_N = len(AB_VARIANTS)
-AB_HEAD = ("<script>(function(){var N=%d,k='bs_v1',v='',id;try{v=localStorage.getItem(k)||''}catch(e){}"
+AB_HEAD = ("<script>(function(){var N=%d,k='bs_v2',v='',id;try{v=localStorage.getItem(k)||''}catch(e){}"
            "if(!/^[1-9]$/.test(v)||+v>N){v=String(1+Math.floor(Math.random()*N));try{localStorage.setItem(k,v)}catch(e){}}"
            "document.documentElement.className+=' pv'+v;try{id=localStorage.getItem('bs_wid')}catch(e){}"
            "if(!id){id='w'+Math.random().toString(36).slice(2,12);try{localStorage.setItem('bs_wid',id)}catch(e){}}"
@@ -69,29 +69,32 @@ AB_HEAD = ("<script>(function(){var N=%d,k='bs_v1',v='',id;try{v=localStorage.ge
 AB_CSS = """
 .v1b,.v3b,.v7a,.v9b,.v10a,.v11b,.v12b,.v13b,.v14b,.v15b{display:none!important}
 html.pv2 .v1b{display:block!important}
-html.pv3 .v11b{display:block!important}
-html.pv4 .v13b{display:block!important}
-html.pv5 .v3b{display:inline!important} html.pv5 .v3a{display:none!important}
-html.pv5 .v12b{display:block!important}
-html.pv5 .v14b{display:block!important} html.pv5 .v14a{display:none!important}
-.v7b,.v10b.fapp{display:block}
-.v7b{display:inline!important} .v10b{display:inline}
-.side{display:flex; flex-direction:column;}
-html.pv4 .side .dl{order:-1; margin:0 0 14px;}
-.side .dl .rm{display:block; margin-top:4px; color:var(--sec); font-size:13px;}
-.ans{background:var(--hero); border:1px solid rgba(255,255,255,.06); border-radius:22px; padding:18px; margin:14px 0 14px;}
+html.pv2 .v3b{display:inline!important} html.pv2 .v3a{display:none!important}
+html.pv2 .v14b{display:block!important} html.pv2 .v14a{display:none!important}
+html.pv3 .v11b,html.pv3 .v13b{display:block!important}
+.v7b{display:inline!important} .v10b{display:inline} .v10b.fapp{display:block}
+.side,.fside{display:flex; flex-direction:column;}
+.side .dl .rm,.fside .dl .rm{display:block; margin-top:4px; color:var(--sec); font-size:13px;}
+.ans{background:var(--hero); border:1px solid rgba(255,255,255,.06); border-radius:22px 22px 0 0; padding:18px 18px 6px;
+  margin:14px 0 0; border-bottom:0;}
+html.pv2 .ans + .stats{display:none;}
+html.pv2 .side .ans + .chk{border-radius:0 0 22px 22px; border-top:0; padding-top:6px;}
 .ans .al{margin:0; font-size:12px; font-weight:600; color:var(--sec); text-transform:uppercase; letter-spacing:.08em;}
 .ans .av{margin:4px 0 4px; font-size:38px; font-weight:700; letter-spacing:-.03em; line-height:1.1; color:var(--white);}
-.ans .as{margin:0 0 16px; font-size:14px; color:var(--body);}
-.side .pf{font-size:13px; color:var(--sec); margin:12px 4px 0;}
-.side .dl{font-size:14px; margin:12px 0 0; padding:13px 15px; background:rgba(232,160,32,.10); border:1px solid rgba(232,160,32,.25);
+.ans .as{margin:0 0 8px; font-size:14px; color:var(--body);}
+.dl{font-size:14px; margin:12px 0 0; padding:13px 15px; background:rgba(232,160,32,.10); border:1px solid rgba(232,160,32,.25);
   border-radius:16px; color:var(--body);}
-.side .dl b{color:var(--white);} .side .dl .dd{font-weight:700; color:var(--amber);}
+.dl b{color:var(--white);} .dl .dd{font-weight:700; color:var(--amber);}
 .shot{margin:16px 0 0; text-decoration:none !important; color:var(--white) !important;}
 .shot img{display:block; width:100%; max-width:360px; height:auto; border-radius:22px; border:1px solid var(--line);}
 .shot span{display:block; font-weight:600; font-size:14px; margin-top:8px; color:var(--teal);}
 .fapp{margin:12px 0 4px; font-weight:600; color:var(--teal) !important;}
 .ftr .abo{font-size:12px; color:var(--sec); margin:10px 0 0;}
+.chk .hd b{font-size:19px; line-height:1.25;}
+.chk .hd b span{font-size:inherit; color:inherit; font-weight:inherit;}
+.chk .hd > span{white-space:nowrap; flex:none;}
+.stats b{font-size:clamp(17px,4.8vw,22px); overflow-wrap:normal; word-break:normal; hyphens:none;}
+.fside{margin:4px 0 22px;}
 """
 AB_SCRIPT = '<script src="/assets/ab.js" defer></script>'
 
@@ -1135,7 +1138,7 @@ def uni_logo(slug, uni_name):
     return ""
 
 CHECK_Q1 = (
-    '<div class="hd"><b><span class="v3a">Which could you get?</span><span class="v3b">How much could you get?</span></b>'
+    '<div class="hd"><b><span class="v3a">Which __WHO__ grants could you get?</span><span class="v3b">How much could you get?</span></b>'
     '<span>1 of 3</span></div>'
     '<div class="prog"><i class="on"></i><i></i><i></i></div>'
     '<div class="v14a"><p class="qq">What will you study?</p>'
@@ -1146,11 +1149,11 @@ CHECK_Q1 = (
     '<button type="button" class="opt" data-v="25000">£25,000 to £43,000</button>'
     '<button type="button" class="opt" data-v="43000">Over £43,000</button>'
     '<button type="button" class="opt" data-v="-1">Not sure</button></div>'
-    '<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>'
+    '<p class="fine">3 quick questions. Your matches open in the free app.</p>'
 )
 
 def check_box(go, who):
-    return (f'<div id="chk" class="chk" data-go="{go}" data-uni="{esc(who)}">{CHECK_Q1}</div>')
+    return (f'<div id="chk" class="chk" data-go="{go}" data-uni="{esc(who)}">{CHECK_Q1.replace("__WHO__", esc(who))}</div>')
 
 CHECK_SCRIPT = '<script src="/assets/check.js" defer></script>'
 
@@ -1315,7 +1318,7 @@ def render_page(uni_name, entries, slug):
         hero = (f'<p class="av">Up to \u00a3{top_ug:,}</p><p class="as">{len(ug)} {esc(sh)} funds for undergraduates, '
                 f'plus national grants</p>')
     hero_html = (f'<div class="ans v1b"><p class="al">What {esc(sh)} could pay you</p>{hero}'
-                 f'<a class="abtn" href="#chk" data-p="hero">Check what you could get &darr;</a></div>'
+                 f'<p class="as" style="color:#4EC4C4;margin:0">Answer 3 questions to see what you\u2019d get &darr;</p></div>'
                  if hero else "")
     nxt = []
     for r in ug + hard:
@@ -1332,19 +1335,17 @@ def render_page(uni_name, entries, slug):
     if not dline:   # version 4 on a page with no dated deadline: the reminder promise without inventing a date
         dline = (f'<p class="dl v13b"><b>Don’t miss a {esc(sh)} deadline</b>'
                  f'<span class="rm">The free app tracks every grant you match and reminds you before each one closes.</span></p>')
-    side_extra = (f'<p class="pf v12b">Free app &middot; {SITE_FUND_COUNT:,} UK funds &middot; 2-minute quiz</p>' + dline
-                  + '<a class="shot v11b" href="/go/seo_uni/" data-p="shot"><img src="/assets/app-grants.webp" '
+    side_extra = ('<a class="shot v11b" href="/go/seo_uni/" data-p="shot"><img src="/assets/app-grants.webp" '
                     'width="320" height="375" loading="lazy" alt="The BursaSearch app: a grant you are tracking and your locked matches">'
-                    '<span>This is what you get in the app: your matches, tracked, with reminders &rarr;</span></a>')
+                    '<span>This is what you get in the app: your matches, tracked, with reminders &rarr;</span></a>' + dline)
     head = (
         crumb_html([("Home", "/"), ("Universities", "/bursaries/"), (uni_name, None)])
         + f'<p class="yr">{uni_logo(slug, uni_name)}<span>{academic_year()}</span></p>'
         + f'<h1 class="page">{esc(uni_name)} Bursaries, Grants &amp; Scholarships</h1>'
-        + hero_html
-        + stats_html
     )
     body_html = (
-        group("ug", "For undergraduates", ug, 4)
+        stats_html
+        + group("ug", "For undergraduates", ug, 4)
         + group("h", "Hardship funds", hard, 2)
         + (f'<p class="hlink"><a href="/bursaries/{slug}/hardship-funds/">Hardship funds at '
            f'{esc(uni_short(uni_name))}: who can apply and how →</a></p>' if slug in HARDSHIP_PAGES else "")
@@ -1355,7 +1356,7 @@ def render_page(uni_name, entries, slug):
         + stat_line()
     )
     body = (f'<div class="layout"><div class="head">{head}</div>'
-            f'<div class="side">{check_box("seo_uni", uni_short(uni_name))}{side_extra}</div>'
+            f'<div class="side">{hero_html}{check_box("seo_uni", uni_short(uni_name))}{side_extra}</div>'
             f'<div class="body">{body_html}</div></div>')
     schema = jsonld_script(faq_jsonld_from(faq_items)) + jsonld_script(breadcrumb_jsonld([
         ("BursaSearch", f"{SITE_URL}/"),
@@ -1380,7 +1381,7 @@ function gateBox(el,uni){var go=el.getAttribute('data-go')||'seo_site';el.classN
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var fb=document.getElementById('fchk');
 if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
- var fask=function(){var q=FQ[fs],h='<div class="hd"><b>Am I eligible?</b><span>'+(fs+1)+' of '+FQ.length+'</span></div><div class="prog">';
+ var fask=function(){var q=FQ[fs],h='<div class="hd"><b>'+esc(fb.getAttribute(V(2)?'data-tb':'data-ta')||'Could you get this?')+'</b><span>'+(fs+1)+' of '+FQ.length+'</span></div><div class="prog">';
   for(var i=0;i<FQ.length;i++)h+='<i'+(i<=fs?' class="on"':'')+'></i>';
   h+='</div><p class="qq">'+esc(q[0])+'</p><div class="yn"><button type="button" class="opt" data-v="y">Yes</button><button type="button" class="opt" data-v="n">No</button></div>';
   if(q[1])h+='<button type="button" class="opt" data-v="u">Not sure</button>';
@@ -1413,7 +1414,7 @@ function ask(){var q=Q[step],h='<div class="hd"><b>'+(V(5)?'How much could you g
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
  h+='</div><p class="qq">'+esc(q.q)+'</p>';
  q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
- h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
+ h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">3 quick questions. Your matches open in the free app.</p>';
  box.className='chk';box.innerHTML=h}
 box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
  if(t.classList.contains('opt')){if(!started){started=true;L('web_check_start')}A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
@@ -1507,7 +1508,7 @@ def write_check_js(rows_all):
 # /assets/match.json (fetched on first use), code is /assets/match.js.
 MATCH_SCRIPT = '<script src="/assets/match.js" defer></script>'
 
-def match_box(go, preset="", title="Which could you get?"):
+def match_box(go, preset="", title="Which grants could you get?"):
     """Server-rendered first question; match.js takes over from there.
     `preset` = a circumstance code the page already answers (care leavers -> c)."""
     n = 3 if preset else 4
@@ -1519,12 +1520,12 @@ def match_box(go, preset="", title="Which could you get?"):
         '<input id="mq" type="search" autocomplete="off" placeholder="Type your university">'
         '<ul class="fres" id="mr"></ul>'
         '<button type="button" class="opt" data-v="none">Not decided yet</button>'
-        '<p class="fine">Quick web estimate for UK students. The app is more accurate.</p></div>'
+        '<p class="fine">3 quick questions. Your matches open in the free app.</p></div>'
     )
 
 MATCH_JS = r"""(function(){
 var box=document.getElementById('mchk');if(!box)return;
-var go=box.getAttribute('data-go')||'seo_site',pre=box.getAttribute('data-c')||'',title=box.getAttribute('data-t')||'Which could you get?';
+var go=box.getAttribute('data-go')||'seo_site',pre=box.getAttribute('data-c')||'',title=box.getAttribute('data-t')||'Which grants could you get?';
 var D=null,wait=[],busy=0;
 function load(cb){if(D){cb();return}wait.push(cb);if(busy)return;busy=1;
  fetch('/assets/match.json').then(function(r){return r.json()}).then(function(j){D=j;var w=wait;wait=[];w.forEach(function(f){f()})})
@@ -1541,7 +1542,7 @@ function head(){var h='<div class="hd"><b>'+esc(title)+'</b><span>'+(step+1)+' o
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';return h+'</div>'}
 function ask(){var q=Q[step],h=head();
  if(q.k==='u')h+='<label class="qq" for="mq">Where are you studying, or hoping to?</label><input id="mq" type="search" autocomplete="off" placeholder="Type your university"><ul class="fres" id="mr"></ul>'
-  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
+  +'<button type="button" class="opt" data-v="none">Not decided yet</button><p class="fine">3 quick questions. Your matches open in the free app.</p>';
  else{h+='<p class="qq">'+esc(q.q)+'</p>';q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
   h+='<button type="button" class="back">Back</button>'}
  box.className='chk mchk';box.innerHTML=h;if(q.k==='u')bind()}
@@ -1858,16 +1859,18 @@ def fund_questions(row, uni_name):
         qs.append(("Is this your first year?", False))
     return qs[:3]
 
-def fund_check_html(qs, go, official, n_other, uni_short_name):
+def fund_check_html(qs, go, official, n_other, uni_short_name, title_a="Could you get this?", title_b="Could you get this?"):
     q, ns = qs[0]
     prog = "".join(f'<i{" class=\"on\"" if i == 0 else ""}></i>' for i in range(len(qs)))
-    first = (f'<div class="hd"><b>Am I eligible?</b><span>1 of {len(qs)}</span></div>'
+    first = (f'<div class="hd"><b><span class="v3a">{esc(title_a)}</span><span class="v3b">{esc(title_b)}</span></b>'
+             f'<span>1 of {len(qs)}</span></div>'
              f'<div class="prog">{prog}</div><p class="qq">{esc(q)}</p>'
              '<div class="yn"><button type="button" class="opt" data-v="y">Yes</button>'
              '<button type="button" class="opt" data-v="n">No</button></div>'
              + ('<button type="button" class="opt" data-v="u">Not sure</button>' if ns else ""))
     data_q = esc(json.dumps([[a, 1 if b else 0] for a, b in qs]))
     return (f'<div id="fchk" class="chk" data-q="{data_q}" data-go="{go}" data-off="{esc(official)}" '
+            f'data-ta="{esc(title_a)}" data-tb="{esc(title_b)}" '
             f'data-n="{n_other}" data-uni="{esc(uni_short_name)}">{first}</div>')
 
 SIMILAR_BY_CIRC = {}   # circ code -> [(value, uni_name, row, href)] — filled in phase 1
@@ -1890,7 +1893,7 @@ def similar_elsewhere(row, uni_name, n=3):
 
 def short_deadline(row):
     if is_automatic(row):
-        return ("None", "paid automatically")
+        return ("Automatic", "no application")
     raw = clean(row.get("Deadline", ""))
     d = parse_deadline_date(raw)
     if d and d >= date.today():
@@ -2761,8 +2764,11 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
 
     siblings = [s for s in sibling_specs if s[3] != fund_slug]
     qs = fund_questions(row, uni_name)
+    short_nm = short_fund_name(name, uni_name)
+    t_a = f"Could you get the {short_nm}?" if len(short_nm) <= 38 else "Could you get this one?"
+    t_b = f"Could you get {amt}?" if "\u00a3" in amt and len(amt) <= 16 else t_a
     if len(qs) >= 2:
-        check = fund_check_html(qs, "seo_fund", official, len(siblings), ushort)
+        check = fund_check_html(qs, "seo_fund", official, len(siblings), ushort, t_a, t_b)
     else:
         check = check_box("seo_fund", ushort)   # 14 Nov: every fund page has the quick check (gated), not a bare button
 
@@ -2785,15 +2791,26 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
 
     faq_items = fund_faq_items(row, uni_name)
     logo = uni_logo(uni_slug, uni_name)
+    # version 3 on fund pages: the app screenshot, then the reminder for THIS fund's deadline (or the general promise)
+    fd = parse_deadline_date(row.get("Deadline", ""))
+    if fd and fd >= date.today():
+        f_dl = (f'<p class="dl v13b" data-d="{fd.isoformat()}">Closes <b>{fd.day} {fd.strftime("%b %Y")}</b>'
+                f'<span class="rm">The free app reminds you before it closes.</span></p>')
+    else:
+        f_dl = ('<p class="dl v13b"><b>Never miss a deadline</b><span class="rm">The free app tracks every grant you '
+                'match and reminds you before each one closes.</span></p>')
+    fund_extra = ('<a class="shot v11b" href="/go/seo_fund/" data-p="shot"><img src="/assets/app-grants.webp" width="320" '
+                  'height="375" loading="lazy" alt="The BursaSearch app: a grant you are tracking and your locked matches">'
+                  '<span>This is what you get in the app: your matches, tracked, with reminders &rarr;</span></a>' + f_dl)
     body = (
         crumb_html([("Home", "/"), ("Universities", "/bursaries/"),
                     (ushort, f"/bursaries/{uni_slug}/"), (name, None)])
         + f'<p class="yr">{logo}<span>{esc(uni_name)} · {academic_year()}</span></p>'
         + f'<h1 class="page">{esc(name)}</h1>'
         + stats_html
+        + f'<div class="fside">{check}{fund_extra}</div>'
         + f'<p class="lede">{esc(lede)}</p>'
         + '<h2>Who can apply</h2>' + crit_html
-        + f'<div class="fside">{check}</div>'
         + apply_html
         + sim_html
         + sib_html

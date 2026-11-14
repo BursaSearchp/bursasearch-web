@@ -12,7 +12,7 @@ function gateBox(el,uni){var go=el.getAttribute('data-go')||'seo_site';el.classN
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var fb=document.getElementById('fchk');
 if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
- var fask=function(){var q=FQ[fs],h='<div class="hd"><b>Am I eligible?</b><span>'+(fs+1)+' of '+FQ.length+'</span></div><div class="prog">';
+ var fask=function(){var q=FQ[fs],h='<div class="hd"><b>'+esc(fb.getAttribute(V(2)?'data-tb':'data-ta')||'Could you get this?')+'</b><span>'+(fs+1)+' of '+FQ.length+'</span></div><div class="prog">';
   for(var i=0;i<FQ.length;i++)h+='<i'+(i<=fs?' class="on"':'')+'></i>';
   h+='</div><p class="qq">'+esc(q[0])+'</p><div class="yn"><button type="button" class="opt" data-v="y">Yes</button><button type="button" class="opt" data-v="n">No</button></div>';
   if(q[1])h+='<button type="button" class="opt" data-v="u">Not sure</button>';
@@ -45,7 +45,7 @@ function ask(){var q=Q[step],h='<div class="hd"><b>'+(V(5)?'How much could you g
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
  h+='</div><p class="qq">'+esc(q.q)+'</p>';
  q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
- h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">Quick web estimate for UK students. The app is more accurate.</p>';
+ h+=step?'<button type="button" class="back">Back</button>':'<p class="fine">3 quick questions. Your matches open in the free app.</p>';
  box.className='chk';box.innerHTML=h}
 box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
  if(t.classList.contains('opt')){if(!started){started=true;L('web_check_start')}A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
