@@ -1335,9 +1335,9 @@ def render_page(uni_name, entries, slug):
     if not dline:   # version 4 on a page with no dated deadline: the reminder promise without inventing a date
         dline = (f'<p class="dl v13b"><b>Don’t miss a {esc(sh)} deadline</b>'
                  f'<span class="rm">The free app tracks every grant you match and reminds you before each one closes.</span></p>')
-    side_extra = ('<a class="shot v11b" href="/go/seo_uni/" data-p="shot"><img src="/assets/app-grants.webp" '
-                    'width="320" height="375" loading="lazy" alt="The BursaSearch app: a grant you are tracking and your locked matches">'
-                    '<span>This is what you get in the app: your matches, tracked, with reminders &rarr;</span></a>' + dline)
+    side_extra = ('<a class="shot v11b" href="/go/seo_uni/" data-p="shot"><img src="/assets/app-track.webp" '
+                    'width="320" height="274" loading="lazy" alt="The BursaSearch app tracking a grant: to start, applied, claimed, with a deadline reminder">'
+                    '<span>In the app: every grant you match, tracked from apply to claimed &rarr;</span></a>' + dline)
     head = (
         crumb_html([("Home", "/"), ("Universities", "/bursaries/"), (uni_name, None)])
         + f'<p class="yr">{uni_logo(slug, uni_name)}<span>{academic_year()}</span></p>'
@@ -2799,9 +2799,9 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
     else:
         f_dl = ('<p class="dl v13b"><b>Never miss a deadline</b><span class="rm">The free app tracks every grant you '
                 'match and reminds you before each one closes.</span></p>')
-    fund_extra = ('<a class="shot v11b" href="/go/seo_fund/" data-p="shot"><img src="/assets/app-grants.webp" width="320" '
-                  'height="375" loading="lazy" alt="The BursaSearch app: a grant you are tracking and your locked matches">'
-                  '<span>This is what you get in the app: your matches, tracked, with reminders &rarr;</span></a>' + f_dl)
+    fund_extra = ('<a class="shot v11b" href="/go/seo_fund/" data-p="shot"><img src="/assets/app-track.webp" width="320" '
+                  'height="274" loading="lazy" alt="The BursaSearch app tracking a grant: to start, applied, claimed, with a deadline reminder">'
+                  '<span>In the app: every grant you match, tracked from apply to claimed &rarr;</span></a>' + f_dl)
     body = (
         crumb_html([("Home", "/"), ("Universities", "/bursaries/"),
                     (ushort, f"/bursaries/{uni_slug}/"), (name, None)])
