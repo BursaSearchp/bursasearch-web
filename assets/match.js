@@ -32,7 +32,17 @@ function suggest(){var inp=document.getElementById('mq'),o=document.getElementBy
   m.sort(function(a,b){return D.u[a][0].length-D.u[b][0].length});m=m.slice(0,6);
   o.innerHTML=m.length?m.map(function(i){return '<li><button type="button" class="pick" data-i="'+i+'">'+esc(D.u[i][0])+'</button></li>'}).join('')
    :'<li class="nil">Not in our list yet. Choose “Not decided yet” to see national grants.</li>'})}
-function next(){step++;if(step<Q.length)ask();else load(result)}
+function gateM(){var u=U?U[0]:'';box.className='res';
+ box.innerHTML='<p class="big">Done. Get your grant results in the app</p>'
+  +'<p>The free BursaSearch app checks your answers against every UK fund we track: '+(u?esc(u)+'’s own grants and bursaries, ':'university grants and bursaries, ')
+  +'national grants and charities. It shows exactly which you’d get, how much, and when each one closes.</p>'
+  +'<a class="wbtn" href="/go/'+esc(go)+'/'+(window.BSAB?'?a='+window.BSAB.hex:'')+'" data-p="gate">Get my results in the free app</a>'
+  +'<p class="small">Takes about 2 minutes. The app asks a few more questions so the matches are exact.</p>'
+  +'<button type="button" class="again">Change answers</button>';
+ if(bar)bar.textContent='Get your results free in the app';
+ try{window.bsLog&&window.bsLog('web_check_done',{gate:1})}catch(_){}
+ if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'})}
+function next(){if(step===0)try{window.bsLog&&window.bsLog('web_check_start')}catch(_){}step++;if(step<Q.length)ask();else gateM()}
 box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
  if(t.classList.contains('pick')){U=D.u[+t.getAttribute('data-i')];next()}
  else if(t.classList.contains('opt')){if(Q[step].k==='u')U=0;else A[Q[step].k]=t.getAttribute('data-v');next()}

@@ -53,9 +53,9 @@ AB_TESTS = [
     ("hero", "money answer card at the top of uni pages"),
     ("dark", "app-style dark cards for the answer card and check result"),
     ("qtitle", "check title 'How much could you get?'"),
-    ("money", "check result leads with a money total"),
-    ("lock", "check result shows 2 matches, the rest locked behind the app"),
-    ("ctacopy", "result button 'See my N matches free'"),
+    ("money", "RETIRED 14 Nov: the check no longer shows results"),
+    ("lock", "RETIRED 14 Nov: the check no longer shows results"),
+    ("ctacopy", "RETIRED 14 Nov: the check no longer shows results"),
     ("barcopy", "sticky bar copy about grants you could get"),
     ("nobar", "no sticky bar"),
     ("rowcta", "'Check if I qualify' link on every fund row"),
@@ -66,6 +66,9 @@ AB_TESTS = [
     ("incfirst", "check asks household income first"),
     ("hdrbtn", "header button 'See my grants'"),
 ]
+# 14 Nov, Isaac: the site is "a quick version of the tool" that gives NO results and asks for the download. Every
+# check (uni, fund, pick-your-uni) ends on gateBox(). The app can't receive web answers yet (bursasearch:// links
+# need the app already installed), so the copy never says results are saved or waiting: the app runs its own quiz.
 AB_N = len(AB_TESTS)
 AB_HEAD = ("<script>(function(){var T=%d,k='bs_ab1',a='',i,id;try{a=localStorage.getItem(k)||''}catch(e){}"
            "if(!/^[01]+$/.test(a)||a.length!==T){a='';for(i=0;i<T;i++)a+=Math.random()<.5?'1':'0';"
@@ -921,6 +924,10 @@ def render_shell(*, title, description, canonical, body, hero="", sticky="", sch
                  og_image=None):
     """The one page template for the whole site. `title`/`description` arrive
     already escaped by the caller (same as the old PAGE_TEMPLATE contract)."""
+    if 'id="mchk"' in body and "match.js" not in scripts:
+        scripts += MATCH_SCRIPT
+    if ('id="chk"' in body or 'id="fchk"' in body) and "check.js" not in scripts:
+        scripts += CHECK_SCRIPT
     return f"""<!doctype html>
 <html lang="en" data-go="{go}">
 <head>
@@ -1028,6 +1035,7 @@ def content_body(*, trail, h1, lede, context_phrase, count, rows_html, faq_html,
         + f'<h1 class="page">{esc(h1)}</h1>'
         + f'<p class="lede">{esc(lede)}</p>'
         + stat_line()
+        + ("" if ('id="mchk"' in pre_html or 'id="chk"' in pre_html) else match_box(go, title="Which grants could you get?"))
         + pre_html
         + f'<h2>{esc(list_title)} <small>{len(rows)}</small></h2>'
         + f'<div class="list">{fold_rows(rows, show=8)}</div>'
@@ -1206,7 +1214,7 @@ def uni_title(uni_name, alias_bit, flag, ug, top_ug, count):
     # 14 Nov: CTR 1.2% at position ~9. Searches are singular and short ('ucl bursary', 'ljmu bursary') and the
     # uni's own page is #1, so the title has to say what it can't: the other funds, and a check of what YOU'd get.
     sh = (uni_alias(uni_name) or short) if len(short) > 14 else short
-    lead = [f"{sh} Bursary {yr}", f"{sh} Bursaries {yr}"]
+    lead = [f"{sh} Bursary & Grants {yr}", f"{sh} Bursaries & Grants {yr}", f"{sh} Bursary {yr}"]
     if flag is not None:
         famt = format_amount(flag.get("Amount", ""))
         if famt and "£" in famt and len(famt) <= 14 and count > 1:
@@ -1327,7 +1335,7 @@ def render_page(uni_name, entries, slug):
     head = (
         crumb_html([("Home", "/"), ("Universities", "/bursaries/"), (uni_name, None)])
         + f'<p class="yr">{uni_logo(slug, uni_name)}<span>{academic_year()}</span></p>'
-        + f'<h1 class="page">{esc(uni_name)} Bursaries &amp; Scholarships</h1>'
+        + f'<h1 class="page">{esc(uni_name)} Bursaries, Grants &amp; Scholarships</h1>'
         + hero_html
         + stats_html
     )
@@ -1356,6 +1364,15 @@ def render_page(uni_name, entries, slug):
 
 CHECK_JS = r"""(function(){
 var NAT=__NAT__;
+function gateBox(el,uni){var go=el.getAttribute('data-go')||'seo_site';el.className='res';
+ el.innerHTML='<p class="big">Done. Get your grant results in the app</p>'
+  +'<p>The free BursaSearch app checks your answers against all '+(window.BS_FUNDS||'4,000+')+' UK funds: '+(uni?esc(uni)+'’s own, ':'your uni’s, ')
+  +'national grants and charities. It shows exactly which you’d get, how much, and when each one closes.</p>'
+  +'<a class="wbtn" href="/go/'+esc(go)+'/'+(window.BSAB?'?a='+window.BSAB.hex:'')+'" data-p="gate">Get my results in the free app</a>'
+  +'<p class="small">Takes about 2 minutes. The app asks a few more questions so the matches are exact.</p>'
+  +'<button type="button" class="again">Change answers</button>';
+ var bar=document.getElementById('ctatext');if(bar)bar.textContent='Get your results free in the app';
+ try{window.bsLog&&window.bsLog('web_check_done',{gate:1})}catch(_){}}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 var fb=document.getElementById('fchk');
 if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
@@ -1364,7 +1381,7 @@ if(fb){var FQ=JSON.parse(fb.getAttribute('data-q')),fs=0,fok=true;
   h+='</div><p class="qq">'+esc(q[0])+'</p><div class="yn"><button type="button" class="opt" data-v="y">Yes</button><button type="button" class="opt" data-v="n">No</button></div>';
   if(q[1])h+='<button type="button" class="opt" data-v="u">Not sure</button>';
   fb.className='chk';fb.innerHTML=h};
- var fres=function(){var go=fb.getAttribute('data-go'),off=fb.getAttribute('data-off'),n=+fb.getAttribute('data-n'),u=fb.getAttribute('data-uni');fb.className='res';
+ var fres=function(){gateBox(fb,fb.getAttribute('data-uni'));return;var go=fb.getAttribute('data-go'),off=fb.getAttribute('data-off'),n=+fb.getAttribute('data-n'),u=fb.getAttribute('data-uni');fb.className='res';
   fb.innerHTML=(fok?'<p class="big">You may be eligible</p><p>Check the full rules on the official page, then apply there. People who fit this usually qualify for other funds too.</p>'
     +'<a class="wbtn" href="/go/'+esc(go)+'/">Find my other funds in the free app</a>'
    :'<p class="big">Probably not this one</p><p>'+(n?n+' other funds at '+esc(u)+', plus national grants, may still fit you.':'National and charity grants may still fit you.')+'</p>'
@@ -1397,7 +1414,8 @@ box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)
  if(t.classList.contains('opt')){if(!started){started=true;L('web_check_start')}A[Q[step].k]=t.getAttribute('data-v');step++;if(step<Q.length)ask();else result()}
  else if(t.classList.contains('back')){step=Math.max(0,step-1);ask()}
  else if(t.classList.contains('again')){A={};step=0;started=false;groups.forEach(function(g,i){g.innerHTML=orig[i]});if(bar)bar.textContent=barOrig;ask()}});
-function result(){var here=0,money=0,names=[];
+function result(){gateBox(box,uni);if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'});return;
+ var here=0,money=0,names=[];
  groups.forEach(function(g,gi){if(g.getAttribute('data-g')==='h')return;g.innerHTML=orig[gi];
   var rows=[].slice.call(g.querySelectorAll('.row[data-l]')),yes=[],no=[];
   rows.forEach(function(r){var ok=fits(r.getAttribute('data-l'),+r.getAttribute('data-i'),r.getAttribute('data-c'));
@@ -1533,7 +1551,17 @@ function suggest(){var inp=document.getElementById('mq'),o=document.getElementBy
   m.sort(function(a,b){return D.u[a][0].length-D.u[b][0].length});m=m.slice(0,6);
   o.innerHTML=m.length?m.map(function(i){return '<li><button type="button" class="pick" data-i="'+i+'">'+esc(D.u[i][0])+'</button></li>'}).join('')
    :'<li class="nil">Not in our list yet. Choose “Not decided yet” to see national grants.</li>'})}
-function next(){step++;if(step<Q.length)ask();else load(result)}
+function gateM(){var u=U?U[0]:'';box.className='res';
+ box.innerHTML='<p class="big">Done. Get your grant results in the app</p>'
+  +'<p>The free BursaSearch app checks your answers against every UK fund we track: '+(u?esc(u)+'’s own grants and bursaries, ':'university grants and bursaries, ')
+  +'national grants and charities. It shows exactly which you’d get, how much, and when each one closes.</p>'
+  +'<a class="wbtn" href="/go/'+esc(go)+'/'+(window.BSAB?'?a='+window.BSAB.hex:'')+'" data-p="gate">Get my results in the free app</a>'
+  +'<p class="small">Takes about 2 minutes. The app asks a few more questions so the matches are exact.</p>'
+  +'<button type="button" class="again">Change answers</button>';
+ if(bar)bar.textContent='Get your results free in the app';
+ try{window.bsLog&&window.bsLog('web_check_done',{gate:1})}catch(_){}
+ if(window.innerWidth<900)box.scrollIntoView({behavior:'smooth',block:'start'})}
+function next(){if(step===0)try{window.bsLog&&window.bsLog('web_check_start')}catch(_){}step++;if(step<Q.length)ask();else gateM()}
 box.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;
  if(t.classList.contains('pick')){U=D.u[+t.getAttribute('data-i')];next()}
  else if(t.classList.contains('opt')){if(Q[step].k==='u')U=0;else A[Q[step].k]=t.getAttribute('data-v');next()}
@@ -2017,13 +2045,15 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
     amt_bit = f" worth {amt_range}" if amt_range else ""
     n_unis = len({clean(r.get("University", "")) for r in entries_sorted if clean(r.get("University", ""))})
     lede = (
-        f"{count} verified bursaries and scholarships{amt_bit} for {noun_phrase}, across {n_unis} "
+        f"{count} verified bursaries, grants and scholarships{amt_bit} for {noun_phrase}, across {n_unis} "
         f"UK universities — each linking straight to the official source, no forms with us. Our app "
         f"also matches you to additional grants beyond this list, based on {lede_tail}."
     )
-    title = f"{h1} ({academic_year()}) | BursaSearch"
+    if h1.startswith("Bursaries for "):
+        h1 = "Bursaries & Grants for " + h1[len("Bursaries for "):]
+    title = f"{h1} {academic_year()}"
     description = (
-        f"{count} verified bursaries and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}. "
+        f"{count} verified bursaries, grants and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}. "
         f"See eligibility, deadlines and official application links."
     )
     path_suffix = f"{kind}/{slug}/" if slug else f"{kind}/"
@@ -2238,7 +2268,7 @@ def render_uni_hardship_page(uni_name, uni_slug, hard, entries):
     n = len(hard)
     top = max_amount_text(hard)
     canonical = f"{SITE_URL}/bursaries/{uni_slug}/hardship-funds/"
-    h1 = f"Hardship Funds at {uni_name}"
+    h1 = f"Hardship Funds & Grants at {uni_name}"
     niche = re.compile(r"international|childcare|nursing|digital|medic|dental|postgrad|phd|care leaver|sport|"
                        r"laptop|travel|placement|parent|disab", re.I)
     general = [r for r in hard if not niche.search(clean(r.get("Bursary Name", "")))]
@@ -2257,7 +2287,8 @@ def render_uni_hardship_page(uni_name, uni_slug, hard, entries):
         yr_t = f" {yr}"
     named_title = None if not general else next((t for t in (f"{pre}{mname}{yr_t}: How Much + How to Apply", f"{pre}{mname}: How Much + How to Apply") if len(t) <= 68
                         and "hardship" not in mname.lower()), None)
-    title = named_title or next((t for t in (f"{uni_name}{ab} Hardship Funds {yr}: How to Apply",
+    title = named_title or next((t for t in (f"{uni_name}{ab} Hardship Funds & Grants {yr}: How to Apply",
+                                             f"{uni_short(uni_name)} Hardship Funds & Grants {yr}: How to Apply",
                               f"{uni_short(uni_name)} Hardship Funds {yr}: How to Apply")
                   if len(t) <= 70), f"{uni_short(uni_name)} Hardship Funds {yr}")
     description = (f"{n} hardship and emergency funds at {uni_name}{ab}" + (f", up to {top}" if top else "")
@@ -2322,7 +2353,7 @@ def render_hardship_hub(all_rows, canon_by_key):
         row_parts.append(bursary_row(r, uni=raw, uni_href=f"/bursaries/{res[1]}/" if res else None,
                                      fund_href=fund_href_for(r)))
     canonical = f"{SITE_URL}/bursaries/hardship-funds/"
-    title = f"University Hardship Funds {yr}: {n_unis} UK Universities Compared"
+    title = f"University Hardship Funds & Grants {yr}: {n_unis} UK Unis Compared"
     description = (f"{len(hard)} hardship and emergency funds at {n_unis} UK universities. "
                    f"Who can apply, how much you can get and where to apply in {yr}.")
     lede = (f"{len(hard)} hardship and emergency funds at {n_unis} UK universities, for students who run "
@@ -2346,9 +2377,9 @@ UNI_SUBJECT_MIN = 2
 def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
     label = SUBJECT_LABEL.get(subj_slug, "Subject")
     count = len(matched)
-    h1 = f"{label} Bursaries at {uni_name}"
+    h1 = f"{label} Bursaries & Grants at {uni_name}"
     canonical = f"{SITE_URL}/bursaries/{uni_slug}/subject/{subj_slug}/"
-    title = f"{label} Bursaries at {uni_name} ({academic_year()}) | BursaSearch"
+    title = f"{label} Bursaries & Grants at {uni_name} {academic_year()}"
     amt = amount_range_text(matched)
     amt_bit = f" worth {amt}" if amt else ""
     lede = (
@@ -2791,7 +2822,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     n_total = sum(c for _, _, c in uni_list) + singles_count
     n_unis = len(uni_list) + singles_count
     canonical = f"{SITE_URL}/bursaries/"
-    title = "UK University Bursaries & Scholarships — Browse by University | BursaSearch"
+    title = f"UK University Bursaries & Grants {academic_year()}: Browse by University"
     description = (
         f"Browse verified bursaries and scholarships at {n_unis} UK universities, "
         f"covering {n_total} funds in total. Free to search."
@@ -2803,7 +2834,7 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
                       f"{singles_count} bursaries"))
     body = (
         crumb_html([("Home", "/"), ("Bursaries", None)])
-        + '<h1 class="page">UK University Bursaries &amp; Scholarships</h1>'
+        + '<h1 class="page">UK University Bursaries, Grants &amp; Scholarships</h1>'
         + match_box("seo_site")
         + stat_line()
         + f'<p class="lede">{esc(lede)}</p>'
@@ -2882,7 +2913,7 @@ def _answer_page(*, slug, title, description, h1, lede, stats, table, note, faq_
             + f'<p class="yr">{academic_year()}</p>'
             + f'<h1 class="page">{esc(h1)}</h1>'
             + f'<p class="lede">{esc(lede)}</p>'
-            + stats_html + table
+            + stats_html + match_box("seo_tag", title="Which grants could you get?") + table
             + f'<p class="fresh">{note}</p>'
             + app_cta(go="seo_tag")
             + '<h2>Questions</h2>' + f'<div class="faq">{faq_html_from(faq_items)}</div>'
@@ -2951,6 +2982,104 @@ def render_biggest_bursaries(canon_by_key):
         stats=[(f"£{a['amount']:,}", f"biggest ({an})"), (f"£{median:,}", "middle of the table"), (str(len(rows)), "universities")],
         table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Biggest university bursaries {yr}", items))
 
+GOV_GRANTS = [   # names only, linked to the official page: amounts change yearly and depend on circumstances
+    ("Childcare Grant", "England, full-time students with children in registered childcare",
+     "https://www.gov.uk/childcare-grant"),
+    ("Parents' Learning Allowance", "England, full-time students with dependent children",
+     "https://www.gov.uk/parents-learning-allowance"),
+    ("Adult Dependants' Grant", "England, full-time students with an adult who depends on them financially",
+     "https://www.gov.uk/adult-dependants-grant"),
+    ("Disabled Students' Allowance", "UK, students with a disability, long-term health or mental health condition, "
+     "or a specific learning difficulty", "https://www.gov.uk/disabled-students-allowance-dsa"),
+    ("NHS Learning Support Fund", "England, nursing, midwifery and many allied health students",
+     "https://www.nhsbsa.nhs.uk/learning-support-fund-lsf"),
+    ("Welsh Government Learning Grant", "Wales, students from lower-income households",
+     "https://www.studentfinancewales.co.uk/"),
+    ("Young Students' Bursary", "Scotland, students from lower-income households (SAAS)", "https://www.saas.gov.uk/"),
+    ("Maintenance Grant", "Northern Ireland, students from lower-income households", "https://www.studentfinanceni.co.uk/"),
+]
+
+
+def render_grants(canon_by_key):
+    """'grants for university students', 'student grants uk', '<uni> grants': one page that sorts every kind of
+    grant a student doesn't pay back, with the quick check on top. Counts come from the same live data."""
+    yr = academic_year()
+    own = [r for r in rows if clean(r.get("Bursary Name", "")) and not clean(r.get("University", "")).lower().startswith("external")]
+    nat = [r for r in rows if clean(r.get("Bursary Name", "")) and clean(r.get("University", "")).lower().startswith("external")]
+    hard = [r for r in own if is_hardship(r)]
+    n_unis = len({clean(r.get("University", "")) for r in own})
+    lede = (f"A grant is money for university you never pay back. UK students can get them from four places: their "
+            f"university ({len(own) - len(hard):,} grants, bursaries and scholarships across {n_unis} unis), "
+            f"hardship funds ({len(hard)}), charities and trusts ({len(nat):,}), and the government. "
+            f"Most students only ever hear about the student loan.")
+    best = []
+    for r in own:
+        if (counts_for_top_award(r) and not is_hardship(r) and level_code(r) != "p" and not _is_international(r)
+                and not check_attrs(r)[3] and not check_attrs(r)[2]):   # open to most students: no course/sport/
+                                                                          # circumstance/international-only rules
+            v = max_amount_value(r.get("Amount", ""))
+            if v >= 1000:
+                best.append((v, r))
+    best.sort(key=lambda t: -t[0])
+    seen, items = set(), []
+    for v, r in best:
+        res_ = canon_by_key.get(norm_uni_key(clean(r.get("University", ""))))
+        nm_ = clean(r.get("Bursary Name", "")).lower()
+        if not res_ or res_[0] in seen or nm_ in seen:
+            continue
+        seen.update((res_[0], nm_))
+        items.append((res_[0], res_[1], r, v))
+        if len(items) == 12:
+            break
+    rows_html = "".join(
+        f'<div class="row"><a class="nm" href="{esc(fund_href_for(r, u) or "/bursaries/" + sl + "/")}">'
+        f'{esc(short_fund_name(clean(r.get("Bursary Name", "")), u))}</a>{display_amount(r)}'
+        f'<span class="m"><a href="/bursaries/{sl}/">{esc(u)}</a></span></div>'
+        for u, sl, r, v in items)
+    gov = "".join(f'<div class="row"><a class="nm" href="{esc(h)}" rel="noopener" target="_blank">{esc(n)}</a>'
+                  f'<span class="amt v">Government</span><span class="m">{esc(w)}</span></div>' for n, w, h in GOV_GRANTS)
+    faq = [
+        ("What grants can university students get in the UK?",
+         f"Grants and bursaries from your own university ({n_unis} UK universities run them), hardship funds for when "
+         f"money runs short, grants from charities and trusts, and government grants such as the Childcare Grant, "
+         f"Parents' Learning Allowance, Adult Dependants' Grant and Disabled Students' Allowance."),
+        ("Do I have to pay a grant back?", "No. Grants, bursaries and scholarships are not loans. You don't repay them."),
+        ("Are there grants for students from low-income families?",
+         "Yes. Most universities pay an income-based bursary to students from lower-income households, often "
+         "automatically through your Student Finance assessment, and many charity grants are aimed at low income too."),
+        ("How do I find which grants I can get?",
+         "Answer the quick check on this page, then the free BursaSearch app matches you to the grants you qualify "
+         "for and reminds you before they close."),
+    ]
+    h1 = "University grants UK: money you never pay back"
+    body = (crumb_html([("Home", "/"), ("Bursaries", "/bursaries/"), ("University grants", None)])
+            + f'<p class="yr">{yr}</p>'
+            + f'<h1 class="page">{esc(h1)}</h1>'
+            + f'<p class="lede">{esc(lede)}</p>'
+            + match_box("seo_tag", title="Which grants could you get?")
+            + '<h2>Biggest university grants for undergraduates</h2>'
+            + f'<div class="list">{rows_html}</div>'
+            + '<p class="hlink"><a href="/bursaries/biggest-bursaries/">Every university\u2019s main bursary, ranked &rarr;</a></p>'
+            + '<h2>Government grants</h2>'
+            + f'<div class="list">{gov}</div>'
+            + '<h2>More grants by situation</h2>'
+            + tiles_html([("/bursaries/household-income-under-25k/", "Grants if your family earns under £25k", None),
+                          ("/bursaries/hardship-funds/", "Hardship funds and grants at every university", None),
+                          ("/bursaries/circumstance/care-leavers/", "Grants for care leavers", None),
+                          ("/bursaries/circumstance/estranged-students/", "Grants for estranged students", None),
+                          ("/bursaries/circumstance/disabled-students/", "Grants for disabled students", None),
+                          ("/bursaries/", "Grants at every university", None)])
+            + '<h2>Questions</h2>' + f'<div class="faq">{faq_html_from(faq)}</div>')
+    canonical = f"{SITE_URL}/bursaries/grants/"
+    schema = (jsonld_script(faq_jsonld_from(faq)) + jsonld_script(breadcrumb_jsonld(
+        [("BursaSearch", f"{SITE_URL}/"), ("Bursaries", f"{SITE_URL}/bursaries/"), ("University grants", canonical)])))
+    title = f"University Grants UK {yr}: Every Grant You Don't Pay Back"
+    description = (f"{len(own) + len(nat):,} grants, bursaries and scholarships for UK students in {yr}: university "
+                   f"grants, hardship funds, charity and government grants. Check which you could get in 30 seconds.")
+    return canonical, render_shell(title=esc(title), description=esc(description), canonical=canonical, body=body,
+                                   sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
+
+
 def render_under_25k(canon_by_key):
     data = _load_json("data/free_money_2026.json")
     yr = academic_year()
@@ -2983,10 +3112,10 @@ def render_under_25k(canon_by_key):
             f"Amounts shown are the most each pays; some pay less as income rises.")
     return _answer_page(
         slug="household-income-under-25k",
-        title=f"Bursaries If Your Family Earns Under £25k: What Each Uni Pays ({yr})",
+        title=f"Grants & Bursaries If Your Family Earns Under £25k ({yr})",
         description=(f"Household income under £25,000? {len(ok)} UK universities pay you a bursary for {yr}, up to "
                      f"£{top['amount']:,} a year at {tn}. Free money you don't pay back."),
-        h1="Family earns under £25k? What each uni pays", lede=lede,
+        h1="Family earns under £25k? The grants each uni pays you", lede=lede,
         stats=[(str(len(ok)), "universities that pay you"), (f"£{top['amount']:,}", f"most ({tn})"), ("£0", "to pay back")],
         table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Bursaries for household income under £25,000 {yr}", items))
 
@@ -3190,7 +3319,8 @@ hardship_urls.insert(0, url)
 answer_urls = []
 for _slug, _render in (("biggest-bursaries", render_biggest_bursaries),
                        ("household-income-under-25k", render_under_25k),
-                       ("cost-of-living", render_cost_of_living)):
+                       ("cost-of-living", render_cost_of_living),
+                       ("grants", render_grants)):
     _url, _html = _render(canon_by_key)
     os.makedirs(os.path.join(OUT_DIR, _slug), exist_ok=True)
     write_page(_url, os.path.join(OUT_DIR, _slug, "index.html"), _html, lastmod_map, changed_urls)
