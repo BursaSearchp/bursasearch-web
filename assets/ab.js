@@ -18,7 +18,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
  if(h.indexOf('/go/')===0){tag(a);log('web_tap',{place:a.getAttribute('data-p')||'link',ms:Date.now()-t0})}
  else if(/apps\.apple|play\.google/.test(a.href))log('web_tap',{place:'store_direct',ms:Date.now()-t0})},true);
 [].forEach.call(document.querySelectorAll('[data-d]'),function(el){var n=Math.ceil((new Date(el.getAttribute('data-d')+'T23:59:00')-Date.now())/864e5);
- if(n>=0){var s=document.createElement('span');s.className='dd';s.textContent=' · '+n+' day'+(n===1?'':'s')+' left';el.appendChild(s)}});
+ if(n>=0){var s=document.createElement('span');s.className='dd';s.textContent=' · '+n+' day'+(n===1?'':'s')+' left';var rm=el.querySelector('.rm');rm?el.insertBefore(s,rm):el.appendChild(s)}});
 addEventListener('scroll',function(){var h=document.documentElement,p=(h.scrollTop+innerHeight)/h.scrollHeight;if(p>maxs)maxs=p},{passive:true});
 log('web_view');
 var gone=false;function bye(){if(gone)return;gone=true;log('web_leave',{ms:Date.now()-t0,scroll:Math.round(Math.min(maxs,1)*100)})}

@@ -35,12 +35,13 @@ var Q=[
  {k:'c',q:'Do any of these apply to you?',o:[['c','Care-experienced'],['e','Estranged from my family'],['r',"I'm a carer"],['d','Disabled or long-term condition'],['f','Refugee or asylum seeker'],['n','None of these']]}
 ];
 function T(n){return document.documentElement.classList.contains('t'+n)}
-if(T(14))Q=[Q[1],Q[0],Q[2]];
+function V(n){return document.documentElement.classList.contains('pv'+n)}
+if(V(5))Q=[Q[1],Q[0],Q[2]];
 var started=false;function L(e,x){try{window.bsLog&&window.bsLog(e,x)}catch(_){}}
 var A={},step=0,groups=[].slice.call(document.querySelectorAll('.grp[data-g]')),orig=groups.map(function(g){return g.innerHTML});
 var bar=document.getElementById('ctatext'),barOrig=bar?bar.textContent:'';
 function fits(l,cap,circ){if(l!=='a'&&l!==A.l)return false;var lo=+A.i;if(cap>0&&lo>=0&&lo>=cap)return false;if(circ&&circ.indexOf(A.c)<0)return false;return true}
-function ask(){var q=Q[step],h='<div class="hd"><b>'+(T(3)?'How much could you get?':'Which could you get?')+'</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
+function ask(){var q=Q[step],h='<div class="hd"><b>'+(V(5)?'How much could you get?':'Which could you get?')+'</b><span>'+(step+1)+' of '+Q.length+'</span></div><div class="prog">';
  for(var i=0;i<Q.length;i++)h+='<i'+(i<=step?' class="on"':'')+'></i>';
  h+='</div><p class="qq">'+esc(q.q)+'</p>';
  q.o.forEach(function(o){h+='<button type="button" class="opt" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'});
