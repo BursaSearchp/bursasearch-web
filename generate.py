@@ -1122,7 +1122,7 @@ def flagship_fund(entries, uni_name):
     best, best_score = None, 0
     for r in entries:
         name = clean(r.get("Bursary Name", "")).lower()
-        if level_code(r) == "p" or is_hardship(r) or any(w in name for w in _NOT_FLAGSHIP):
+        if level_code(r) == "p" or is_hardship(r) or any(w in name for w in _NOT_FLAGSHIP) or re.search(r"society|trust|foundation|charit|association", name):
             continue
         score = 0
         if "bursary" in name and short.split(" ")[0] in name:
@@ -1210,7 +1210,7 @@ def uni_faq_items(uni_name, flag, ug, hard, pg, entries):
         items = faq_items_generic(uni_name)[2:]
     return items
 
-def uni_title(uni_name, alias_bit, flag, ug, top_ug, count):
+def uni_title(uni_name, alias_bit, flag, ug, top_ug, count, slug_for_title=""):
     """Searchers name the main bursary ('uon core bursary'), so lead with it when
     we can identify it. The 'up to' figure is the biggest undergraduate award -
     a PhD studentship figure misleads someone searching '<uni> bursary'. Long
@@ -1230,20 +1230,21 @@ def uni_title(uni_name, alias_bit, flag, ug, top_ug, count):
         elif upto:
             tails.append(f": {fname} +{count - 1} more,{upto}")
     tails.append(f": {count} grant{'s' if count != 1 else ''}{upto}")
-    # 14 Nov: CTR 1.2% at position ~9. Searches are singular and short ('ucl bursary', 'ljmu bursary') and the
-    # uni's own page is #1, so the title has to say what it can't: the other funds, and a check of what YOU'd get.
+    # 15 Nov split test (title_arm): "a" = the all-in-one-place promise the descriptions make,
+    # "b" = the LJMU style (6.2% CTR on 14 Nov vs 0.3-0.6% for '+ N More' titles). No '+ N More'.
     sh = (uni_alias(uni_name) or short) if len(short) > 14 else short
-    lead = [f"{sh} Bursary & Grants {yr}", f"{sh} Bursaries & Grants {yr}", f"{sh} Bursary {yr}"]
-    if flag is not None:
-        famt = format_amount(flag.get("Amount", ""))
-        if famt and "£" in famt and len(famt) <= 14 and count > 1:
-            for b in lead:
-                for t in (f"{b}: {famt} + {count - 1} More You Could Get", f"{b}: {famt} + {count - 1} More"):
-                    if len(t) <= 66:
-                        return t
-    if count > 1 and upto:
-        for b in lead:
-            t = f"{b}: {count} Grants{upto}, Check Yours"
+    if is_external(uni_name):
+        return f"UK Charity & National Grants {yr}: {count:,} You Can Apply For"
+    if count > 1:
+        arm = title_arm(f"/bursaries/{slug_for_title}/") if slug_for_title else "a"
+        if arm == "a":
+            cands = [f"{sh} Bursary {yr}: All {count} Grants, See What You Get",
+                     f"{sh} Bursary {yr}: All {count} Grants, See Yours",
+                     f"{sh} Bursary: All {count} Grants, See What You Get"]
+        else:
+            cands = ([f"{sh} Bursary & Grants {yr}: {count} Grants{upto}, Check Yours",
+                      f"{sh} Bursary {yr}: {count} Grants{upto}, Check Yours"] if upto else []) +                     [f"{sh} Bursary {yr}: {count} Grants, Check Yours"]
+        for t in cands:
             if len(t) <= 66:
                 return t
     for tail in tails:
@@ -1568,10 +1569,54 @@ def render_scholarships(canon_by_key):
         [("BursaSearch", f"{SITE_URL}/"), ("Bursaries", f"{SITE_URL}/bursaries/"), ("Scholarships", canonical)])))
     top = max_amount_value(own[0].get("Amount", "")) if own else 0
     title = f"University Scholarships UK {yr}: {len(own):,} You Can Apply For"
-    description = clip_desc(f"{len(own):,} UK university scholarships for {yr}" + (f", up to £{top:,}" if top >= 1000 else "")
-                            + ": sport, music, grades, STEM and more. See which you qualify for in 30 seconds, free.")
+    description = clip_desc(f"All {len(own):,} UK university scholarships for {yr} in one place" + (f", up to £{top:,}" if top >= 1000 else "")
+                            + ": sport, music, grades, STEM. " + ELIG_CTA)
+    if description.endswith("…"):
+        description = clip_desc(f"All {len(own):,} UK university scholarships for {yr} in one place"
+                                + (f", up to £{top:,}" if top >= 1000 else "") + ". " + ELIG_CTA)
     return canonical, render_shell(title=esc(title), description=esc(description), canonical=canonical, body=body,
                                    sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
+
+
+import hashlib as _hl
+
+# 15 Nov: CTR split test. Each page gets title style "a" or "b" from a fixed hash of
+# its URL path, so the same page always keeps its style and half the site runs each.
+# Compare the two groups in Search Console (tools/title_test_report.py). Written to
+# title_test.json on every build.
+TITLE_TEST = {}
+
+
+def title_arm(path):
+    arm = "a" if int(_hl.md5(path.encode()).hexdigest(), 16) % 2 == 0 else "b"
+    TITLE_TEST[path] = arm
+    return arm
+
+
+def is_external(uni_name):
+    u = uni_name.lower()
+    return "external" in u or "national bodies" in u
+
+
+def first_fit(*cands, n=158):
+    """First candidate that fits a snippet; else the last one clipped."""
+    for c in cands:
+        if c and len(c) <= n:
+            return c
+    return clip_desc(cands[-1], n)
+
+
+def all_n(n, noun):
+    """'All 47 UCL grants' - but '2 medicine grants', never 'All 2'."""
+    return f"All {n:,} {noun}" if n >= 3 else f"{n} {noun}"
+
+
+ELIG_CTA = "See exactly what you're eligible for, instantly. Free."
+FUND_CTA = " See instantly if you're eligible. Free."
+
+
+def _the(n):
+    return n if n.lower().startswith("the ") else f"The {n}"
 
 
 def clip_desc(t, n=158):
@@ -1590,13 +1635,25 @@ def render_page(uni_name, entries, slug):
     _famt0 = format_amount(_flag0.get("Amount", "")) if _flag0 is not None else ""
     _famt0 = _famt0 if "\u00a3" in _famt0 and len(_famt0) <= 18 else ""
     _famt0 = re.sub(r"^Up to ", "up to ", _famt0)
-    description = clip_desc(
-        (f"The {_fn} pays {_famt0}, plus {count - 1} more {uni_short(uni_name)} grants most students never claim. "
-         if _fn and _famt0 and count > 1 else
-         f"The {_fn} plus {count - 1} more {uni_short(uni_name)} grants most students never claim. "
-         if _fn and count > 1 else f"{count} {uni_short(uni_name)} grants and scholarships{amt_bit}, never paid back. ")
-        + "See which you qualify for in 30 seconds, free."
-    )
+    _us = uni_short(uni_name)
+    if _us.lower().startswith("the "):          # 'The Open' -> 'Open University'
+        _us = re.sub(r"^the\s+", "", uni_name, flags=re.I)
+    _top = max((max_amount_value(r.get("Amount", "")) for r in entries if counts_for_top_award(r)), default=0)
+    _up = f", up to £{_top:,}" if _top >= 100 else ""
+    if is_external(uni_name):
+        description = first_fit(
+            f"{all_n(count, 'grants from UK charities and national bodies')} in one place{_up}, never paid back. " + ELIG_CTA,
+            f"{all_n(count, 'UK charity grants')} in one place{_up}. " + ELIG_CTA)
+    elif count >= 3:
+        description = first_fit(
+            f"The {_us} bursary plus all {count - 1} other {_us} grants and scholarships in one place{_up}. " + ELIG_CTA,
+            f"The {_us} bursary plus all {count - 1} other {_us} grants in one place{_up}, never paid back. " + ELIG_CTA,
+            f"The {_us} bursary plus all {count - 1} other {_us} grants in one place{_up}. " + ELIG_CTA,
+            f"{_us} bursary plus all {count - 1} other grants in one place. " + ELIG_CTA)
+    else:
+        description = first_fit(
+            f"{_us} bursaries and grants: {count} in one place{_up}, never paid back. " + ELIG_CTA,
+            f"{_us} bursaries and grants: {count} in one place. " + ELIG_CTA)
 
     named = [r for r in entries if clean(r.get("Bursary Name", ""))]
     flag = flagship_fund(named, uni_name)
@@ -1618,7 +1675,7 @@ def render_page(uni_name, entries, slug):
 
     # Three numbers instead of a paragraph.
     top_ug = max((max_amount_value(r.get("Amount", "")) for r in ug if counts_for_top_award(r)), default=0)
-    title = uni_title(uni_name, alias_bit, flag, ug, top_ug, count)
+    title = uni_title(uni_name, alias_bit, flag, ug, top_ug, count, slug_for_title=slug)
     stats = []
     stats.append((f"£{top_ug:,}", "top award") if top_ug >= 100 else (f"{count}", "funds listed"))
     stats.append((f"{len(ug)}", "for undergrads") if ug else (f"{len(pg)}", "postgrad funds"))
@@ -1973,7 +2030,7 @@ def render_rollup(singles):
     rows_html = "".join(bursary_row(r, uni=uni) for uni, r in all_rows)
     count = len(all_rows)
     title = f"More UK University Bursaries ({academic_year()}) | BursaSearch"
-    description = f"{count} more UK university bursaries, one per university, money you never pay back. See which you qualify for in 30 seconds, free."
+    description = f"All {count} more UK university bursaries in one place, never paid back. " + ELIG_CTA
     canonical = f"{SITE_URL}/bursaries/more-universities/"
     lede = (
         f"{count} more verified bursaries, one each from smaller listings across UK universities — "
@@ -2408,9 +2465,12 @@ def render_tag_page(kind, slug, h1, noun_phrase, rows_matched, crumb_label, lede
     if h1.startswith("Bursaries for "):
         h1 = "Bursaries & Grants for " + h1[len("Bursaries for "):]
     title = f"{h1} {academic_year()}"
-    description = clip_desc(
-        f"{count} grants and scholarships for {noun_phrase} at {n_unis} UK universities{amt_bit}, never paid back. "
-        f"See which you qualify for in 30 seconds, free."
+    _top = re.findall(r"£[\d,]+", amt_range or "")
+    _up = f", up to {_top[-1]}" if _top else ""
+    description = first_fit(
+        f"{all_n(count, 'grants for ' + noun_phrase)} in one place, from {n_unis} UK universities{_up}. " + ELIG_CTA,
+        f"{all_n(count, 'grants for ' + noun_phrase)} in one place{_up}. " + ELIG_CTA,
+        f"{all_n(count, 'grants for ' + noun_phrase)} in one place. " + ELIG_CTA
     )
     path_suffix = f"{kind}/{slug}/" if slug else f"{kind}/"
     canonical = f"{SITE_URL}/bursaries/{path_suffix}"
@@ -2648,8 +2708,18 @@ def render_uni_hardship_page(uni_name, uni_slug, hard, entries):
                                              f"{uni_short(uni_name)} Hardship Funds & Grants {yr}: How to Apply",
                               f"{uni_short(uni_name)} Hardship Funds {yr}: How to Apply")
                   if len(t) <= 70), f"{uni_short(uni_name)} Hardship Funds {yr}")
-    description = clip_desc(f"Short of money at {uni_short(uni_name)}? {n} hardship and emergency funds"
-                            + (f", up to {top}" if top else "") + ". See which you could get in 30 seconds, free.")
+    # 15 Nov: 950 impressions/28d for 'keele access and success fund', 0 clicks - the snippet
+    # never said the name people typed. A named general fund leads (Google bolds it).
+    _upt = f", up to {top}" if top else ""
+    _mn = f"{pre}{mname}"
+    _ma = format_amount(main_h.get("Amount", ""))
+    _mupt = (" (" + re.sub(r"^Up to ", "up to ", _ma) + ")") if _ma and "£" in _ma and len(_ma) <= 20 else ""
+    description = first_fit(
+        *([f"The {_mn}{_mupt}: who can apply, how much and how to apply. Not a loan. " + ELIG_CTA,
+           f"The {_mn}{_mupt}: who can apply and how. Not a loan. " + ELIG_CTA,
+           f"The {_mn}{_mupt}, not a loan. " + ELIG_CTA] if named_title else []),
+        f"Short of money at {uni_short(uni_name)}? {all_n(n, 'hardship and emergency funds')} in one place{_upt}, not loans. " + ELIG_CTA,
+        f"Short of money at {uni_short(uni_name)}? {all_n(n, 'hardship funds')} in one place{_upt}. " + ELIG_CTA)
     lede = (f"{n} hardship and emergency funds at {uni_name} for students who hit money problems "
             f"during the year" + (f", worth up to {top}" if top else "") + ".")
     rows_html = "".join(bursary_row(r, fund_href=fund_href_for(r, uni_name))
@@ -2711,8 +2781,8 @@ def render_hardship_hub(all_rows, canon_by_key):
                                      fund_href=fund_href_for(r)))
     canonical = f"{SITE_URL}/bursaries/hardship-funds/"
     title = f"University Hardship Funds & Grants {yr}: {n_unis} UK Unis Compared"
-    description = (f"Run out of money at uni? {len(hard)} hardship and emergency funds at {n_unis} UK universities. "
-                   f"See which you could get in 30 seconds, free.")
+    description = (f"Run out of money at uni? All {len(hard)} hardship funds at {n_unis} UK universities in one place, not loans. "
+                   + ELIG_CTA)
     lede = (f"{len(hard)} hardship and emergency funds at {n_unis} UK universities, for students who run "
             f"into money problems during their course.")
     faq_items = hardship_faq_items(hard, f"across {n_unis} universities")
@@ -2737,6 +2807,9 @@ def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
     h1 = f"{label} Bursaries & Grants at {uni_name}"
     canonical = f"{SITE_URL}/bursaries/{uni_slug}/subject/{subj_slug}/"
     title = f"{label} Bursaries & Grants at {uni_name} {academic_year()}"
+    if is_external(uni_name):
+        h1 = f"{label} Grants from UK Charities and National Bodies"
+        title = f"{label} Grants from UK Charities {academic_year()}"
     amt = amount_range_text(matched)
     amt_bit = f" worth {amt}" if amt else ""
     lede = (
@@ -2744,9 +2817,12 @@ def render_uni_subject_page(uni_name, uni_slug, subj_slug, matched):
         f"{uni_name} students — each linking straight to the official page. Our app also "
         f"matches you to funds beyond this list, based on your subject and circumstances."
     )
+    _t = re.findall(r"£[\d,]+", amt or "")
+    amt_bit = f", up to {_t[-1]}" if _t else ""
     description = clip_desc(
-        f"{count} {label.lower()} grants and scholarships for {uni_name} students{amt_bit}. "
-        f"See which you qualify for in 30 seconds, free."
+        (f"{all_n(count, label.lower() + ' grants from UK charities and national bodies')} in one place{amt_bit}. "
+         if is_external(uni_name) else
+         f"{all_n(count, label.lower() + ' grants for ' + uni_short(uni_name) + ' students')} in one place{amt_bit}. ") + ELIG_CTA
     )
     rows_html = "".join(
         bursary_row(r, fund_href=fund_href_for(r, uni_name))
@@ -2950,7 +3026,7 @@ def max_amount_text(entries):
     top = max((max_amount_value(r.get("Amount", "")) for r in entries), default=0)
     return f"£{top:,.0f}" if top >= 100 else ""
 
-def fund_title(row, name, uni_name):
+def fund_title(row, name, uni_name, fund_path=""):
     alias = uni_alias(uni_name)
     who = alias or uni_name
     t = name if who.lower() in name.lower() else f"{name} – {who}"
@@ -2963,31 +3039,61 @@ def fund_title(row, name, uni_name):
                 return cand
         return f"{t2}: How to Apply"
     amount = format_amount(row.get("Amount", ""))
-    if amount and len(amount) <= 18 and "£" in amount:
-        t += f": {amount}"
+    amt = f": {amount}" if amount and len(amount) <= 18 and "£" in amount else ""
+    # 15 Nov split test: "a" = old '| Eligibility' style, "b" = a question the searcher has.
+    arm = title_arm(fund_path) if fund_path else "a"
+    if arm == "b":
+        for cand in (f"{t}{amt}. Are You Eligible?", f"{name}{amt}. Are You Eligible?",
+                     f"{t}: Are You Eligible?"):
+            if len(cand) <= 65:
+                return cand
+    t += amt
     for cand in (f"{t} | Eligibility {academic_year()}", f"{t} ({academic_year()})"):
         if len(cand) <= 65:
             return cand
     return t
 
 def fund_description(row, name, uni_name, ftype):
+    """Search snippet for a fund page. People search the fund's name, so it leads
+    (Google bolds it); then how much, who for, when, never paid back, instant check.
+    Each longer version drops a part until it fits."""
     amount = format_amount(row.get("Amount", ""))
+    amt = amount if amount and "£" in amount and len(amount) <= 24 else ""
+    amt = re.sub(r"^Up to ", "up to ", amt)
+    external = is_external(uni_name)
+    us = uni_alias(uni_name) or (uni_name if len(uni_name) <= 32 else uni_short(uni_name))
+    nm = _the(name) if len(name) <= 60 else ""
+    cta = FUND_CTA
     if is_hardship(row):
-        alias = uni_alias(uni_name)
-        at = f"{uni_name} ({alias})" if alias and alias.lower() not in name.lower() and alias.lower() != uni_name.lower() else uni_name
-        amt = f" (up to {amount})" if amount and "£" in amount and len(amount) <= 24 else ""
-        bits = (f"Short of money at {uni_short(uni_name)}? The {name}{amt} can help, and it isn't a student loan. "
-                f"See if you qualify in 30 seconds, free.")
-        return bits if len(bits) <= 160 else bits[:157].rsplit(" ", 1)[0] + "…"
+        q = "Short of money? " if external else f"Short of money at {us}? "
+        give = (f" gives {amt}, and it isn't a loan." if amt else " can help, and it isn't a loan.")
+        return first_fit(q + (nm or "This fund") + give + " Who can apply and how." + cta,
+                         q + (nm or "This fund") + give + cta,
+                         q + "This fund" + give + cta)
     aud = eligibility_audience_phrase(row)
-    bits = f"{name}: " + (f"{amount} " if amount and len(amount) <= 24 else "")
     aud = aud.replace("income of Under ", "income under ").replace("income of Over ", "income over ")
-    bits += f"{ftype.lower()}" + (f" for {aud}" if aud else "") + f" at {uni_name}"
-    alias = uni_alias(uni_name)
-    if alias and alias.lower() not in name.lower():
-        bits += f" ({alias})"
-    bits += ". See if you qualify in 30 seconds, free."
-    return bits if len(bits) <= 160 else bits[:157].rsplit(" ", 1)[0] + "…"
+    kind = ftype.lower()
+    at = "" if external or us.lower() in name.lower() else f" at {us}"
+    forw = f" for {aud}" if aud else ""
+    dl = clean(row.get("Deadline", ""))
+    d = parse_deadline_date(dl) if dl else None
+    when = ""
+    if dl.lower().startswith("automatic"):
+        when = " Paid automatically."
+    elif d and d >= date.today():
+        when = f" Apply by {d.day} {d.strftime('%b')}."
+    what = f"{amt} {kind}" if amt else f"a {kind}"
+    c = []
+    if nm:
+        c += [f"{nm}: {what}{forw}{at}, never paid back.{when}{cta}",
+              f"{nm}: {what}{forw}{at}.{when}{cta}",
+              f"{nm}: {what}{forw}{at}.{cta}",
+              f"{nm}: {what}{at}, never paid back.{cta}",
+              f"{nm}: {what}{at}.{cta}"]
+    c += [f"Get {amt} from this {kind}{forw}{at}, never paid back.{when}{cta}" if amt else
+          f"A {kind}{forw}{at}, never paid back.{when}{cta}",
+          f"Get {amt} from this {kind}{at}.{cta}" if amt else f"A {kind}{at}, never paid back.{cta}"]
+    return first_fit(*c)
 
 def fund_lede(row, uni_name, ftype):
     name = clean(row.get("Bursary Name", ""))
@@ -3094,7 +3200,7 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
     canonical = f"{SITE_URL}/bursaries/{uni_slug}/{fund_slug}/"
     lede = fund_lede(row, uni_name, ftype)
     description = fund_description(row, name, uni_name, ftype)
-    title = fund_title(row, name, uni_name)
+    title = fund_title(row, name, uni_name, fund_path=f"/bursaries/{uni_slug}/{fund_slug}/")
     national = uni_name.lower().startswith("external")
     ushort = "National funders" if national else uni_short(uni_name)
 
@@ -3136,7 +3242,11 @@ def render_fund_page(row, uni_name, uni_slug, fund_slug, sibling_specs):
     sib_links = "".join(f'<li><a href="/bursaries/{uni_slug}/{s[3]}/">{esc(short_fund_name(s[0], uni_name))}</a></li>'
                         for s in siblings[:5])
     sib_html = (f'<h2>More from {esc(ushort)}</h2><ul class="links">{sib_links}'
-                f'<li><a href="/bursaries/{uni_slug}/">All {esc(ushort)} funds</a></li></ul>')
+                f'<li><a href="/bursaries/{uni_slug}/">'
+                + ("All UK charity grants" if is_external(uni_name) else f"{esc(ushort)} bursary: all {len(siblings) + 1} grants")
+                + '</a></li></ul>')
+    # 15 Nov: 'ntu bursary' (187 imp/28d) ranked the part-time fund page, 0 clicks. The
+    # back-link now says '<uni> bursary' so the uni page is the one that ranks for it.
 
     faq_items = fund_faq_items(row, uni_name)
     logo = uni_logo(uni_slug, uni_name)
@@ -3195,8 +3305,8 @@ def render_hub(uni_list, singles_count, circumstance_counts, subject_counts, reg
     canonical = f"{SITE_URL}/bursaries/"
     title = f"UK University Bursaries & Grants {academic_year()}: Browse by University"
     description = (
-        f"{n_total:,} grants, bursaries and scholarships at {n_unis} UK universities, money you never pay back. "
-        f"Find yours in 30 seconds, free."
+        f"All {n_total:,} grants, bursaries and scholarships at {n_unis} UK universities in one place, never paid back. "
+        + ELIG_CTA
     )
     lede = f"{n_total:,} verified bursaries and scholarships across {n_unis} UK universities."
     uni_items = [(f"/bursaries/{slug}/", name,
@@ -3350,7 +3460,7 @@ def render_biggest_bursaries(canon_by_key):
         slug="biggest-bursaries",
         title=f"Which UK Universities Give the Biggest Bursaries? {yr} Ranking",
         description=(f"{len(rows)} UK universities ranked by bursary size for {yr}: {an} up to £{a['amount']:,} a year. "
-                     f"See what you'd get in 30 seconds."),
+                     + ELIG_CTA),
         h1="Which UK universities give the biggest bursaries?", lede=lede,
         stats=[(f"£{a['amount']:,}", f"biggest ({an})"), (f"£{median:,}", "middle of the table"), (str(len(rows)), "universities")],
         table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Biggest university bursaries {yr}", items))
@@ -3456,8 +3566,8 @@ def render_grants(canon_by_key):
     schema = (jsonld_script(faq_jsonld_from(faq)) + jsonld_script(breadcrumb_jsonld(
         [("BursaSearch", f"{SITE_URL}/"), ("Bursaries", f"{SITE_URL}/bursaries/"), ("University grants", canonical)])))
     title = f"University Grants UK {yr}: Every Grant You Don't Pay Back"
-    description = clip_desc(f"{len(own) + len(nat):,} grants for UK students in {yr} from universities, charities and "
-                            f"the government, none paid back. See which you qualify for in 30 seconds, free.")
+    description = clip_desc(f"All {len(own) + len(nat):,} UK student grants for {yr} in one place: universities, charities and "
+                            f"the government. " + ELIG_CTA)
     return canonical, render_shell(title=esc(title), description=esc(description), canonical=canonical, body=body,
                                    sticky=sticky_bar("seo_tag"), schema=schema, go="seo_tag")
 
@@ -3496,7 +3606,7 @@ def render_under_25k(canon_by_key):
         slug="household-income-under-25k",
         title=f"Grants & Bursaries If Your Family Earns Under £25k ({yr})",
         description=(f"Household income under £25,000? {len(ok)} UK universities pay you a bursary for {yr}, up to "
-                     f"£{top['amount']:,} a year at {tn}. See yours in 30 seconds, free."),
+                     f"£{top['amount']:,} a year at {tn}. " + ELIG_CTA),
         h1="Family earns under £25k? The grants each uni pays you", lede=lede,
         stats=[(str(len(ok)), "universities that pay you"), (f"£{top['amount']:,}", f"most ({tn})"), ("£0", "to pay back")],
         table=table, note=note, faq_items=faq, itemlist=_itemlist(f"Bursaries for household income under £25,000 {yr}", items))
@@ -3980,6 +4090,10 @@ with open(LASTMOD_FILE, "w", encoding="utf-8") as f:
 
 with open("robots.txt", "w", encoding="utf-8") as f:
     f.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n")
+
+with open("title_test.json", "w", encoding="utf-8") as _f:
+    json.dump({"started": "2026-11-15", "note": "a/b title style per page, see title_arm() in generate.py",
+               "pages": dict(sorted(TITLE_TEST.items()))}, _f, indent=0)
 
 submit_indexnow(core_urls + sitemap_fund_urls if os.environ.get("INDEXNOW_ALL") else changed_urls)
 
